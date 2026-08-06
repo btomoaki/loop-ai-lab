@@ -1,0 +1,12 @@
+name: 機能リクエスト / 改善提案 (Feature Request)
+description: 新機能やハーネス機能の改善提案
+title: "[FEAT] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: 提案の概要
+      description: 追加・改善したい機能やルールについて記載してください。
+    validations:
+      required: true

@@ -1,0 +1,19 @@
+name: バグ報告 (Bug Report)
+description: 不具合やエラーに関する報告
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 不具合の概要
+      description: 発生した問題やエラーについて詳しく記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: 1. `python3 runner/run_loop.py` を実行 ...
+    validations:
+      required: false
