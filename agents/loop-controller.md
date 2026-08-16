@@ -31,3 +31,8 @@ Your response MUST strictly follow this structure:
 - **Target File(s)**: [Specific files needing creation or modification]
 - **Action Required**: [Detailed step-by-step modification instructions]
 - **Expected Outcome**: [What test command or documentation check should pass after this edit]
+
+## Direct Code Target Requirement
+- **No Meta-Documentation Delegations**:
+  - NEVER instruct the local Executor LLM to generate `prompt_history.md`, `implementation_plan.md`, or meta-discussion.
+  - ALWAYS instruct the Executor to directly generate functional implementation code files (`main.go`, `go.mod`, unit tests, etc.) under the target workspace directory using `# FILE: filepath` markers.
