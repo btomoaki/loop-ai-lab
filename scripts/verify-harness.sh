@@ -1,45 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ------------------------------------------------------------------------------
-# Verification & Guardrail Harness Script (Functional Code Focus)
-# ------------------------------------------------------------------------------
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# 設定ファイルの読み込み
 if [ -f "${BASE_DIR}/config.env" ]; then
-    # shellcheck disable=SC1091
     source "${BASE_DIR}/config.env"
 fi
 
-TARGET_DIR="${TARGET_DIR:-${BASE_DIR}/workspace/sample-project}"
-LOCAL_SETUP_DIR="${LOCAL_SETUP_DIR:-${BASE_DIR}/../local-setup}"
-VERIFY_COMMAND="${VERIFY_COMMAND:-make test}"
+TARGET_DIR="${TARGET_DIR:-${BASE_DIR}/workspace/avatar-service}"
+VERIFY_COMMAND="${VERIFY_COMMAND:-cd ${TARGET_DIR} && go test ./... && go build -o /tmp/avatar-server .}"
 
 echo "================================================================="
 echo " [Harness] Target Directory: ${TARGET_DIR}"
 echo " [Harness] Verify Command : ${VERIFY_COMMAND}"
 echo "================================================================="
 
-# local-setup インフラのヘルスチェックおよび自動起動
-if [ -d "${LOCAL_SETUP_DIR}" ]; then
-    if ! curl -s --connect-timeout 2 http://registry.localhost &> /dev/null; then
-        echo "⚠️  [Infrastructure] Local registry/proxy is not running."
-        echo "🚀 [Infrastructure] Auto-starting local-setup infrastructure..."
-        (cd "${LOCAL_SETUP_DIR}" && docker compose up -d) || true
-    else
-        echo "ℹ️  [Infrastructure] Common proxy & registry (local-setup) is healthy."
-    fi
-fi
-
 if [ ! -d "${TARGET_DIR}" ]; then
-    echo "❌ Error: Target directory '${TARGET_DIR}' does not exist."
-    exit 1
+    mkdir -p "${TARGET_DIR}"
 fi
 
 cd "${TARGET_DIR}"
+
+
+# -----------------------------------------------------------------
+# Smart Pre-Harness Guard: 空ワークスペースの事前検知
+# -----------------------------------------------------------------
+HAS_FILES=$(find . -maxdepth 2 -type f ! -name ".git*" ! -name "README.md" ! -name "prompt_history.md" 2>/dev/null | head -n 1)
+if [ -z "$HAS_FILES" ]; then
+    echo "ℹ️ [Harness Guard] Target workspace is currently empty (No implementation files found)."
+    echo "ℹ️ [Harness Guard] Prompting Executor to generate initial project structure and boilerplate."
+    exit 1
+fi
 
 echo "🚀 Running verification command..."
 set +e
