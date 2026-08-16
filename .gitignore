@@ -15,3 +15,8 @@ __pycache__/
 
 # Agent Skills directory (Managed via .agents/plugin.json manifest)
 .agents/skills/
+
+# Python cache & bytecode
+runner/__pycache__/
+*.pyc
+*.pyo

@@ -38,7 +38,7 @@ def main():
     active_task_type = config.get("ACTIVE_TASK_TYPE", "feature_dev")
     target_dir = root_dir / config.get("TARGET_DIR", "workspace/sample-project")
     req_file_path = root_dir / config.get("REQUIREMENT_FILE", "requirements.sample.md")
-    eval_log_path = root_dir / config.get("EVALUATION_LOG_FILE", "logs/EVALUATION_LOG.md")
+    eval_log_path = target_dir / config.get("EVALUATION_LOG_FILE", "logs/EVALUATION_LOG.md")
     verify_command = config.get("VERIFY_COMMAND", "go test ./...")
     max_loops = int(config.get("MAX_LOOPS", 5))
     review_interval = int(config.get("REVIEW_INTERVAL", 3))
