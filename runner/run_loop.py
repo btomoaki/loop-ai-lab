@@ -92,7 +92,7 @@ Your goal is to inspect history and guide the executor step-by-step toward 100% 
 Instructions for Step #{step_num}:
 Analyze history and issue a clear, precise instruction for the executor for this step.
 """
-        eval_instruction = evaluator.generate(eval_prompt)
+        eval_instruction = evaluator.generate_text(eval_prompt)
         print(f"   Instruction Output: {eval_instruction[:120]}...\n")
 
         # 2. Executor Phase
@@ -107,7 +107,7 @@ Analyze history and issue a clear, precise instruction for the executor for this
 
 Generate the exact file changes using `# FILE: filepath` markers.
 """
-        code_output = executor.generate(exec_prompt)
+        code_output = executor.generate_text(exec_prompt)
         apply_code_changes(code_output, target_dir)
 
         # 3. Progress Review Logging
