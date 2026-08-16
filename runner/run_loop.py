@@ -59,7 +59,7 @@ def main():
     requirement_content = req_file_path.read_text(encoding="utf-8") if req_file_path.exists() else ""
 
     evaluator = get_llm_adapter(evaluator_provider, model_name=evaluator_model)
-    executor = get_llm_adapter(executor_provider, model_name=executor_model, api_url=local_llm_url)
+    executor = get_llm_adapter(executor_provider, model_name=executor_model, base_url=local_llm_url)
 
     harness_script = root_dir / "scripts" / "verify-harness.sh"
 
