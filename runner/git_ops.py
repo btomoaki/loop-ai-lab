@@ -10,6 +10,8 @@ def ensure_target_git_init(target_dir: Path):
     git_dir = target_dir / ".git"
     if not git_dir.exists():
         subprocess.run(["git", "init"], cwd=target_dir, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.name", "Loop AI Agent"], cwd=target_dir, check=False)
+        subprocess.run(["git", "config", "user.email", "agent@loop-ai-lab.local"], cwd=target_dir, check=False)
         print(f" 📦 [Target Git] Initialized independent Git repository in: {target_dir}")
 
 def commit_step_if_needed(target_dir: Path, loop_count: int, message: str):
