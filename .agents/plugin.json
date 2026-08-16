@@ -1,0 +1,8 @@
+{
+  "name": "loop-ai-lab-customizations",
+  "version": "1.0.0",
+  "description": "Project-level skills and agent customizations for Loop AI Lab",
+  "skills": [
+    "frontend-design"
+  ]
+}
