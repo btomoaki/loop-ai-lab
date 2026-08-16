@@ -1,19 +1,27 @@
-# インフラ・ミドルウェア構築ポリシー (Infrastructure & Middleware Policy)
+# インフラ・IaC セットアップ ポリシー (Infrastructure Setup Policy)
 
-本ドキュメントは、インフラコード (Docker / Kubernetes / Helm / Terraform / Cloud Run 等) やミドルウェアの選定規約を定義します。
+## 1. 原則 (Principles)
+- **宣言的インフラ (Declarative Infrastructure)**: 手動変更を禁止し、すべて Dockerfile, Compose, Helm Chart, Terraform 等のコードで管理すること。
+- **再現性とクリーンネス**: ローカル環境依存を排除し、誰の環境でも同一の `make test` や `helm template` で検証可能とすること。
 
-## 1. ミドルウェア・コンテナ選定基準 (Selection Criteria)
-- **ローカルプルスルーキャッシュ (local-setup) の優先利用**:
-  - Docker Hub や GHCR からイメージを pull/build する際は、`local-setup` が提供するローカルプロキシキャッシュ (`registry.localhost` または `ghcr.localhost`) を優先利用すること。
-- **安定版 (LTS / Stable) の優先**:
-  - ベースイメージやパッケージは、開発中の最新版ではなく公式推奨の長期サポート版 (LTS) または Stable タグを採用すること。
-- **公式・Bitnami レジストリ優先**:
-  - オープンソースミドルウェア（PostgreSQL, Redis, RabbitMQ 等）を採用する際は、公式または Bitnami などの検証済みリポジトリを最優先利用すること。
-- **ドキュメント・エコシステム重視**:
-  - サポートコミュニティが広く、標準ドキュメントが豊富な構成を採用すること。
+## 2. ローカル検証インフラ (local-setup) 連携ルール
+- **ネットワーク & プロキシ標準**:
+  - Web アプリケーションや API をデプロイする場合は、ホスト直付けのポートマッピング（例: `-p 80:80`）を避け、可能な限り `local-setup` プロキシ（`http://localhost` または *.localhost）経由でルーティング可能に構成すること。
+  - Kubernetes / Helm チャートの場合は `Ingress` または `NodePort` を標準で含めること。
+- **コンテナレジストリ**:
+  - カスタムイメージをビルド・使用する場合は `registry.localhost` (ローカルレジストリ) を優先的に利用すること。
 
-## 2. 構成原則 (Infrastructure Principles)
-- **環境差異の排除**:
-  - ローカル環境とクラウドデプロイ環境の構成差分を極力無くし、環境変数経由でスイッチ可能にすること。
-- **ネットワーク境界の隔離**:
-  - 外部公開が不要なミドルウェア・データベースは外部ポートバインドを避け、内部ネットワーク (`local-common-net` や K8s ClusterIP) に閉じ込めること。
+## 3. 実装・ドキュメント作成の責務分離ルール (Separation of Concerns)
+- **ローカル Executor の責務 (Code Only)**:
+  - 1ステップでのコード生成は機能コード（`Chart.yaml`, `values.yaml`, `templates/*.yaml` 等）の実装・修正に専念すること。
+  - `README.md` の作成・編集を一度のステップで同時に行う必要はない。
+- **Evaluator / System の責務 (Documentation & Delivery)**:
+  - ハーネス検証（`helm lint`, `helm template` 等）が合格 (Green) した後、システムが自動的に Evaluator (Claude) を呼び出し、最新のコードベースに基づく親切な `README.md` を最終生成・コミットする。
+
+## 4. 実装ステップ分割ルール (Step Execution Rules)
+- **1ステップあたりの出力ファイル数は最大3ファイルまで**:
+  - 一度の実装ステップで生成・更新するファイルは最大3つに限定すること。
+  - ファイル数が多い場合は、複数ステップに分割して実装すること。
+- **優先順位**:
+  1. まず `Chart.yaml` + `values.yaml` を作成・修正する
+  2. 次に `templates/` 配下のマニフェストを作成・修正する

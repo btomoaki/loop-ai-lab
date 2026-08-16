@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ------------------------------------------------------------------------------
-# Verification & Guardrail Harness Script
+# Verification & Guardrail Harness Script (Functional Code Focus)
 # ------------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,6 +55,6 @@ if [ ${EXIT_CODE} -eq 0 ]; then
     echo "✅ [SUCCESS] Verification passed (Exit Code: 0)"
     exit 0
 else
-    echo "❌ [FAILED] Verification failed (Exit Code: ${EXIT_CODE})"
+    echo "❌ [FAILED] Verification command failed (Exit Code: ${EXIT_CODE})"
     exit ${EXIT_CODE}
 fi

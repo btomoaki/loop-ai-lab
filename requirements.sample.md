@@ -1,14 +1,12 @@
-# 要件定義書サンプル (Requirements Specification Sample)
+# Helm チャート自動構築・検証要件
 
-本ファイルは `loop-ai-lab` 自律ループに引き渡す要件仕様書のサンプルテンプレートです。
+`workspace/helm-app` ディレクトリ内に、Nginx Web サービス用の正当な Helm チャートを構築すること。
 
-## 1. 目的・目標 (Goal)
-- [ ] ターゲットプロジェクトにおける目的や達成すべき成果物を記述します。
+## 必須成果物
+- `Chart.yaml`: チャートのメタデータ定義 (apiVersion: v2, name: helm-app, version: 0.1.0)
+- `values.yaml`: イメージ、レプリカ数、ポート等のデフォルト設定値定義 (Bitnami または公式 Nginx イメージ `nginx:alpine` を使用)
+- `templates/deployment.yaml`: Deployment 定義
+- `templates/service.yaml`: Service 定義
 
-## 2. 必須要件 (Requirements)
-1. **機能・構成要件**:
-   - 実装・構築すべき仕様や形式（ソースコード, Docker Compose, Helm チャート等）を指定。
-2. **検証条件 (Acceptance Criteria)**:
-   - `VERIFY_COMMAND`（例: `make test` や `docker compose config`）がエラーなく終了すること。
-3. **クレデンシャル安全性の維持**:
-   - パスワードやAPIキー等の機密情報をコード上に直書きしないこと。
+## 合否条件 (Acceptance Criteria)
+- `helm lint` および `helm template` コマンドがエラーなく実行できること (Exit Code 0)。

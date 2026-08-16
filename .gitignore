@@ -1,0 +1,14 @@
+# Log files
+logs/
+*.log
+
+# Workspace target projects contents (Keep workspace directory via .gitkeep)
+workspace/*
+!workspace/.gitkeep
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Environment files with potential sensitive keys
+*.secret
