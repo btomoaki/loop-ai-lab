@@ -11,7 +11,7 @@ from pathlib import Path
 # Add current project root to PYTHONPATH
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from runner.adapters import get_adapter
+from runner.adapters import get_llm_adapter
 from runner.parser import apply_code_changes
 from runner.git_ops import ensure_target_git_init, commit_step_if_needed
 
@@ -58,8 +58,8 @@ def main():
     policy_content = policy_path.read_text(encoding="utf-8") if policy_path.exists() else ""
     requirement_content = req_file_path.read_text(encoding="utf-8") if req_file_path.exists() else ""
 
-    evaluator = get_adapter(evaluator_provider, model_name=evaluator_model)
-    executor = get_adapter(executor_provider, model_name=executor_model, api_url=local_llm_url)
+    evaluator = get_llm_adapter(evaluator_provider, model_name=evaluator_model)
+    executor = get_llm_adapter(executor_provider, model_name=executor_model, api_url=local_llm_url)
 
     harness_script = root_dir / "scripts" / "verify-harness.sh"
 
