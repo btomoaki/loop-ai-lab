@@ -26,7 +26,7 @@ cd "${TARGET_DIR}"
 # -----------------------------------------------------------------
 # Smart Pre-Harness Guard: 空ワークスペースの事前検知
 # -----------------------------------------------------------------
-HAS_FILES=$(find . -maxdepth 2 -type f ! -name ".git*" ! -name "README.md" ! -name "prompt_history.md" 2>/dev/null | head -n 1)
+HAS_FILES=$(find . -maxdepth 2 -path "./.git" -prune -o -type f ! -name "README.md" ! -name "prompt_history.md" -print 2>/dev/null | grep -v "^\." | head -n 1)
 if [ -z "$HAS_FILES" ]; then
     echo "ℹ️ [Harness Guard] Target workspace is currently empty (No implementation files found)."
     echo "ℹ️ [Harness Guard] Prompting Executor to generate initial project structure and boilerplate."
