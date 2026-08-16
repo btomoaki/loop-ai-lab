@@ -59,3 +59,10 @@
   - Reinforced Go module import consistency, `//go:embed` asset co-generation, and struct test type safety rules across `policies/feature_dev.md` and `agents/code-executor.md`.
   - Corrected harness verification command paths in `config.env` to ensure raw Go compilation logs are accurately evaluated.
 - **Files Affected:** `runner/run_loop.py`, `config.env`, `policies/feature_dev.md`, `agents/code-executor.md`, `prompt_history.md`
+
+## Step 15: 2026-08-17
+- **Prompt:** `Refactor and modularize run_loop.py into dedicated submodules with extension-based dynamic code formatters.`
+- **Summary:**
+  - Decoupled `runner/run_loop.py` by extracting code parsing into `runner/parser.py`, Git operations into `runner/git_ops.py`, and auto-formatting into `runner/formatters.py`.
+  - Implemented extension-based dynamic code formatter registry (`runner/formatters.py`) that auto-detects modified file types (`.go`, `.py`, `.js`, etc.) and executes appropriate formatters prior to Git commits.
+- **Files Affected:** `runner/run_loop.py`, `runner/parser.py`, `runner/git_ops.py`, `runner/formatters.py`, `prompt_history.md`
