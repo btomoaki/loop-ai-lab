@@ -94,6 +94,14 @@ def ensure_target_git_init(target_dir: Path):
 
 def commit_target_step(target_dir: Path, loop_count: int, message: str):
     try:
+        # コミット前にコードフォーマッタを自動実行
+        try:
+            if (target_dir / "go.mod").exists() or list(target_dir.rglob("*.go")):
+                subprocess.run(["gofmt", "-w", "."], cwd=target_dir, check=False)
+                print(" 🎨 [Auto-Format] Executed gofmt -w . on target workspace")
+        except Exception as e:
+            print(f" ⚠️  [Auto-Format Warning] {e}")
+
         subprocess.run(["git", "add", "."], cwd=target_dir, check=True, capture_output=True)
         commit_msg = f"Step #{loop_count}: {message[:60]}"
         subprocess.run(["git", "commit", "-m", commit_msg], cwd=target_dir, check=True, capture_output=True)
