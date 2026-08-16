@@ -29,3 +29,8 @@
   - `//go:embed` を含むコードを出力する場合、参照先の静的ファイル（例: `static/index.html` や `static/css/style.css`）を同一ステップ内で必ず同時に生成すること（未存在参照によるコンパイルエラーの防止）。
 - **単体テストコードの厳格性**:
   - テストコードを追加する際は、テスト対象の構造体のフィールドの公開・非公開（大文字/小文字）および型を厳密に一致させること。
+
+## Target Directory Separation Rule
+- **No Workspace prompt_history.md**:
+  - Do NOT create or instruct to create `prompt_history.md` or `implementation_plan.md` inside the target application directory (`workspace/*`).
+  - Focus strictly on application source code, module definition, configuration files, and unit tests.
