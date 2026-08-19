@@ -119,3 +119,20 @@
 ## Step 25 - 2026-08-20
 - **Prompt**: Consolidate `references/` gitignore rules into root `.gitignore` and add `references/.gitkeep`
 - **Summary of Decision**: Removed nested `references/.gitignore` and consolidated user reference exclusion rules directly into the root `.gitignore`. Created `references/.gitkeep` for directory structure preservation.
+## Step 26 - 2026-08-20
+- **Prompt**: Switch to feature branch workflow for icon_generator verification
+- **Summary of Decision**: Enforce feature branch workflow (`feature/icon-generator-verification`) for icon_generator implementation and verification tasks, keeping the `main` branch clean.
+## Step 27 - 2026-08-20
+- **Prompt**: Create environment cleanup shell script `scripts/clean-env.sh`
+- **Summary of Decision**: Created `scripts/clean-env.sh` to allow quick resetting of generated workspace code, scrum state artifacts, and python cache for clean re-runs.
+## Step 28 - 2026-08-20
+- **Prompt**: Include state memo/progress cleanup and add `state/.gitkeep`
+- **Summary of Decision**: Updated `scripts/clean-env.sh` to purge `state/memo.md` and `state/progress.md` for clean initial loop runs, and added `state/.gitkeep` to preserve directory tracking in Git.
+## Step 29 - 2026-08-20
+- **Prompt**: Implement file-based prompt exchange using `state/.evaluator/` workspace directory
+- **Summary of Decision**: Refactored `runner/run_scrum.py` and `runner/adapters.py` to route all prompt and completion interactions with Evaluator and Executor through `state/.evaluator/` markdown files, preventing CLI argument truncation and standard input blocking.
+
+## Step 29: Process Management & AGY Adapter Refactoring (2026-08-20)
+- **User Order**: Process cleanup, CLI stream pipe adapter fix, and commit current workspace state.
+- **Summary**: Refactored `GeminiAdapter` to use file-based stdin pipe streaming for large prompts to eliminate CLI string length limits and timeouts. Enhanced `runner/run_scrum.py` Pass 2 prompt for reliable harness generation. Updated `scripts/clean-env.sh` with automatic process termination (`pkill -9 -f run_scrum.py`) to prevent orphaned background LLM processes.
+- **Files Modified**: `runner/adapters.py`, `runner/run_scrum.py`, `scripts/clean-env.sh`, `.gitignore`, `state/.gitkeep`

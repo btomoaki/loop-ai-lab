@@ -181,7 +181,7 @@ def run_sprint_phase(config, root_dir, sprint_num=1):
         err_log = res.stdout[-1500:] if res.stdout else res.stderr[-1500:]
 
         eval_prompt = f"""[SYSTEM INSTRUCTION - SPRINT EVALUATOR]
-You are Lead Sprint Evaluator. Analyze current harness failure and instruct the Executor on exact code changes.
+You are Lead Sprint Evaluator. Analyze current harness failure and instruct the Executor on exact code changes in concise English.
 
 ## SPRINT #{sprint_num} BACKLOG:
 ```markdown
@@ -194,7 +194,7 @@ You are Lead Sprint Evaluator. Analyze current harness failure and instruct the 
 {err_log}
 ```
 
-TARGET OUTPUT FORMAT:
+TARGET OUTPUT FORMAT (in English):
 ### 1. [ACTION REQUIRED]
 - **What Failed**: Brief explanation of root cause.
 - **Target Files**: `relative/file/path.go`

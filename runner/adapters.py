@@ -11,8 +11,15 @@ class GeminiAdapter(BaseLLMAdapter):
         self.model_name = model_name
 
     def generate_text(self, prompt: str) -> str:
-        print(f"   Connecting to Cloud Evaluator (Gemini REST / CLI)...")
+        print(f"   Connecting to Cloud Evaluator (Gemini REST / File-based AGY CLI)...")
         
+        from pathlib import Path
+        eval_dir = Path("state/.evaluator")
+        eval_dir.mkdir(parents=True, exist_ok=True)
+        prompt_file = eval_dir / "latest_prompt.md"
+        response_file = eval_dir / "latest_response.md"
+        prompt_file.write_text(prompt, encoding="utf-8")
+
         # 1. First try direct REST API if GEMINI_API_KEY is available
         api_key = os.environ.get("GEMINI_API_KEY", "")
         if api_key:
@@ -26,19 +33,23 @@ class GeminiAdapter(BaseLLMAdapter):
                 with urllib.request.urlopen(req, timeout=60) as response:
                     res_body = response.read().decode('utf-8')
                     res_json = json.loads(res_body)
-                    return res_json['candidates'][0]['content']['parts'][0]['text']
+                    result_text = res_json['candidates'][0]['content']['parts'][0]['text']
+                    response_file.write_text(result_text, encoding="utf-8")
+                    return result_text
             except Exception as e:
                 print(f"⚠️ [Gemini REST Warning]: {e}")
 
-        # 2. Try non-blocking CLI prompt execution
-        for cli in ["agy", "gemini"]:
-            cmd = [cli, "prompt", prompt]
-            try:
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-                if res.returncode == 0 and res.stdout.strip():
-                    return res.stdout
-            except Exception:
-                pass
+        # 2. File-based stdin pipe execution (prevents CLI argument string limit crash)
+        cmd = ["agy", "prompt"]
+        try:
+            res = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=120)
+            if res.returncode == 0 and res.stdout.strip():
+                response_file.write_text(res.stdout, encoding="utf-8")
+                return res.stdout
+            else:
+                print(f"⚠️ [AGY CLI Error]: ReturnCode {res.returncode}, Stderr: {res.stderr[:200]}")
+        except Exception as e:
+            print(f"⚠️ [AGY CLI Exception]: {e}")
 
         return ""
 

@@ -3,7 +3,8 @@
 config.env.local
 
 # Dynamic Scrum State & Workspace
-state/
+state/*
+!state/.gitkeep
 workspace/
 coverage_sprint*.out
 
