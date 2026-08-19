@@ -144,6 +144,15 @@ Generate the exact file changes using `# FILE: filepath` markers.
         with open(eval_log_path, "a", encoding="utf-8") as f:
             f.write(log_entry)
 
+        current_issues_path = root_dir / "current_issues.md"
+        if not harness_success:
+            err_summary = res.stdout[-1500:] if res.stdout else "No output"
+            issues_content = f"# Current Build & Test Issues\n\n## �� Harness Failure (Step #{step_num})\n\n```text\n" + err_summary + "\n```\n"
+            current_issues_path.write_text(issues_content, encoding="utf-8")
+        else:
+            clean_content = f"# Current Build & Test Issues\n\n## 🟢 Status: CLEAN\nStep #{step_num} passed harness validation successfully.\n"
+            current_issues_path.write_text(clean_content, encoding="utf-8")
+
         if harness_success:
             print(f"🎉 [SUCCESS] Step #{step_num} Passed Harness Validation!")
             commit_step_if_needed(target_dir, step_num, f"Step #{step_num} passed harness")

@@ -1,22 +1,21 @@
-# Log files
-logs/
-*.log
+# Environment & Secrets
+.env
+config.env.local
 
-# Workspace target projects contents (Keep workspace directory via .gitkeep)
-workspace/*
-!workspace/.gitkeep
+# Dynamic Scrum State & Workspace
+state/
+workspace/
+coverage_sprint*.out
 
-# Python bytecode
+# User Reference Files (Ignore user additions, keep repository defaults)
+references/*
+!references/.gitkeep
+!references/GEMINI.md
+!references/go_clean_architecture.md
+!references/icon_generator.md
+
+# Python Cache
 __pycache__/
 *.pyc
-
-# Environment files with potential sensitive keys
-*.secret
-
-# Agent Skills directory (Managed via .agents/plugin.json manifest)
-.agents/skills/
-
-# Python cache & bytecode
-runner/__pycache__/
-*.pyc
-*.pyo
+.venv/
+./runner/__pycache__/*.pyc

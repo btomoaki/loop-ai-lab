@@ -1,35 +1,49 @@
 import os
 import subprocess
-from abc import ABC, abstractmethod
+from pathlib import Path
 
-class BaseLLMAdapter(ABC):
-    """LLMプロバイダ共通の抽象インターフェース"""
-    @abstractmethod
+class BaseLLMAdapter:
     def generate_text(self, prompt: str, system_instruction: str = "") -> str:
-        pass
+        raise NotImplementedError
 
 class GeminiAdapter(BaseLLMAdapter):
-    """agy CLI を経由して Gemini を呼び出すアダプター"""
-    def __init__(self, model_name: str = ""):
+    def __init__(self, model_name: str = "gemini-3.7-flash-low", **kwargs):
         self.model_name = model_name
 
-    def generate_text(self, prompt: str, system_instruction: str = "") -> str:
-        full_prompt = prompt
-        if system_instruction:
-            full_prompt = f"System Instruction:\n{system_instruction}\n\nUser Request:\n{prompt}"
-            
-        cmd = ["agy", "-p", full_prompt]
-        if self.model_name:
-            cmd.extend(["--model", self.model_name])
-            
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return res.stdout.strip()
-        except Exception as e:
-            return f"[Error running agy CLI]: {e}"
+    def generate_text(self, prompt: str) -> str:
+        print(f"   Connecting to Cloud Evaluator (Gemini REST / CLI)...")
+        
+        # 1. First try direct REST API if GEMINI_API_KEY is available
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if api_key:
+            import urllib.request
+            import json
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            payload = {"contents": [{"parts": [{"text": prompt}]}]}
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+            try:
+                with urllib.request.urlopen(req, timeout=60) as response:
+                    res_body = response.read().decode('utf-8')
+                    res_json = json.loads(res_body)
+                    return res_json['candidates'][0]['content']['parts'][0]['text']
+            except Exception as e:
+                print(f"⚠️ [Gemini REST Warning]: {e}")
+
+        # 2. Try non-blocking CLI prompt execution
+        for cli in ["agy", "gemini"]:
+            cmd = [cli, "prompt", prompt]
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                if res.returncode == 0 and res.stdout.strip():
+                    return res.stdout
+            except Exception:
+                pass
+
+        return ""
+
 
 class LocalOllamaAdapter(BaseLLMAdapter):
-    """Ollama API (/api/generate) アダプター - 後方互換のため保持 (Python標準ライブラリ使用)"""
     def __init__(self, model_name: str = "qwen3.6:27b", base_url: str = "http://127.0.0.1:11434", num_ctx: int = 16384):
         self.model_name = model_name
         self.num_ctx = num_ctx
@@ -69,61 +83,48 @@ class LocalOllamaAdapter(BaseLLMAdapter):
             return f"[Ollama Error]: {e}"
 
 class LlamaCppAdapter(BaseLLMAdapter):
-    """llama.cpp server (llama-server) OpenAI 互換 API アダプター
+    def __init__(self, base_url: str = None, model_name: str = "devstral", max_tokens: int = 4096, **kwargs):
+        if not base_url:
+            from runner.run_loop import load_env_config
+            from pathlib import Path
+            config = load_env_config(Path("config.env").resolve())
+            base_url = config.get("LOCAL_LLM_URL", "http://127.0.0.1:11435/completion")
 
-    llama-server は /v1/chat/completions エンドポイントを提供する。
-    コンテキストウィンドウはサーバー起動時の -c オプションで確定するため
-    per-request での num_ctx 指定は不要。
-    """
-    def __init__(self, model_name: str = "", base_url: str = "http://127.0.0.1:8080",
-                 max_tokens: int = 4096, timeout: int = 600):
+        base_url = base_url.strip()
+        if not base_url.endswith("/completion"):
+            base_url = base_url.rstrip("/") + "/completion"
+        
+        self.endpoint_url = base_url
         self.model_name = model_name
-        self.base_url = base_url.rstrip("/")
-        self.api_url = f"{self.base_url}/v1/chat/completions"
         self.max_tokens = max_tokens
-        self.timeout = timeout
 
-    def generate_text(self, prompt: str, system_instruction: str = "") -> str:
-        import json
+    def generate_text(self, prompt: str) -> str:
         import urllib.request
-        import urllib.error
-
-        messages = []
-        if system_instruction:
-            messages.append({"role": "system", "content": system_instruction})
-        messages.append({"role": "user", "content": prompt})
-
+        import json
+        print(f"   Connecting to Local LLM Native Endpoint ({self.endpoint_url})...")
         payload = {
-            "messages": messages,
-            "max_tokens": self.max_tokens,
-            "stream": False,
+            "prompt": prompt,
+            "n_predict": self.max_tokens,
+            "temperature": 0.2,
+            "stop": ["</s>", "USER:", "ASSISTANT:"]
         }
-        # model フィールドはオプション（llama-server はロード済みモデルを使う）
-        if self.model_name:
-            payload["model"] = self.model_name
-
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            self.api_url, data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+        headers = {
+            "Content-Type": "application/json",
+            "Accept-Encoding": "identity"
+        }
+        req = urllib.request.Request(self.endpoint_url, data=data, headers=headers)
         try:
-            print(f"   Connecting to llama-server: {self.api_url} (max_tokens={self.max_tokens})...")
-            with urllib.request.urlopen(req, timeout=self.timeout) as response:
+            with urllib.request.urlopen(req, timeout=180) as response:
                 res_body = response.read().decode("utf-8")
                 res_json = json.loads(res_body)
-                return res_json["choices"][0]["message"]["content"].strip()
-        except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", errors="replace")
-            return f"[LlamaCpp HTTP Error {e.code}]: {body}"
-        except urllib.error.URLError as e:
-            return f"[LlamaCpp Connection Error]: Failed to reach {self.api_url}. Reason: {e}"
+                return res_json.get("content", "")
         except Exception as e:
-            return f"[LlamaCpp Error]: {e}"
+            print(f"❌ [LlamaCpp Error]: {e}")
+            return ""
+
 
 class ClaudeAdapter(BaseLLMAdapter):
-    """Anthropic Claude API アダプター (anthropic SDK 使用, 未インストール時は urllib でフォールバック)"""
     def __init__(self, model_name: str = "claude-sonnet-4-5"):
         self.model_name = model_name
 
@@ -151,7 +152,6 @@ class ClaudeAdapter(BaseLLMAdapter):
             return f"[Claude Error]: {e}"
 
     def _generate_via_http(self, prompt: str, system_instruction: str = "") -> str:
-        """anthropic SDK 未インストール時の urllib フォールバック"""
         import json
         import urllib.request
         import urllib.error
@@ -188,19 +188,11 @@ class ClaudeAdapter(BaseLLMAdapter):
         except Exception as e:
             return f"[Claude urllib Error]: {e}"
 
-def get_llm_adapter(provider: str, model_name: str, base_url: str = "", num_ctx: int = 16384, max_tokens: int = 4096) -> BaseLLMAdapter:
-    """設定フラグに応じて適切な LLM アダプターインスタンスを返すファクトリ関数"""
-    provider = provider.lower().strip()
-    if provider == "gemini":
-        return GeminiAdapter(model_name=model_name)
-    elif provider in ("claude", "anthropic"):
-        return ClaudeAdapter(model_name=model_name)
-    elif provider in ("llama_cpp", "llama"):
-        url = base_url if base_url else "http://127.0.0.1:8080"
-        return LlamaCppAdapter(model_name=model_name, base_url=url, max_tokens=max_tokens)
-    elif provider in ("local_ollama", "ollama", "openai"):
-        url = base_url if base_url else "http://localhost:11434/v1"
-        return LocalOllamaAdapter(model_name=model_name, base_url=url, num_ctx=num_ctx)
+def get_llm_adapter(provider: str, model_name: str = None, base_url: str = None, **kwargs) -> BaseLLMAdapter:
+    prov = provider.lower().strip()
+    if prov in ("gemini", "google"):
+        return GeminiAdapter(model_name=model_name or "gemini-3.7-flash-low", **kwargs)
+    elif prov in ("llama_cpp", "llama", "local_ollama", "ollama", "local"):
+        return LlamaCppAdapter(base_url=base_url, model_name=model_name or "devstral", **kwargs)
     else:
-        # デフォルトフォールバック
-        return GeminiAdapter(model_name=model_name)
+        raise ValueError(f"Unsupported LLM provider: {provider}")

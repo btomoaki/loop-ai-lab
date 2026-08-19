@@ -11,31 +11,37 @@ fi
 TARGET_DIR="${TARGET_DIR:-${BASE_DIR}/workspace/avatar-service}"
 VERIFY_COMMAND="${VERIFY_COMMAND:-cd ${TARGET_DIR} && go test ./... && go build -o /tmp/avatar-server .}"
 
-echo "================================================================="
-echo " [Harness] Target Directory: ${TARGET_DIR}"
-echo " [Harness] Verify Command : ${VERIFY_COMMAND}"
-echo "================================================================="
-
 if [ ! -d "${TARGET_DIR}" ]; then
     mkdir -p "${TARGET_DIR}"
 fi
 
 cd "${TARGET_DIR}"
 
-
 # -----------------------------------------------------------------
-# Smart Pre-Harness Guard: 空ワークスペースの事前検知
+# Smart Pre-Harness Guard: 空ワークスペースの事前検知 (TARGET_DIR内)
 # -----------------------------------------------------------------
-HAS_FILES=$(find . -maxdepth 2 -path "./.git" -prune -o -type f ! -name "README.md" ! -name "prompt_history.md" -print 2>/dev/null | grep -v "^\." | head -n 1)
+HAS_FILES=$(find . -maxdepth 3 -type f ! -name "README.md" ! -name "prompt_history.md" ! -path "*/.git/*" -print 2>/dev/null | head -n 1 || true)
 if [ -z "$HAS_FILES" ]; then
     echo "ℹ️ [Harness Guard] Target workspace is currently empty (No implementation files found)."
-    echo "ℹ️ [Harness Guard] Prompting Executor to generate initial project structure and boilerplate."
     exit 1
+fi
+
+echo "================================================================="
+echo " [Harness] Target Directory: ${TARGET_DIR}"
+echo " [Harness] Verify Command : ${VERIFY_COMMAND}"
+echo "================================================================="
+
+# -----------------------------------------------------------------
+# Auto-resolve Go third-party dependencies before testing
+# -----------------------------------------------------------------
+if [ -f "go.mod" ]; then
+    echo "📦 Auto-tidying Go dependencies (go mod tidy)..."
+    go mod tidy 2>&1 || true
 fi
 
 echo "🚀 Running verification command..."
 set +e
-LOG_OUTPUT=$(eval "${VERIFY_COMMAND}" 2>&1)
+LOG_OUTPUT=$(eval "${VERIFY_COMMAND}" 2>&1 | sed -E "s|/home/wimet/\.local/share/mise/installs/go/[^/]+/src/|<GOROOT>/|g" | sed -E "s|/home/wimet/work/loop-ai-lab/workspace/avatar-service/||g" | sed -E "s|/home/wimet/work/loop-ai-lab/||g")
 EXIT_CODE=$?
 set -e
 
