@@ -1,289 +1,146 @@
-#!/usr/bin/env python3
-"""
-Scrum AI Loop Orchestration Runner (2-Pass Refinement Engine & 10-Loop Limit)
-"""
-
 import os
 import sys
+import json
+import re
 import argparse
 import subprocess
-import re
 from pathlib import Path
+from typing import Dict, Any, List
 
-root_dir = Path(__file__).resolve().parent.parent
-if str(root_dir) not in sys.path:
-    sys.path.insert(0, str(root_dir))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from adapters import GeminiAdapter, LlamaCppAdapter
 
-from runner.run_loop import load_env_config
-from runner.adapters import get_llm_adapter
-
-def parse_code_blocks(text: str) -> dict:
-    files = {}
-    pattern = r"(?:#|//|<!--)\s*FILE:\s*([^\s\n]+).*?\n```[a-zA-Z0-9_-]*\n(.*?)```"
-    matches = re.findall(pattern, text, re.DOTALL)
-    for filepath, code in matches:
-        fp = filepath.strip()
-        valid_exts = ('.go', '.html', '.css', '.js', '.json', '.md', '.yml', '.yaml', '.sh', '.env', 'go.mod', 'go.sum', 'Dockerfile')
-        if any(fp.endswith(ext) or fp in ('go.mod', 'go.sum') for ext in valid_exts):
-            files[fp] = code.strip()
-    return files
-
-def apply_code_changes(files: dict, base_dir: Path):
-    for rel_path, content in files.items():
-        target_path = base_dir / rel_path
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        target_path.write_text(content + "\n", encoding="utf-8")
-        print(f" ✍️  [Applied] {target_path}")
-
-def run_refinement_phase(config, root_dir, sprint_num=1):
-    print("\n==================================================")
-    print(" 🔍 [Scrum Phase 1] 2-Pass Refinement Execution")
-    print("==================================================")
-
-    req_file_path = root_dir / config.get("REQUIREMENT_FILE", "requirements.sample.md")
-    req_content = req_file_path.read_text(encoding="utf-8") if req_file_path.exists() else "No specific requirement file."
-
-    refine_provider = config.get("REFINEMENT_PROVIDER", config.get("EVALUATOR_PROVIDER", "gemini")).lower().strip()
-    refine_model = config.get("REFINEMENT_MODEL", config.get("EVALUATOR_MODEL", "gemini-3.7-flash-low"))
-
-    if refine_provider in ("llama_cpp", "llama", "local_ollama", "ollama"):
-        print("⚠️ [Refinement Guardrail Warning]: Falling back from local LLM to Gemini Cloud LLM for Refinement!")
-        refine_provider = "gemini"
-        refine_model = "gemini-3.7-flash-low"
-
-    print(f" 🤖 [Refinement Engine]: Using {refine_provider.upper()} ({refine_model})")
-    refinement_agent = get_llm_adapter(refine_provider, model_name=refine_model)
-
-    policies_dir = root_dir / "policies"
-    references_dir = root_dir / "references"
-    avail_policies = [p.name for p in policies_dir.glob("*.md")] if policies_dir.exists() else []
-    avail_refs = [r.name for r in references_dir.glob("*.md")] if references_dir.exists() else []
-
-    retro_path = root_dir / "state/sprints/retrospective.md"
-    retro_context = f"\n\n## 💡 LESSONS LEARNED FROM PAST RETROSPECTIVE:\n```markdown\n{retro_path.read_text(encoding='utf-8')}\n```" if retro_path.exists() else ""
-
-    # Pass 1: Product Roadmap & Sprint Backlogs
-    print("\n🧐 [Refinement Pass 1/2] Generating Product Roadmap & All Sprint Backlogs...")
-    pass1_prompt = f"""[REFINEMENT PASS 1: ROADMAP & BACKLOGS]
-You are Lead Product Owner. Split requirements into a detailed multi-sprint roadmap and backlogs.
-
-## REQUIREMENTS:
-```markdown
-{req_content}
-```
-
-## AVAILABLE BASE POLICIES: {avail_policies}
-## AVAILABLE KNOWLEDGE REFERENCES: {avail_refs}{retro_context}
-
-## 🤖 TARGET EXECUTOR SPECIFICATION (Local LLM - Devstral 24B):
-- Context Window: 16,384 tokens | Max Generation: 4,096 tokens
-- High capacity for one-shot initial skeleton generation. Keep Sprint scope achievable in 3-5 loops.
-
-## 🚫 CRITICAL CONSTRAINT (STRICT NEGATIVE PROMPT):
-- ABSOLUTELY PROHIBITED: Do NOT write "Go標準ライブラリのみ" or "標準パッケージのみ" or "ゼロ依存" anywhere in product_backlog.md or backlog files!
-- Third-party Go libraries (e.g. Gin, Chi, Zap, image packages) are FULLY ALLOWED and encouraged.
-
-## YOUR TASK (PASS 1):
-1. Write a HIGHLY DETAILED `state/sprints/product_backlog.md` (Product vision, detailed sprint roadmap for Sprint 1, 2, 3 with architecture/scope explanations, and gap analysis).
-2. Write detailed Backlogs for ALL SPRINTS: `state/sprints/sprint_1_backlog.md`, `state/sprints/sprint_2_backlog.md`, `state/sprints/sprint_3_backlog.md`.
-
-Please provide code blocks with `# FILE: filepath` markers for:
-- `state/sprints/product_backlog.md`
-- `state/sprints/sprint_1_backlog.md`
-- `state/sprints/sprint_2_backlog.md`
-- `state/sprints/sprint_3_backlog.md`
-"""
-
-    raw_pass1 = refinement_agent.generate_text(pass1_prompt)
-    files_pass1 = parse_code_blocks(raw_pass1)
-    if files_pass1:
-        apply_code_changes(files_pass1, root_dir)
-        print("✅ [Pass 1/2 Complete] Product Roadmap & Sprint Backlogs generated.")
-    else:
-        print("⚠️ [Pass 1/2] Failed to extract roadmap/backlog files.")
-        return False
-
-    # Pass 2: Custom Harnesses & Sprint Policy
-    print("\n🛠️ [Refinement Pass 2/2] Generating Executable Custom Harnesses & Policy...")
-    pb_path = root_dir / "state/sprints/product_backlog.md"
-
-    pass2_prompt = f"""[REFINEMENT PASS 2: CUSTOM HARNESSES & POLICY]
-You are Lead Architect. You MUST write complete, fully-functional executable bash test scripts for each Sprint.
-
-## YOUR TASK (PASS 2):
-Write COMPLETE bash scripts starting with `#!/usr/bin/env bash` and `set -euo pipefail`.
-
-Please provide non-empty code blocks with `# FILE: filepath` markers for:
-- `state/sprints/sprint_1_policy.md`
-- `state/sprints/sprint_1_harness.sh`
-- `state/sprints/sprint_2_harness.sh`
-- `state/sprints/sprint_3_harness.sh`
-"""
-
-    raw_pass2 = refinement_agent.generate_text(pass2_prompt)
-    files_pass2 = parse_code_blocks(raw_pass2)
-    if files_pass2:
-        apply_code_changes(files_pass2, root_dir)
-        for s in [1, 2, 3]:
-            h_path = root_dir / f"state/sprints/sprint_{s}_harness.sh"
-            if h_path.exists():
-                os.chmod(h_path, 0o755)
-        print("🎉 [Scrum Phase 1 Complete] 2-Pass Refinement Finished 100% GREEN!")
-        return True
-    else:
-        print("⚠️ [Pass 2/2] Failed to extract harness files.")
-        return False
-
-def run_sprint_phase(config, root_dir, sprint_num=1):
-    print("\n==================================================")
-    print(f" 🏃 [Scrum Phase 2] Executing Sprint #{sprint_num}")
-    print("==================================================")
-
-    custom_harness_path = root_dir / f"state/sprints/sprint_{sprint_num}_harness.sh"
-    if not custom_harness_path.exists():
-        print(f"❌ Custom harness for Sprint #{sprint_num} not found at {custom_harness_path}")
-        return False
-
-    target_dir = root_dir / config.get("TARGET_DIR", "workspace/sample-project")
-    evaluator_provider = config.get("EVALUATOR_PROVIDER", "gemini")
-    evaluator_model = config.get("EVALUATOR_MODEL", "gemini-3.7-flash-low")
-    executor_provider = config.get("EXECUTOR_PROVIDER", "llama_cpp")
-    executor_model = config.get("EXECUTOR_MODEL", "devstral")
-
-    evaluator = get_llm_adapter(evaluator_provider, model_name=evaluator_model)
-    local_url = config.get("LOCAL_LLM_URL", "http://127.0.0.1:11435/completion")
-    executor = get_llm_adapter(executor_provider, model_name=executor_model, base_url=local_url)
-
-    memo_path = root_dir / "state/memo.md"
-    memo_context = f"\n\n## 📜 PROJECT ARCHITECTURE RULES & CONSTRAINTS (memo.md):\n```markdown\n{memo_path.read_text(encoding='utf-8')}\n```" if memo_path.exists() else ""
-
-    retro_path = root_dir / "state/sprints/retrospective.md"
-    retro_info = f"\n\n## 💡 PAST RETROSPECTIVE LESSONS:\n```markdown\n{retro_path.read_text(encoding='utf-8')[-800:]}\n```" if retro_path.exists() else ""
-
-    issues_track_path = root_dir / "state/current_issues.md"
-    if not issues_track_path.exists():
-        issues_track_path.write_text(f"# 🐛 Current Sprint #{sprint_num} Issues & Recovery Tracking\n\n", encoding="utf-8")
-
-    max_sprint_loops = 10
-    for step in range(1, max_sprint_loops + 1):
-        print(f"\n--- [Sprint #{sprint_num} / Loop Step #{step} of {max_sprint_loops}] ---")
+def parse_and_extract_files(text: str, target_dir: Path):
+    text = re.sub(r"^```[a-z]*\n", "", text.strip())
+    text = re.sub(r"\n```+$", "", text).strip()
+    
+    file_blocks = re.split(r'(?m)^#\s*FILE:\s*', text)
+    for block in file_blocks:
+        if not block.strip():
+            continue
+        lines = block.split('\n', 1)
+        filepath_str = lines[0].strip()
+        body = lines[1] if len(lines) > 1 else ""
         
-        res = subprocess.run(["bash", str(custom_harness_path)], cwd=target_dir, capture_output=True, text=True)
-        if res.returncode == 0:
-            print(f"🎉 [SUCCESS] Sprint #{sprint_num} Custom Harness PASSED 100% GREEN in Step #{step}!")
-            
-            pass_entry = f"\n### ✅ [Step #{step}] Harness Verification: PASSED (GREEN)\n- **Result**: All tests and formatting passed 100% GREEN!\n"
-            with open(issues_track_path, "a", encoding="utf-8") as f:
-                f.write(pass_entry)
+        if filepath_str:
+            clean_body = re.sub(r'```[a-zA-Z]*', '', body).strip()
+            target_path = target_dir / filepath_str
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(clean_body + "\n", encoding="utf-8")
+            print(f" ✍️  [Applied] {target_path}", flush=True)
+            if target_path.suffix == ".go":
+                subprocess.run(["gofmt", "-w", str(target_path)], capture_output=True)
+
+def load_active_yaml_backlog(root_dir: Path, sprint_num: int) -> str:
+    initiatives_dir = root_dir / "state" / "initiatives"
+    found = sorted(list(initiatives_dir.glob(f"**/sprint_{sprint_num}_backlog.yaml")))
+    if found:
+        return found[0].read_text(encoding="utf-8")
+    return ""
+
+def update_current_issues(root_dir: Path, loop_num: int, exit_code: int, stdout: str, stderr: str):
+    issues_file = root_dir / "state" / ".evaluator" / "current_issues.md"
+    issues_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    status_str = "PASS (100% GREEN)" if exit_code == 0 else f"FAIL (Exit Code {exit_code})"
+    err_snippet = (stdout + "\n" + stderr).strip()[-1500:] if exit_code != 0 else "All acceptance criteria & tests passed 100% GREEN."
+    
+    content = f"""# Current Issues & Active Tasks
+
+## Current Active Focus
+- **Epic 1 (Domain Layer)**: Implement `internal/domain/model/grid.go` and `grid_test.go` in `workspace/avatar-service/`.
+- **Sprint Harness Status**: {status_str} in Loop #{loop_num}
+
+## Latest Harness Execution Failure Output (Loop #{loop_num}):
+```text
+{err_snippet}
+```
+
+## Remaining Epics
+1. **Epic 1**: Domain Model & Core Logic
+2. **Epic 2**: Use Case & Application Layer
+3. **Epic 3**: Infrastructure Layer (HTTP/Storage)
+4. **Epic 4**: Interface Layer & Integration Tests
+"""
+    issues_file.write_text(content, encoding="utf-8")
+    print(f" 📝 [Updated] state/.evaluator/current_issues.md (Loop #{loop_num} Status: {status_str})", flush=True)
+
+def run_sprint_development(config: Dict[str, Any], root_dir: Path, sprint_num: int = 1) -> bool:
+    print("\n" + "="*50, flush=True)
+    print(f" 🚀 [Scrum Phase 2] Executing Sprint {sprint_num} Development Loop", flush=True)
+    print("="*50, flush=True)
+    
+    workspace_dir = root_dir / "workspace" / "avatar-service"
+    initiatives_dir = root_dir / "state" / "initiatives"
+    found = sorted(list(initiatives_dir.glob(f"**/sprint_{sprint_num}_harness.sh")))
+    if found:
+        harness_path = found[0]
+    else:
+        print(f"⚠️ Harness script missing for Sprint {sprint_num}! Guarding with generic harness...", flush=True)
+        harness_path = root_dir / "scripts" / "generic-harness-guard.sh"
+
+    dev_agent = LlamaCppAdapter(base_url="http://127.0.0.1:11435/completion")
+    print(f" 🤖 [Dev Engine]: Using Local LLM ({getattr(dev_agent, 'model_name', 'devstral')})", flush=True)
+    
+    max_loops = 10
+    loop = 0
+    
+    while loop < max_loops:
+        loop += 1
+        print(f"\n🔄 [Loop {loop}/{max_loops}] Running Test Harness: {harness_path.relative_to(root_dir)}...", flush=True)
+        
+        proc = subprocess.run(["bash", str(harness_path)], cwd=str(root_dir), capture_output=True, text=True, stdin=subprocess.DEVNULL)
+        print(f"   Harness Exit Code: {proc.returncode}", flush=True)
+        
+        # Auto-update state/.evaluator/current_issues.md with latest result
+        update_current_issues(root_dir, loop, proc.returncode, proc.stdout, proc.stderr)
+        
+        if proc.returncode == 0:
+            print(f"🎉 [Sprint {sprint_num} Success] Test Harness PASSED 100% GREEN in loop {loop}!", flush=True)
             return True
+            
+        print(f"⚠️ [Harness Failure]: Harness returned exit code {proc.returncode}. Requesting code fixes...", flush=True)
+        
+        backlog_content = load_active_yaml_backlog(root_dir, sprint_num)
+        memo_file = root_dir / "state" / ".evaluator" / "memo.md"
+        issues_file = root_dir / "state" / ".evaluator" / "current_issues.md"
+        memo_content = memo_file.read_text(encoding="utf-8") if memo_file.exists() else ""
+        issues_content = issues_file.read_text(encoding="utf-8") if issues_file.exists() else ""
 
-        print(f"❌ [Sprint Harness] Failure detected (Exit Code: {res.returncode})")
-        err_log = res.stdout[-1500:] if res.stdout else res.stderr[-1500:]
+        dev_prompt = (
+            f"[SPRINT {sprint_num} DEVELOPMENT FIX]\n"
+            f"Fix the code failures reported by the test harness.\n\n"
+            f"## SYSTEM ARCHITECTURE MEMO & DESIGN DECISIONS:\n"
+            f"```markdown\n{memo_content}\n```\n\n"
+            f"## CURRENT ISSUES & ACTIVE STATUS:\n"
+            f"```markdown\n{issues_content}\n```\n\n"
+            f"## ACTIVE SPRINT BACKLOG:\n"
+            f"```yaml\n{backlog_content}\n```\n\n"
+            f"## HARNESS STDOUT / STDERR:\n"
+            f"```\n{proc.stdout}\n{proc.stderr}\n```\n\n"
+            f"CRITICAL INSTRUCTIONS:\n"
+            f"Output code updates using `# FILE: workspace/avatar-service/path/to/file` header.\n"
+        )
+        
+        print(f"🚀 [DEBUG-LLM] Loop {loop}: Requesting code fixes from Devstral 24B...", flush=True)
+        raw_code = dev_agent.generate_text(dev_prompt)
+        print(f"📦 [DEBUG-LLM] Loop {loop}: Parsing and extracting files...", flush=True)
+        parse_and_extract_files(raw_code, target_dir=root_dir)
 
-        eval_prompt = f"""[SYSTEM INSTRUCTION - SPRINT EVALUATOR]
-You are Lead Sprint Evaluator. Analyze current harness failure and instruct the Executor on exact code changes in concise English.
-
-## SPRINT #{sprint_num} BACKLOG:
-```markdown
-{(root_dir / f'state/sprints/sprint_{sprint_num}_backlog.md').read_text(encoding='utf-8') if (root_dir / f'state/sprints/sprint_{sprint_num}_backlog.md').exists() else 'N/A'}
-```
-{memo_context}{retro_info}
-
-## CURRENT HARNESS FAILURE LOG (Step #{step}):
-```text
-{err_log}
-```
-
-TARGET OUTPUT FORMAT (in English):
-### 1. [ACTION REQUIRED]
-- **What Failed**: Brief explanation of root cause.
-- **Target Files**: `relative/file/path.go`
-- **Required Fix**: Concrete implementation guidelines.
-"""
-        eval_instruction = evaluator.generate_text(eval_prompt)
-
-        sprint_policy_path = root_dir / f"state/sprints/sprint_{sprint_num}_policy.md"
-        active_policy_path = sprint_policy_path if sprint_policy_path.exists() else (root_dir / "policies/scrum_dev.md")
-
-        exec_prompt = f"""[SYSTEM INSTRUCTION - CODE EXECUTOR]
-Implement the exact code modifications requested by the Evaluator to pass Sprint #{sprint_num} Harness.
-
-## 🎯 MANDATORY OUTPUT FORMAT:
-You MUST provide code blocks starting with `# FILE: relative/path/to/file.ext` before each block!
-Example:
-# FILE: go.mod
-```go
-module identicon-generator
-go 1.22
-```
-
-## POLICY: {active_policy_path.name}
-{memo_context}
-
-## EVALUATOR INSTRUCTION:
-{eval_instruction}
-
-## ERROR LOG (Step #{step}):
-```text
-{err_log}
-```
-"""
-        raw_exec = executor.generate_text(exec_prompt)
-        code_files = parse_code_blocks(raw_exec)
-
-        step_entry = f"""
-## 📌 [Step #{step}/{max_sprint_loops}] Issue & Fix Tracking
-- **What Failed**: Harness Exit Code {res.returncode}
-- **Evaluator Analysis**:
-{eval_instruction[:400]}...
-- **Files Modified**: {list(code_files.keys()) if code_files else 'None'}
-- **Status**: Code applied, pending next verification loop.
----
-"""
-        with open(issues_track_path, "a", encoding="utf-8") as f:
-            f.write(step_entry)
-
-        if code_files:
-            apply_code_changes(code_files, target_dir)
-
-    print(f"❌ Sprint #{sprint_num} reached max limit ({max_sprint_loops} loops) without passing custom harness. Auto-stopping sprint.")
-    print("📝 Generating Retrospective report (state/sprints/retrospective.md)...")
-
-    retro_prompt = f"""[SPRINT RETROSPECTIVE ANALYZER]
-Sprint #{sprint_num} failed to pass custom harness within {max_sprint_loops} loops.
-Read `current_issues.md` for full step tracking history.
-
-OUTPUT FORMAT:
-Please output `# FILE: state/sprints/retrospective.md` containing:
-1. **Root Cause Analysis**: Why did Sprint #{sprint_num} exceed {max_sprint_loops} loops?
-2. **Bottlenecks Identified**: Architectural or test scope issues.
-3. **Actionable Kaizen Improvements**: Concrete steps for next refinement/retry.
-"""
-    raw_retro = evaluator.generate_text(retro_prompt)
-    retro_files = parse_code_blocks(raw_retro)
-    if retro_files:
-        apply_code_changes(retro_files, root_dir)
-        print("🎉 [Retrospective] state/sprints/retrospective.md created successfully!")
-
+    print(f"❌ [Sprint {sprint_num} Failed]: Max loops ({max_loops}) reached without passing test harness.", flush=True)
     return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Scrum AI Loop Runner")
+    parser = argparse.ArgumentParser(description="Autonomous Scrum Runner")
     parser.add_argument("--sprint", type=int, default=1, help="Sprint number to execute")
-    parser.add_argument("--phase", type=str, choices=["all", "refinement", "sprint"], default="all", help="Phase to run")
+    parser.add_argument("--phase", type=str, default="all", choices=["all", "refinement", "sprint"], help="Phase to run")
     args = parser.parse_args()
-
-    config = load_env_config(root_dir / "config.env")
-
-    if args.phase in ["all", "refinement"]:
-        success = run_refinement_phase(config, root_dir, sprint_num=args.sprint)
-        if not success:
-            sys.exit(1)
-
+    
+    root_dir = Path(__file__).resolve().parent.parent
+    config = {}
+    
     if args.phase in ["all", "sprint"]:
-        success = run_sprint_phase(config, root_dir, sprint_num=args.sprint)
-        if not success:
-            sys.exit(1)
+        run_sprint_development(config, root_dir, sprint_num=args.sprint)
 
 if __name__ == "__main__":
     main()

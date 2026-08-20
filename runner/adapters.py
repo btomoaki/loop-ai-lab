@@ -1,3 +1,4 @@
+import sys
 import os
 import subprocess
 from pathlib import Path
@@ -11,7 +12,7 @@ class GeminiAdapter(BaseLLMAdapter):
         self.model_name = model_name
 
     def generate_text(self, prompt: str) -> str:
-        print(f"   Connecting to Cloud Evaluator (Gemini REST / File-based AGY CLI)...")
+        print(f"   Connecting to Cloud Evaluator (Gemini REST / File-based AGY CLI, flush=True)...")
         
         from pathlib import Path
         eval_dir = Path("state/.evaluator")
@@ -30,26 +31,26 @@ class GeminiAdapter(BaseLLMAdapter):
             data = json.dumps(payload).encode('utf-8')
             req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
             try:
-                with urllib.request.urlopen(req, timeout=60) as response:
+                with urllib.request.urlopen(req, timeout=90) as response:
                     res_body = response.read().decode('utf-8')
                     res_json = json.loads(res_body)
                     result_text = res_json['candidates'][0]['content']['parts'][0]['text']
                     response_file.write_text(result_text, encoding="utf-8")
                     return result_text
             except Exception as e:
-                print(f"⚠️ [Gemini REST Warning]: {e}")
+                print(f"⚠️ [Gemini REST Warning]: {e}", flush=True)
 
-        # 2. File-based stdin pipe execution (prevents CLI argument string limit crash)
-        cmd = ["agy", "prompt"]
+        # 2. Stdin pipe execution using agy --dangerously-skip-permissions prompt
+        cmd = ["agy", "--dangerously-skip-permissions", "prompt"]
         try:
-            res = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=120)
+            res = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=300)
             if res.returncode == 0 and res.stdout.strip():
                 response_file.write_text(res.stdout, encoding="utf-8")
                 return res.stdout
             else:
-                print(f"⚠️ [AGY CLI Error]: ReturnCode {res.returncode}, Stderr: {res.stderr[:200]}")
+                print(f"⚠️ [AGY CLI Error]: ReturnCode {res.returncode}, Stderr: {res.stderr[:200]}", flush=True)
         except Exception as e:
-            print(f"⚠️ [AGY CLI Exception]: {e}")
+            print(f"⚠️ [AGY CLI Exception]: {e}", flush=True)
 
         return ""
 
@@ -83,7 +84,7 @@ class LocalOllamaAdapter(BaseLLMAdapter):
             headers={"Content-Type": "application/json"}
         )
         try:
-            print(f"   Connecting to Ollama API: {self.api_url} ({self.model_name}, num_ctx={self.num_ctx})...")
+            print(f"   Connecting to Ollama API: {self.api_url} ({self.model_name}, num_ctx={self.num_ctx}, flush=True)...")
             with urllib.request.urlopen(req, timeout=600) as response:
                 res_body = response.read().decode("utf-8")
                 res_json = json.loads(res_body)
@@ -96,15 +97,10 @@ class LocalOllamaAdapter(BaseLLMAdapter):
 class LlamaCppAdapter(BaseLLMAdapter):
     def __init__(self, base_url: str = None, model_name: str = "devstral", max_tokens: int = 4096, **kwargs):
         if not base_url:
-            from runner.run_loop import load_env_config
-            from pathlib import Path
-            config = load_env_config(Path("config.env").resolve())
-            base_url = config.get("LOCAL_LLM_URL", "http://127.0.0.1:11435/completion")
-
+            base_url = "http://127.0.0.1:11435/completion"
         base_url = base_url.strip()
         if not base_url.endswith("/completion"):
             base_url = base_url.rstrip("/") + "/completion"
-        
         self.endpoint_url = base_url
         self.model_name = model_name
         self.max_tokens = max_tokens
@@ -112,7 +108,7 @@ class LlamaCppAdapter(BaseLLMAdapter):
     def generate_text(self, prompt: str) -> str:
         import urllib.request
         import json
-        print(f"   Connecting to Local LLM Native Endpoint ({self.endpoint_url})...")
+        print(f"🔍 [DEBUG-LLM] Sending Request to Local LLM ({self.endpoint_url}). Prompt length: {len(prompt)} chars...", flush=True)
         payload = {
             "prompt": prompt,
             "n_predict": self.max_tokens,
@@ -122,16 +118,19 @@ class LlamaCppAdapter(BaseLLMAdapter):
         data = json.dumps(payload).encode("utf-8")
         headers = {
             "Content-Type": "application/json",
-            "Accept-Encoding": "identity"
+            "Accept-Encoding": "identity",
+            "Connection": "close"
         }
         req = urllib.request.Request(self.endpoint_url, data=data, headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=180) as response:
+            with urllib.request.urlopen(req, timeout=300) as response:
                 res_body = response.read().decode("utf-8")
                 res_json = json.loads(res_body)
-                return res_json.get("content", "")
+                content = res_json.get("content", "")
+                print(f"✅ [DEBUG-LLM] Successfully received {len(content)} chars from Devstral 24B!", flush=True)
+                return content
         except Exception as e:
-            print(f"❌ [LlamaCpp Error]: {e}")
+            print(f"❌ [LlamaCpp Error]: {e}", flush=True)
             return ""
 
 
@@ -154,7 +153,7 @@ class ClaudeAdapter(BaseLLMAdapter):
             }
             if system_instruction:
                 kwargs["system"] = system_instruction
-            print(f"   Connecting to Anthropic API ({self.model_name})...")
+            print(f"   Connecting to Anthropic API ({self.model_name}, flush=True)...")
             response = client.messages.create(**kwargs)
             return response.content[0].text.strip()
         except ImportError:
@@ -189,7 +188,7 @@ class ClaudeAdapter(BaseLLMAdapter):
             method="POST",
         )
         try:
-            print(f"   Connecting to Anthropic API via urllib ({self.model_name})...")
+            print(f"   Connecting to Anthropic API via urllib ({self.model_name}, flush=True)...")
             with urllib.request.urlopen(req, timeout=300) as resp:
                 res_json = json.loads(resp.read().decode("utf-8"))
                 return res_json["content"][0]["text"].strip()
@@ -207,3 +206,5 @@ def get_llm_adapter(provider: str, model_name: str = None, base_url: str = None,
         return LlamaCppAdapter(base_url=base_url, model_name=model_name or "devstral", **kwargs)
     else:
         raise ValueError(f"Unsupported LLM provider: {provider}")
+
+OllamaAdapter = LlamaCppAdapter

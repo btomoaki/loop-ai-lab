@@ -1,0 +1,11 @@
+{
+  "current_status": "COMPLETED",
+  "phases": {
+    "decomposition": {
+      "status": "COMPLETED"
+    },
+    "harness": {
+      "status": "COMPLETED"
+    }
+  }
+}

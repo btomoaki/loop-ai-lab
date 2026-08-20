@@ -1,21 +1,16 @@
-# Scrum-Based Autonomous Development Policy
+# POLICY: Autonomous Scrum Development Workflow
 
-## 🏛️ Framework Overview
-Development is divided into iterative Sprint cycles:
-1. **Refinement Phase**: Analyze requirements, detect specification gaps, split full project into a multi-sprint roadmap (`sprints/product_backlog.md`), define Sprint 1 scope (`sprints/sprint_1_backlog.md`), and generate custom harness (`sprints/sprint_1_harness.sh`).
-2. **Sprint Execution Phase**: Autonomously implement ONLY the items in `sprint_N_backlog.md` until `sprint_N_harness.sh` passes 100% GREEN.
-3. **Retrospective & Feedback**: If Sprint does not complete within 5 loops, write lessons learned to `sprints/retrospective.md` and feed it back into next Refinement/Sprint retry.
+## 1. Core Principles
+- **Initiative & Epic Phase Hierarchy**: The system specifications are decomposed into an Initiative Overview (`state/initiatives/initiative_overview.md`) and physically isolated Engineering Epic Phase directories (`state/initiatives/epic_{n}_{name}/`).
+- **1 Task = 1 Sprint (YAML Backlog)**: Each task within an Epic Phase becomes an individual Sprint defined strictly in YAML format (`sprint_{n}_backlog.yaml`).
+- **No Scope Creep**: Implement ONLY the items defined in the target Sprint's YAML backlog (`state/initiatives/epic_{n}_{name}/sprint_{n}_backlog.yaml`).
 
-## 📏 Target Sprint Velocity & Granularity
-- **Target Loops per Sprint**: 3 to 5 loop steps max.
-- **Scope Limit**: Focus on at most 1-2 architectural layers (~5 files modified) per Sprint.
-- **No Scope Creep**: Do NOT add features outside `sprint_N_backlog.md`.
+## 2. Refinement Phase (Phase 1)
+- Analyze requirements in `references/*.md`.
+- Generate `state/initiatives/initiative_overview.md` and `state/initiatives/epic_{n}_{name}/sprint_{n}_backlog.yaml`.
+- Generate system specification `workspace/avatar-service/README.md`.
+- Perform specification audit and pause with `BLOCKED_WAITING_PO` if PO input is required.
 
-## 🤖 Target Executor Environment Spec (Local LLM - Devstral 24B / Qwen 27B)
-- **Context Window (num_ctx)**: 16,384 tokens (~12,000 words max prompt input)
-- **Max Generation Limit (max_tokens)**: 4,096 tokens per single output
-- **Capacity Characteristics**:
-  - High capacity for one-shot initial skeleton generation (structs, handlers, tests in 1-2 passes).
-  - Weak at resolving complex multi-package refactoring with cyclic dependencies once type errors occur.
-  - High risk of code truncation if a single generated file exceeds ~4,000 tokens.
-- **Design Rule**: Keep prompts and file outputs comfortably within 16k context and 4k generation bounds.
+## 3. Sprint Execution Phase (Phase 2)
+- Execute Devstral coding loop targeting ONLY the files listed in `TargetFiles` of the YAML backlog.
+- Autonomously iterate until `sprint_{n}_harness.sh` passes 100% GREEN.

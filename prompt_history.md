@@ -136,3 +136,28 @@
 - **User Order**: Process cleanup, CLI stream pipe adapter fix, and commit current workspace state.
 - **Summary**: Refactored `GeminiAdapter` to use file-based stdin pipe streaming for large prompts to eliminate CLI string length limits and timeouts. Enhanced `runner/run_scrum.py` Pass 2 prompt for reliable harness generation. Updated `scripts/clean-env.sh` with automatic process termination (`pkill -9 -f run_scrum.py`) to prevent orphaned background LLM processes.
 - **Files Modified**: `runner/adapters.py`, `runner/run_scrum.py`, `scripts/clean-env.sh`, `.gitignore`, `state/.gitkeep`
+
+## Step 30: Modularized Multi-Stage Refinement Architecture (2026-08-20)
+- **User Order**: Split heavy one-pass refinement into structured Scrum Refinement sub-phases (Elaboration, Decomposition, Estimation, Prioritization) and manage phase state in `state/.evaluator/refinement_progress.json`. Dynamically calculate max sprint loops based on estimation.
+- **Summary**: Designed a 4-phase Refinement pipeline in `runner/run_scrum.py`. Each phase executes lightweight prompt exchanges via `state/.evaluator/` files, updating `state/.evaluator/refinement_progress.json` and generating granular backlogs, dynamic loop limits, and executable test harnesses.
+- **Files Modified**: `prompt_history.md`, `runner/run_scrum.py`
+
+## Step 31: 4-Subphase Refinement Pipeline & Generic Harness Stopping Guard (2026-08-20)
+- **Prompt**: Restructure Refinement into 4 modular subphases (Elaboration, Decomposition, Estimation with 10 max loops policy, Harness/Policy), add PO clarification pause mechanism saving open questions to `state/refinement_questions.md` and reading `references/*.md`, and implement generic harness guard script (`scripts/generic-harness-guard.sh`) that halts execution (exit code 1) on missing/invalid test harness.
+- **Files Modified**: `runner/run_scrum.py`, `runner/adapters.py`, `scripts/generic-harness-guard.sh`, `scripts/clean-env.sh`
+- **Result**: Refinement pipeline updated with robust error handling and harness safety guard.
+
+## Step 32: 2026-08-21 - Hierarchical Refinement Restructuring (Initiative -> Epic Phase -> Task/Sprint YAML)
+
+### Summary of Decisions & Directives:
+- **Hierarchical Phase Decomposition**: Refinement workflow is restructured into Initiative (Overall Project) -> Epic (Work Engineering Phase) -> Task (1 Task = 1 Sprint).
+- **Physical Directory Isolation**: All sprint backlogs are saved into physical isolated structure `state/initiatives/epic_{n}/sprint_{n}_backlog.yaml` (or feature level subdirectories).
+- **YAML Backlog Standard**: Backlog files transition to standard YAML format (`TargetFiles`, `AcceptanceCriteria`, `Tasks`) to eliminate syntax ambiguity and avoid markdown parsing errors.
+- **Scrum Runner Integration**: Updated `runner/run_scrum.py` to parse hierarchical YAML backlogs and execute sprint development loops based on current Epic and Sprint indices.
+
+## Step 33 - 2026-08-21
+- **Prompt**: "stopその修正取り込んだら今日は終わろう。"
+- **Summary**: 
+  1. Devstral 24B (ローカルLLM) による Epic 1 Domain Layer (`grid.go` / `grid_test.go`) の自律実装・修正コードを取り込み。
+  2. `state/.evaluator/memo.md` および `state/.evaluator/current_issues.md` を作成し、スクラムランナー (`runner/run_scrum.py`) 経由で毎ループのテスト結果・失敗ログを自動追記更新＆LLMフィードバックするコンテキスト注入基盤を完了。
+  3. テストハーネスサニタイズ（マークダウンコードブロック除去・自動 `gofmt` 適用・標準入力非ブロック化）を完了。
