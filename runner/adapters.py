@@ -40,8 +40,10 @@ class GeminiAdapter(BaseLLMAdapter):
             except Exception as e:
                 print(f"⚠️ [Gemini REST Warning]: {e}", flush=True)
 
-        # 2. Stdin pipe execution using agy --dangerously-skip-permissions prompt
-        cmd = ["agy", "--dangerously-skip-permissions", "prompt"]
+        # 2. Stdin pipe execution using agy / agy-ide CLI prompt
+        import shutil
+        cli_name = os.environ.get("ANTIGRAVITY_CLI_ALIAS") or shutil.which("agy") or shutil.which("agy-ide") or shutil.which("antigravity") or "agy"
+        cmd = [cli_name, "--dangerously-skip-permissions", "prompt"]
         try:
             res = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=300)
             if res.returncode == 0 and res.stdout.strip():
