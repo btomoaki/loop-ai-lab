@@ -13,7 +13,7 @@ if [ -f "${BASE_DIR}/config.env" ]; then
     source "${BASE_DIR}/config.env"
 fi
 
-TARGET_DIR="${TARGET_DIR:-${BASE_DIR}/workspace/sample-project}"
+TARGET_DIR="${TARGET_DIR:-${BASE_DIR}/workspace}"
 ENABLE_SOPS="${ENABLE_SOPS:-false}"
 
 echo "🔒 [Secret Harness] Checking credentials safety for: ${TARGET_DIR}"

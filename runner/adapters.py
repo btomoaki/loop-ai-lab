@@ -11,8 +11,8 @@ class GeminiAdapter(BaseLLMAdapter):
     def __init__(self, model_name: str = "gemini-3.7-flash-low", **kwargs):
         self.model_name = model_name
 
-    def generate_text(self, prompt: str) -> str:
-        print(f"   Connecting to Cloud Evaluator (Gemini REST / File-based AGY CLI, flush=True)...")
+    def generate_text(self, prompt: str, system_instruction: str = "") -> str:
+        print("   Connecting to Cloud Evaluator (Gemini REST / File-based AGY CLI)...", flush=True)
         
         from pathlib import Path
         eval_dir = Path("state/.evaluator")
@@ -105,12 +105,14 @@ class LlamaCppAdapter(BaseLLMAdapter):
         self.model_name = model_name
         self.max_tokens = max_tokens
 
-    def generate_text(self, prompt: str) -> str:
+    def generate_text(self, prompt: str, system_instruction: str = "") -> str:
         import urllib.request
         import json
-        print(f"🔍 [DEBUG-LLM] Sending Request to Local LLM ({self.endpoint_url}). Prompt length: {len(prompt)} chars...", flush=True)
+        
+        full_prompt = f"[SYSTEM: {system_instruction}]\n\n{prompt}" if system_instruction else prompt
+        print(f"🔍 [DEBUG-LLM] Sending Request to Local LLM ({self.endpoint_url}). Prompt length: {len(full_prompt)} chars...", flush=True)
         payload = {
-            "prompt": prompt,
+            "prompt": full_prompt,
             "n_predict": self.max_tokens,
             "temperature": 0.2,
             "stop": ["</s>", "USER:", "ASSISTANT:"]

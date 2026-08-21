@@ -8,28 +8,8 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from adapters import GeminiAdapter, LlamaCppAdapter
-
-def parse_and_extract_files(text: str, target_dir: Path):
-    text = re.sub(r"^```[a-z]*\n", "", text.strip())
-    text = re.sub(r"\n```+$", "", text).strip()
-    
-    file_blocks = re.split(r'(?m)^#\s*FILE:\s*', text)
-    for block in file_blocks:
-        if not block.strip():
-            continue
-        lines = block.split('\n', 1)
-        filepath_str = lines[0].strip()
-        body = lines[1] if len(lines) > 1 else ""
-        
-        if filepath_str:
-            clean_body = re.sub(r'```[a-zA-Z]*', '', body).strip()
-            target_path = target_dir / filepath_str
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            target_path.write_text(clean_body + "\n", encoding="utf-8")
-            print(f" ✍️  [Applied] {target_path}", flush=True)
-            if target_path.suffix == ".go":
-                subprocess.run(["gofmt", "-w", str(target_path)], capture_output=True)
+from adapters import GeminiAdapter, LlamaCppAdapter, get_llm_adapter
+from parser import apply_code_changes
 
 def load_active_yaml_backlog(root_dir: Path, sprint_num: int) -> str:
     initiatives_dir = root_dir / "state" / "initiatives"
@@ -79,8 +59,9 @@ def run_sprint_development(config: Dict[str, Any], root_dir: Path, sprint_num: i
         print(f"⚠️ Harness script missing for Sprint {sprint_num}! Guarding with generic harness...", flush=True)
         harness_path = root_dir / "scripts" / "generic-harness-guard.sh"
 
-    dev_agent = LlamaCppAdapter(base_url="http://127.0.0.1:11435/completion")
-    print(f" 🤖 [Dev Engine]: Using Local LLM ({getattr(dev_agent, 'model_name', 'devstral')})", flush=True)
+    local_llm_url = os.getenv("LOCAL_LLM_URL", "http://127.0.0.1:11435")
+    dev_agent = get_llm_adapter("llama_cpp", model_name="devstral", base_url=local_llm_url)
+    print(f" 🤖 [Dev Engine]: Using Local LLM at {local_llm_url} ({getattr(dev_agent, 'model_name', 'devstral')})", flush=True)
     
     max_loops = 10
     loop = 0
@@ -122,13 +103,61 @@ def run_sprint_development(config: Dict[str, Any], root_dir: Path, sprint_num: i
             f"Output code updates using `# FILE: workspace/avatar-service/path/to/file` header.\n"
         )
         
-        print(f"🚀 [DEBUG-LLM] Loop {loop}: Requesting code fixes from Devstral 24B...", flush=True)
+        print(f"🚀 [DEBUG-LLM] Loop {loop}: Requesting code fixes from Local LLM...", flush=True)
         raw_code = dev_agent.generate_text(dev_prompt)
         print(f"📦 [DEBUG-LLM] Loop {loop}: Parsing and extracting files...", flush=True)
-        parse_and_extract_files(raw_code, target_dir=root_dir)
+        apply_code_changes(raw_code, target_dir=root_dir)
 
     print(f"❌ [Sprint {sprint_num} Failed]: Max loops ({max_loops}) reached without passing test harness.", flush=True)
     return False
+
+def run_refinement(config: Dict[str, Any], root_dir: Path) -> bool:
+    print("\n" + "="*50, flush=True)
+    print(" 🎯 [Scrum Phase 1] Executing Cloud Refinement (Gemini / Cloud Evaluator)", flush=True)
+    print("="*50, flush=True)
+
+    refinement_provider = config.get("REFINEMENT_PROVIDER", os.getenv("EVALUATOR_PROVIDER", "gemini"))
+    refinement_model = config.get("REFINEMENT_MODEL", os.getenv("EVALUATOR_MODEL", "gemini-2.5-flash"))
+    
+    evaluator = get_llm_adapter(refinement_provider, model_name=refinement_model)
+    print(f" 🤖 [Refinement Engine]: Using Cloud Evaluator ({refinement_provider}: {refinement_model})", flush=True)
+
+    req_file_setting = config.get("REQUIREMENT_FILE", "requirements.sample.md")
+    req_file = root_dir / req_file_setting
+    req_text = req_file.read_text(encoding="utf-8") if req_file.exists() else "Default application requirements."
+
+    references_dir = root_dir / "references"
+    references_text = ""
+    if references_dir.exists():
+        ref_files = sorted([p for p in references_dir.glob("*.md") if p.is_file()])
+        for ref_file in ref_files:
+            references_text += f"\n--- [REFERENCE FILE: {ref_file.name}] ---\n"
+            references_text += ref_file.read_text(encoding="utf-8") + "\n"
+        print(f" 📚 [References]: Loaded {len(ref_files)} reference document(s) from references/", flush=True)
+
+    prompt = f"""
+[SYSTEM INSTRUCTION - SCRUM REFINEMENT PO]
+Analyze the requirement document and project reference materials to refine engineering Epics and Sprints.
+
+REQUIREMENTS ({req_file_setting}):
+{req_text}
+
+PROJECT REFERENCE MATERIALS (references/*.md):
+{references_text if references_text else "No additional reference materials."}
+
+OUTPUT INSTRUCTIONS:
+Output initiative breakdown and sprint backlogs using `# FILE: state/initiatives/path/to/file` header.
+"""
+
+    print("🚀 Requesting Refinement Plan from Cloud Evaluator...", flush=True)
+    response = evaluator.generate_text(prompt)
+    if response:
+        apply_code_changes(response, target_dir=root_dir)
+        print("🎉 [Refinement Success] Refinement phase completed successfully!", flush=True)
+        return True
+    else:
+        print("ℹ️ [Refinement Note] Evaluator completed prompt exchange via state/.evaluator/.", flush=True)
+        return True
 
 def main():
     parser = argparse.ArgumentParser(description="Autonomous Scrum Runner")
@@ -138,7 +167,18 @@ def main():
     
     root_dir = Path(__file__).resolve().parent.parent
     config = {}
+    config_file = root_dir / "config.env"
+    if config_file.exists():
+        with open(config_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    config[k.strip()] = v.strip().strip('"').strip("'")
     
+    if args.phase in ["all", "refinement"]:
+        run_refinement(config, root_dir)
+
     if args.phase in ["all", "sprint"]:
         run_sprint_development(config, root_dir, sprint_num=args.sprint)
 

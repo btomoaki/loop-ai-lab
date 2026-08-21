@@ -41,10 +41,9 @@ def apply_code_changes(llm_output: str, target_dir: Path):
         applied_paths.append(target_path)
         print(f" ✍️  [Applied Changes] Updated target file: {target_path}")
 
-    print(f" �� [Parser] Successfully extracted and applied {created_count} file(s).")
+    print(f" 📦 [Parser] Successfully extracted and applied {created_count} file(s).")
 
 def parse_code_blocks(text: str) -> dict:
-    import re
     files = {}
     pattern = r"(?:#|//|<!--)\s*FILE:\s*([^\s\n]+).*?\n```[a-zA-Z0-9_-]*\n(.*?)```"
     matches = re.findall(pattern, text, re.DOTALL)

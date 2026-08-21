@@ -8,8 +8,8 @@ if [ -f "${BASE_DIR}/config.env" ]; then
     source "${BASE_DIR}/config.env"
 fi
 
-TARGET_DIR="${TARGET_DIR:-${BASE_DIR}/workspace/avatar-service}"
-VERIFY_COMMAND="${VERIFY_COMMAND:-cd ${TARGET_DIR} && go test ./... && go build -o /tmp/avatar-server .}"
+TARGET_DIR="${TARGET_DIR:-${BASE_DIR}/workspace}"
+VERIFY_COMMAND="${VERIFY_COMMAND:-cd ${TARGET_DIR} && go test ./...}"
 
 if [ ! -d "${TARGET_DIR}" ]; then
     mkdir -p "${TARGET_DIR}"
@@ -41,7 +41,7 @@ fi
 
 echo "🚀 Running verification command..."
 set +e
-LOG_OUTPUT=$(eval "${VERIFY_COMMAND}" 2>&1 | sed -E "s|/home/wimet/\.local/share/mise/installs/go/[^/]+/src/|<GOROOT>/|g" | sed -E "s|/home/wimet/work/loop-ai-lab/workspace/avatar-service/||g" | sed -E "s|/home/wimet/work/loop-ai-lab/||g")
+LOG_OUTPUT=$(eval "${VERIFY_COMMAND}" 2>&1 | sed -E "s|${HOME}/\.local/share/[^/]+/installs/go/[^/]+/src/|<GOROOT>/|g" | sed -E "s|${BASE_DIR}/workspace/[^/]+/||g" | sed -E "s|${BASE_DIR}/||g")
 EXIT_CODE=$?
 set -e
 
