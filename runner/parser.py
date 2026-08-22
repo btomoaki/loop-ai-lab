@@ -41,9 +41,19 @@ def apply_code_changes(llm_output: str, target_dir: Path):
     applied_paths = []
     for rel_path_str, code_content in matches:
         rel_path_str = rel_path_str.strip().lstrip("./")
-        # ネスト・冗長パスの削除
-        rel_path_str = re.sub(r"^(?:workspace/[^/]+/+)+", "", rel_path_str)
-        rel_path_str = re.sub(r"^" + re.escape(target_dir.name) + r"/+", "", rel_path_str)
+        # Dynamically root target files inside target_ws_rel if relative
+        rel_path_str = rel_path_str.strip().lstrip("./")
+        target_ws_prefix = "workspace/avatar-service" # Default fallback
+        if hasattr(target_dir, "name"):
+            # Compute relative path dynamically if target_dir is inside root_dir
+            try:
+                target_ws_prefix = str(target_dir.relative_to(target_dir.parents[1]))
+            except Exception:
+                pass
+        # Remove duplicate workspace prefix if already present in relative path
+        for ws_pfx in ["workspace/avatar-service/", "avatar-service/", f"{target_dir.name}/"]:
+            if rel_path_str.startswith(ws_pfx):
+                rel_path_str = rel_path_str[len(ws_pfx):]
 
         # 残存マークダウンフェンスの剥ぎ取り
         code_content = re.sub(r"^```(?:[a-zA-Z0-9_-]+)?\n?", "", code_content.strip(), flags=re.IGNORECASE)

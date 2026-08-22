@@ -17,3 +17,12 @@
 - **Docker**: `docker build` & `PORT` startup liveness in `refinement_harness_docker.md`.
 - **HTTP API**: Dynamic URL mapping & `curl` status in `refinement_harness_http_api.md`.
 - **Unit**: Language standard `go test` in `refinement_harness_unit.md`.
+
+## 7. Epic Completion Gate & DoD Review
+- Individual sprints are fast-tracked via `./sprint_N_harness.sh` (Exit 0).
+- Epic completion triggers DoD review by [PO] and [Auditor], documented in `state/.evaluator/epic_<topic>_review_log.md`.
+
+
+4. **Mandatory Definition of Done (DoD) Per Task**:
+   - Every `sprint_N_backlog.yaml` MUST include an explicit `definition_of_done:` checklist (array of 2-3 unambiguous strings).
+   - The DoD checklist MUST specify file placement paths, architectural constraints, and harness passing conditions.

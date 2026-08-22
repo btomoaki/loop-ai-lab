@@ -117,7 +117,7 @@ class LlamaCppAdapter(BaseLLMAdapter):
         print(f"🔍 [DEBUG-LLM] Sending Request to Local LLM ({self.endpoint_url}). Prompt length: {len(full_prompt)} chars...", flush=True)
         payload = {
             "prompt": full_prompt,
-            "n_predict": self.max_tokens,
+            "n_predict": int(os.getenv("MAX_TOKENS", 4096)),
             "temperature": 0.2,
             "stop": ["</s>", "USER:", "ASSISTANT:"]
         }

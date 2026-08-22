@@ -3,6 +3,7 @@
 ## 🏛️ Clean Architecture Layout Standard
 - `cmd/server/main.go`: Entry point initializing `di.NewContainer()`
 - `internal/domain/model/`: Pure domain models, structs & value objects (No external dependencies)
+- `internal/domain/service/`: Pure domain services, factories & domain calculation logic
 - `internal/domain/repository/`: Domain repository ports (interfaces)
 - `internal/application/usecase/`: Application business logic
 - `internal/infrastructure/handler/`: HTTP handlers & routing

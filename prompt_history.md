@@ -161,3 +161,27 @@
   1. Devstral 24B (ローカルLLM) による Epic 1 Domain Layer (`grid.go` / `grid_test.go`) の自律実装・修正コードを取り込み。
   2. `state/.evaluator/memo.md` および `state/.evaluator/current_issues.md` を作成し、スクラムランナー (`runner/run_scrum.py`) 経由で毎ループのテスト結果・失敗ログを自動追記更新＆LLMフィードバックするコンテキスト注入基盤を完了。
   3. テストハーネスサニタイズ（マークダウンコードブロック除去・自動 `gofmt` 適用・標準入力非ブロック化）を完了。
+
+### Step 27 - Strict File Naming Rules & Domain Layer Implementation
+- **Date**: 2026-08-23
+- **Prompt**: "ある程度動くようになったから、commitして。"
+- **Decision & Actions**:
+  - Implemented strict file naming conventions in `.agents/rules/dev_go_clean_architecture.md`:
+    - Model: `<struct_name>.go` (e.g. `avatar.go`)
+    - Repository: `<interface_name>_repository.go` (e.g. `avatar_repository.go`)
+    - Service: `<service_name>_service.go` (e.g. `avatar_service.go`)
+  - Fixed path normalization bug in `runner/parser.py` and `runner/run_scrum.py`.
+  - Verified clean compilation and `go test ./...` PASS.
+  - Committed changes (`8bd5b71`).
+
+### Step 27 - Strict File Naming Rules & Domain Layer Implementation
+- **Date**: 2026-08-23
+- **Prompt**: "ある程度動くようになったから、commitして。"
+- **Decision & Actions**:
+  - Implemented strict file naming conventions in `.agents/rules/dev_go_clean_architecture.md`:
+    - Model: `<struct_name>.go` (e.g. `avatar.go`)
+    - Repository: `<interface_name>_repository.go` (e.g. `avatar_repository.go`)
+    - Service: `<service_name>_service.go` (e.g. `avatar_service.go`)
+  - Fixed path normalization bug in `runner/parser.py` and `runner/run_scrum.py`.
+  - Verified clean compilation and `go test ./...` PASS.
+  - Committed changes (`8bd5b71`).
