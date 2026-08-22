@@ -20,3 +20,12 @@ __pycache__/
 *.pyc
 .venv/
 ./runner/__pycache__/*.pyc
+
+state/initiatives/epic_*
+state/.evaluator/latest_*
+state/.evaluator/refinement_audit_report.md
+state/execution_tracker.json
+workspace/avatar-service/*
+!workspace/avatar-service/.gitkeep
+!state/initiatives/.gitkeep
+/tmp/*

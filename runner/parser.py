@@ -1,3 +1,21 @@
+from pathlib import Path
+
+import tempfile
+import os
+
+def atomic_write_text(target_path: Path, content: str, encoding: str = "utf-8"):
+    """Write text to temporary file first, then atomically replace target file."""
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = target_path.with_name(f".tmp_{target_path.name}")
+    try:
+        temp_path.write_text(content, encoding=encoding)
+        os.replace(temp_path, target_path)
+    except Exception as e:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise e
+
+
 """
 runner/parser.py - Standardized code parsing and file system operations for LLM outputs.
 """
@@ -53,3 +71,37 @@ def parse_code_blocks(text: str) -> dict:
         if any(fp.endswith(ext) or fp in ('go.mod', 'go.sum') for ext in valid_exts):
             files[fp] = code.strip()
     return files
+
+def extract_spec_sections(references_dir: Path) -> list:
+    """Extract H2 and H3 section headings from all markdown files in references/."""
+    sections = []
+    if not references_dir.exists():
+        return sections
+    for fpath in sorted(references_dir.glob("*.md")):
+        text = fpath.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            line_str = line.strip()
+            if line_str.startswith("## ") or line_str.startswith("### "):
+                import re
+                clean_title = re.sub(r"^[#\s]+", "", line_str)
+                sections.append({"file": fpath.name, "section": clean_title})
+    return sections
+
+def audit_spec_coverage(references_dir: Path, initiatives_dir: Path) -> dict:
+    """Audit if generated initiatives cover all extracted spec sections."""
+    spec_sections = extract_spec_sections(references_dir)
+    covered_sections = set()
+    
+    for backlog_path in initiatives_dir.glob("epic_*/sprint_1_backlog.yaml"):
+        text = backlog_path.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if "spec_section:" in line:
+                val = line.split("spec_section:", 1)[1].strip().strip('"').strip("'")
+                covered_sections.add(val)
+    
+    uncovered = [s for s in spec_sections if s["section"] not in covered_sections]
+    return {
+        "total_spec_sections": len(spec_sections),
+        "covered_count": len(covered_sections),
+        "uncovered_sections": uncovered
+    }

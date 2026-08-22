@@ -10,3 +10,7 @@
 ## Domain Design & Code Organization Rules
 - **Model Layer Purity**: `internal/domain/model/` contains ONLY pure data structures and structs (e.g. `type Grid struct`).
 - **Separation of Factory/Logic**: Constructor & algorithmic logic functions (e.g. `func NewGrid(...)`) MUST NOT be placed inside `internal/domain/model/`. They must be decoupled into domain services or factory components.
+
+## Backlog Granularity & Refinement Generation Rules
+- **Detailed Tasks**: `sprint_1_backlog.yaml` MUST contain granular sub-tasks (`TASK-1.1`, `TASK-1.2`) with explicit `description` fields detailing exact types, data structures, and behaviors.
+- **No Generic Backlogs**: Never output generic placeholder tasks like "Core Data Types & Interfaces".

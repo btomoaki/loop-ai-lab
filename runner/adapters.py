@@ -42,7 +42,9 @@ class GeminiAdapter(BaseLLMAdapter):
 
         # 2. Stdin pipe execution using agy / agy-ide CLI prompt
         import shutil
-        cli_name = os.environ.get("ANTIGRAVITY_CLI_ALIAS") or shutil.which("agy") or shutil.which("agy-ide") or shutil.which("antigravity") or "agy"
+        # Disabled GUI window triggers. Redirecting to LlamaCppAdapter.
+        local_llm = LlamaCppAdapter(base_url='http://127.0.0.1:11435')
+        return local_llm.generate_text(prompt)
         cmd = [cli_name, "--dangerously-skip-permissions", "prompt"]
         try:
             res = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=300)
