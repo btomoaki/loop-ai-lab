@@ -387,3 +387,9 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Updated `runner/adapters/llm_adapter.py` with strict socket disconnection and `Connection: close` headers.
+
+## Step - Disable Silent LLM Fallback (2026-08-23)
+- **Prompt Summary**: Removed automatic silent fallback to other LLM providers when connection fails. Enforced strict `RuntimeError` raising on LLM connectivity or execution failure to escalate directly to the user.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Refactored `runner/adapters/llm_adapter.py` to raise `RuntimeError` on failure instead of silently switching providers.

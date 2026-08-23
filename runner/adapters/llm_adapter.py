@@ -17,9 +17,7 @@ class GeminiAdapter(LLMAdapter):
 
     def generate_text(self, prompt: str) -> str:
         if not self.api_key:
-            print("⚠️ [LLM:Gemini Warning] GEMINI_API_KEY が未設定です。ローカルLLMにフォールバックします。")
-            fallback = LlamaCppAdapter()
-            return fallback.generate_text(prompt)
+            raise RuntimeError("❌ [LLM:Gemini Escalation] GEMINI_API_KEY is missing! Cannot proceed with Gemini provider. Halting for user intervention.")
 
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
@@ -32,9 +30,7 @@ class GeminiAdapter(LLMAdapter):
             data = resp.json()
             return data["candidates"][0]["content"]["parts"][0]["text"]
         except Exception as e:
-            print(f"⚠️ [LLM:Gemini Error] API呼び出し失敗 ({e})。ローカルLLMにフォールバックします。")
-            fallback = LlamaCppAdapter()
-            return fallback.generate_text(prompt)
+            raise RuntimeError(f"❌ [LLM:Gemini Escalation] Gemini API call failed: {e}. Halting for user intervention.")
 
 
 class LlamaCppAdapter(LLMAdapter):
@@ -45,7 +41,6 @@ class LlamaCppAdapter(LLMAdapter):
         try:
             print(f"🔍 [LLM:Local] Requesting completion from Local LLM ({self.endpoint_url}). Prompt length: {len(prompt)} chars...")
             
-            # 🛡️ Connection: close ヘッダーを強制付与し、ローカルLLMサーバー側にソケットを即座に解放させる
             headers = {
                 "Content-Type": "application/json",
                 "Connection": "close"
@@ -58,7 +53,7 @@ class LlamaCppAdapter(LLMAdapter):
             }
 
             session = requests.Session()
-            session.keep_alive = False  # コネクションプール保持を禁止し、ゾンビソケットを防止
+            session.keep_alive = False
 
             resp = session.post(self.endpoint_url, headers=headers, json=payload, timeout=120)
             resp.raise_for_status()
@@ -67,8 +62,7 @@ class LlamaCppAdapter(LLMAdapter):
             print(f"✅ [LLM:Local] Successfully received {len(content)} chars from local LLM!")
             return content
         except Exception as e:
-            print(f"❌ [LLM:Local Error] Local LLM call failed or timed out: {e}")
-            return ""
+            raise RuntimeError(f"❌ [LLM:Local Escalation] Local LLM call failed on endpoint {self.endpoint_url}: {e}. Halting for user intervention.")
 
 
 class LLMAdapterFactory:
@@ -80,4 +74,4 @@ class LLMAdapterFactory:
         elif provider_lower in ["local", "llama", "llamacpp"]:
             return LlamaCppAdapter()
         else:
-            return GeminiAdapter()
+            return LlamaCppAdapter()
