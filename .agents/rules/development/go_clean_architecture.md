@@ -1,25 +1,26 @@
-# Go Clean Architecture & Strict File Naming Rules
+# Go Clean Architecture Development Standard
 
-## 1. Architectural Layers & File Naming Conventions
-- **Domain Models (`internal/domain/model/`)**:
-  - File MUST be named after the target struct: `<struct_name>.go` (e.g. `avatar.go`, `grid.go`). Never use generic `model.go`.
-- **Domain Repositories (`internal/domain/repository/`)**:
-  - Contains ONLY Go interface definitions.
-  - File MUST be named: `<interface_name>_repository.go` (e.g. `avatar_repository.go`).
-- **Domain Services (`internal/domain/service/`)**:
-  - Contains domain business logic and factories.
-  - File MUST be named: `<service_name>_service.go` (e.g. `avatar_service.go`).
-- **Application UseCases (`internal/usecase/`)**:
-  - File MUST be named: `<usecase_name>_usecase.go` (e.g. `avatar_usecase.go`).
+## 1. Clean Architecture Layer Hierarchy
+All Go applications developed in this project must strictly conform to the 4-layer Clean Architecture layout:
 
-## 2. Module Import & Go Standard Library Pure Standard Library & Commercial License OSS Policy Commercial-Friendly OSS Policy
-- All internal package imports MUST use the exact module path: `avatar-service/internal/...` (NEVER use `workspace/avatar-service/`).
-- Domain Core layer MUST use Go standard library ONLY (e.g. `context`, `crypto/rand`). NO third-party packages (e.g. `uuid`, `mgo`).
+1. **Domain Layer (`internal/domain/`)**:
+   - Contains pure business entities (`model/`) and repository interfaces (`repository/`).
+   - Must have zero external third-party dependencies.
 
-## 3. Implementation Order
-1. Step 1 (Domain Data: `<struct_name>.go`)
-2. Step 2 (Domain Interfaces: `<interface_name>_repository.go`)
-3. Step 3 (Domain Services: `<service_name>_service.go`)
-4. Step 4 (UseCases: `<usecase_name>_usecase.go`)
-5. Step 5 (Infrastructure)
-6. Step 6 (Interface Adapters)
+2. **Application Layer (`internal/application/`)**:
+   - Contains usecases (`usecase/`) orchestrating business logic and flow control.
+   - Depends only on the Domain layer interface contracts.
+
+3. **Infrastructure Layer (`internal/infrastructure/`)**:
+   - Implements domain repository interfaces (e.g., persistence, hashing, image generation, external clients).
+
+4. **Interface Adapter Layer (`internal/interface/adapter/` & `cmd/`)**:
+   - Contains HTTP handlers, REST API routing, CLI entrypoints, and static asset embedding (`cmd/server/main.go`).
+
+## 2. Dependency & Licensing Policy
+- **Go Standard Library Priority**: Leverage standard Go built-in packages (`net/http`, `crypto`, `image`, `encoding/json`, `os`, `fmt`) whenever applicable.
+- **Approved Commercial OSS Licenses**: Permitted 3rd-party packages must use commercial-friendly open-source licenses (**MIT, Apache-2.0, or BSD**).
+
+## 3. Mandatory Unit Testing Standard
+- Every implementation file (`*.go`) must be paired with unit test coverage (`*_test.go`).
+- Domain entities and Application usecases must pass unit tests with 100% harness verification.

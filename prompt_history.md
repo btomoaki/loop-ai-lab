@@ -218,3 +218,128 @@
   - Moved `refinement_multi_persona.md` and `refinement_file_reference_prompt.md` to `rules/refinement/` without prefix redundancy.
   - Trimmed `dev_` prefix from `dev_go_clean_architecture.md` and `dev_container_deployment.md` and placed in `rules/development/`.
   - Moved `task_management.md` to `rules/policies/`.
+
+## Step - Delete Redundant `references/go_clean_architecture.md` and Unify Rules (2026-08-23)
+- **Prompt Summary**: Remove redundant `references/go_clean_architecture.md` and unify Go Clean Architecture guidelines under `.agents/rules/development/go_clean_architecture.md`.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Deleted `references/go_clean_architecture.md`.
+  - Refined `.agents/rules/development/go_clean_architecture.md` as the single app-agnostic source of truth.
+  - Updated `RefinementEngine` references.
+
+## Step - Refinement Engine True Autonomy & Hardcode Elimination (2026-08-23)
+- **Prompt Summary**: Eliminate hardcoded task arrays (`file_decomposed_epics`) from Python code in `RefinementEngine`. Let LLM dynamically derive Epics, file task breakdowns, and DI wiring tasks (`internal/di/`, `cmd/server/main.go`) based on specs and rules.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Removed Python hardcoded task array `file_decomposed_epics`.
+  - Added DI/Wiring rules to `.agents/rules/development/go_clean_architecture.md`.
+  - Implemented dynamic Epic parser `extract_epics_from_overall_log()` in `RefinementEngine` to dynamically discover Epics from Phase 1 output.
+  - Implemented dynamic file-task prompt in Phase 2 allowing LLM to autonomously generate file paths, DI integration tasks, and DoD criteria.
+
+## Step - Create Meta Architecture Rules and Enable Dynamic Rule Ingestion (2026-08-23)
+- **Prompt Summary**: Establish Meta Architecture rules in `.agents/rules/policies/meta_architecture.md` (Single Source of Truth & Dynamic Context Loading) and update `RefinementEngine` to dynamically ingest all rules from `.agents/rules/` without Python code modifications.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created `.agents/rules/policies/meta_architecture.md` defining rules 1 & 2 (Externalization & Automatic Rule Loading) and step-by-step hardcode refactoring policy.
+  - Implemented `load_all_rules()` in `RefinementEngine` to automatically load all Markdown rule files in `.agents/rules/` recursively.
+
+## Step - Implement ContextLoader and Separate Ingestion Rules by Phase (2026-08-23)
+- **Prompt Summary**: Implement `ContextLoader` (`runner/utils/context_loader.py`) to separate context windows between Loop/Refinement LLM and Worker/Dev LLM, optimize token usage by pruning unneeded logs/specs, and extract only consolidated decisions from `state/.evaluator/overall_debate_log.md`.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created `runner/utils/context_loader.py` with `get_refinement_context()`, `get_worker_context()`, and `extract_evaluator_decisions()`.
+  - Refactored `RefinementEngine` to use `ContextLoader`, reducing prompt token bloat while keeping Single Source of Truth via dynamic directory loading.
+  - Isolated worker context (`.agents/rules/development/` + `.agents/rules/policies/`) away from verbose debate logs.
+
+## Step - Revert to Lightweight File Path Referencing Policy (2026-08-23)
+- **Prompt Summary**: Eliminate inlining/text-injection of Markdown file contents in prompts. Revert to lightweight physical file path references (e.g. `references/icon_generator.md`, `.agents/rules/development/go_clean_architecture.md`) to shrink prompt size from 24,000 chars down to ~1,200 chars.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Removed text inlining functions in `ContextLoader` and `RefinementEngine`.
+  - Updated prompt generators to strictly pass relative file paths instead of raw file body texts.
+
+## Step - Refactor Refinement Output to `epic_backlog.yaml` and Implement Sprint Task Splitter (2026-08-23)
+- **Prompt Summary**: Update `RefinementEngine` to output `epic_backlog.yaml` representing full epic scope, and implement automated task decomposition from `epic_backlog.yaml` into sprint-specific backlogs (`sprint_1_backlog.yaml`, `sprint_2_backlog.yaml`, etc.).
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Changed `RefinementEngine` output filename from `sprint_1_backlog.yaml` to `epic_backlog.yaml`.
+  - Added `BacklogSplitter` logic in `HarnessGenerator` / `RefinementEngine` to split `epic_backlog.yaml` tasks into sprint-specific files.
+
+## Step - Enhance Multi-Persona Debate Dialogue and Implement Sprint Backlog Splitter (2026-08-23)
+- **Prompt Summary**: Enhance `debate_log.md` to record substantive persona review comments (reasons, trade-offs, security points) rather than just a task list. Save complete epic tasks into `epic_backlog.yaml` and implement automated splitting into `sprint_1_backlog.yaml`, `sprint_2_backlog.yaml`, etc.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `RefinementEngine` prompts to enforce rich persona review dialogue in `debate_log.md`.
+  - Saved full epic tasks as `epic_backlog.yaml`.
+  - Implemented `split_epic_backlog_into_sprints()` in `HarnessGenerator` to partition tasks into sprint-specific backlogs and harness scripts.
+
+## Step - Decouple Backlog Splitting from HarnessGenerator (2026-08-23)
+- **Prompt Summary**: Extract `BacklogSplitter` (`runner/utils/backlog_splitter.py`) to handle `epic_backlog.yaml` -> `sprint_x_backlog.yaml` partitioning, decoupling it from `HarnessGenerator` to enforce Single Responsibility Principle.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created `runner/utils/backlog_splitter.py` dedicated to backlog parsing and sprint partitioning.
+  - Simplified `runner/generators/harness_generator.py` to focus solely on bash script generation.
+  - Updated `RefinementEngine` pipeline invocation order.
+
+## Step - Delete Redundant `references/GEMINI.md` and Enforce 1-Task 1-Sprint Step Model (2026-08-23)
+- **Prompt Summary**: Remove redundant `references/GEMINI.md` after full integration into `.agents/rules/development/go_clean_architecture.md`, and execute dynamic refinement using the 1-task per 1-sprint step model.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Executed `git rm references/GEMINI.md`.
+  - Confirmed 1-task = 1-sprint backlog partitioning logic in `BacklogSplitter`.
+
+## Step - Refactor Refinement Rules & Enforce Single Source of Truth via Rules/Personas (2026-08-23)
+- **Prompt Summary**: Remove ad-hoc prompt strings from Python engines. Rely on `.agents/rules/` and `.agents/personas/` for role definitions and debate instructions.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Enforced Meta-Architecture policy: Python code serves as a transparent runner; LLM behaviors and persona roleplay are defined in rule/persona files.
+  - Reset state and executed refinement pipeline.
+
+## Step - Decouple Debate Log and Direct YAML Generation (2026-08-23)
+- **Prompt Summary**: Eliminate text-parsing regex logic from Python runner. Enforce SRP: debate_log.md for multi-persona discussion, and epic_backlog.yaml directly written by LLM with scope and tasks.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Completely removed string parsing regex methods from `RefinementEngine`.
+  - Updated LLM prompt to write `epic_backlog.yaml` directly containing `scope` and fine-grained `tasks`.
+  - Executed clean refinement pipeline.
+
+## Step - Enforce Single Responsibility Epic Granularity Rule & Physical "and/with" Harness Check (2026-08-23)
+- **Prompt Summary**: Added rule against combining multiple responsibilities in epic names using "and/with". Implemented physical harness in RefinementEngine to reject epics containing conjunction keywords ("_and_", "_with_").
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `.agents/rules/refinement/epic_granularity.md` to forbid conjunction terms in epic titles.
+  - Implemented physical validation harness in `RefinementEngine.extract_epics_from_overall_log()` to reject composite epic names.
+
+## Step - Create `spec_auditor` Persona for 100% Requirement Coverage Check (2026-08-23)
+- **Prompt Summary**: Introduced `Specification Auditor` persona (`.agents/personas/spec_auditor.md`) to audit every requirement in `icon_generator.md` (including GCP Cloud Run, PORT binding, and licenses) to prevent spec omissions.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created `.agents/personas/spec_auditor.md`.
+  - Updated refinement pipeline to include `spec_auditor` in multi-persona debate.
+
+## Step - Clean Context Reference with Selective Wildcards (`.agents/rules/refinement/*.md`) (2026-08-23)
+- **Prompt Summary**: Replaced verbose individual file lists in prompt context with selective wildcard directory paths (e.g. `.agents/rules/refinement/*.md`). Excluded irrelevant implementation rules (`development/*.md`) during the refinement phase.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `ContextLoader` to output clean wildcard references (`.agents/rules/refinement/*.md`, `.agents/rules/policies/*.md`, `.agents/personas/*.md`).
+  - Filtered out phase-inappropriate rules (such as `development/*.md`) from refinement prompts to keep LLM context lean and relevant.
+
+## Step - Externalize Phase 1 Objective & Constraints to Rule File (`overall_debate.md`) (2026-08-23)
+- **Prompt Summary**: Moved hardcoded Phase 1 instructions/objectives (100% spec coverage, Specification Auditor check, single-responsibility epics, no conjunctions) from Python code to `.agents/rules/refinement/overall_debate.md`.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created `.agents/rules/refinement/overall_debate.md`.
+  - Externalized prompt instructions into rule files so Python runner remains 100% driven by rules.
+
+## Step - Completely Remove Hardcoded Fallback String from `RefinementEngine` (2026-08-23)
+- **Prompt Summary**: Removed unacceptable hardcoded debate/epic string fallbacks from `RefinementEngine.py` to maintain 100% rule-driven dynamic LLM generation and runner code transparency.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Deleted hardcoded fallback debate logs and epic lists from `RefinementEngine.run_overall_debate()`.
+  - Enforced strict failure handling (retry/exit) instead of writing synthetic fallback strings in Python code.
+
+## Step - Enforce Strict User Escalation & Halt on LLM Understanding/Parsing Failure (2026-08-23)
+- **Prompt Summary**: Prohibited silent skipping or swallowing errors when LLM generation/parsing fails. Enforced explicit runtime exception & immediate pipeline escalation back to user.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `RefinementEngine.py` to raise `RuntimeError` on empty LLM responses or missing epic extractions, halting execution immediately for user escalation.

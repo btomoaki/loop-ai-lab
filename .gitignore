@@ -19,6 +19,7 @@ references/*
 __pycache__/
 *.pyc
 .venv/
+./engine/__pycache__/*.pyc
 ./runner/__pycache__/*.pyc
 
 state/initiatives/epic_*

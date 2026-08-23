@@ -13,7 +13,7 @@ project:
   format_cmd: gofmt -w .
   lint_cmd: golint ./...
   file_extension: .go
-  container_image_name: gcr.io/your-project/identicon-generator
+  container_image_name: gcr.io/your-project-id/identicon-generator
   container_base: gcr.io/distroless/static-debian12
   run_user: nonroot
   port: 8080
