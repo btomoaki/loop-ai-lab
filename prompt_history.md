@@ -356,3 +356,9 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Updated `.agents/rules/refinement/overall_debate.md` with trade-off & alternative proposal escalation instructions.
+
+## Step - Elevate Alternative Proposal Escalation Rule to CRITICAL DIRECTIVE #1 (2026-08-23)
+- **Prompt Summary**: Promoted Alternative Proposal Escalation to top priority (CRITICAL DIRECTIVE #1) across all refinement & debate rules. Instructed AI personas to prioritize escalating with Option A/B immediately over force-implementing or guessing.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `.agents/rules/refinement/overall_debate.md` placing CRITICAL DIRECTIVE #1 at the top of the file.

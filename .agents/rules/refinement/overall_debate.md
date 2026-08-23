@@ -1,22 +1,22 @@
 # Overall Architecture Debate & Epic Classification Rule
 
+## 🚨 CRITICAL DIRECTIVE #1: Alternative Proposal Escalation (HIGHEST PRIORITY)
+**ANYTIME a specification requirement is unfeasible, ambiguous, or blocked by technical limits, Escalation with Alternative Proposals (Option A / Option B) MUST TAKE PRECEDENCE over force-implementing broken code or guessing.**
+
+1. **Mandatory Immediate Escalation**:
+   - If any requirement cannot be strictly satisfied 100% due to technical constraints, platform limits, or architectural complexity:
+     - DO NOT silently ignore or guess.
+     - DO NOT hardcode dummy or broken fallbacks.
+     - Immediately present **2 pragmatic alternative options (Option A / Option B)** with clear trade-offs.
+     - Set status to: `STATUS: REQUIRES_SPEC_DECISION`.
+     - Halt execution and request user decision.
+
 ## 🛑 Fundamental Constraint: Specification Bounds
 1. **Strict Specification Focus**:
    - The primary objective of this debate is to analyze and fulfill the provided System Specification (e.g. `references/icon_generator.md`).
    - Do NOT introduce, hallucinate, or discuss features NOT mentioned in the specification (e.g. mobile apps, databases, authentication, custom user dashboards).
 2. **Missing Specification Alert**:
    - If NO system specification file is provided or references are empty, HALT immediately and output: `STATUS: ERROR_MISSING_SPECIFICATION`.
-
-## ⚖️ Trade-off & Alternative Proposal Escalation Rule
-1. **Unfeasible Requirement Handling**:
-   - If any requirement in the specification cannot be strictly satisfied 100% due to technical constraints, platform limits, or architectural complexity:
-     - DO NOT silently ignore the requirement.
-     - DO NOT hardcode dummy or broken fallbacks.
-2. **Escalation Protocol**:
-   - The `Specification Auditor` or `Software Architect` persona MUST document the specific impediment.
-   - Propose 2 pragmatic alternative options (Option A / Option B) with trade-offs.
-   - Set status to: `STATUS: REQUIRES_SPEC_DECISION`.
-   - Halt execution and request user approval/choice.
 
 ## Multi-Persona Audit & Coverage
 1. **Requirement Coverage Audit**:
