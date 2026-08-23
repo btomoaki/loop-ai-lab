@@ -417,3 +417,17 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Created/Updated `.agents/rules/development/go_clean_architecture.md` with explicit Interface Injection guidelines.
+
+## Step - Add Automatic Epic Prompt Context Logging (`actual_epic_prompt.md`) (2026-08-23)
+- **Prompt Summary**: Updated `RefinementEngine.refine_single_epic()` to automatically output the exact prompt context used for individual epic refinement to `state/.evaluator/actual_epic_prompt.md`.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Added auto-logging for individual epic prompts in `RefinementEngine`.
+
+## Step - Add Graceful Shutdown (SIGTERM/SIGINT) Mandate to Personas & Rules (2026-08-23)
+- **Prompt Summary**: User identified missing Cloud Native requirement: Graceful Shutdown handling for SIGTERM/SIGINT signals. Added Graceful Shutdown mandate to `.agents/personas/devops_cloud_architect.md`, `.agents/rules/development/go_clean_architecture.md`, and `references/decisions.md`.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `devops_cloud_architect.md` persona with explicit SIGTERM/SIGINT handling requirements.
+  - Appended Graceful Shutdown rule to `go_clean_architecture.md`.
+  - Added Decision #5 to `references/decisions.md`.

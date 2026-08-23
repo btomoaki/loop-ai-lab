@@ -15,3 +15,9 @@
    - Use clean, explicit constructor interface injection.
 3. **Unit Testability (UT)**:
    - Interface injection ensures all dependencies can be cleanly mocked using standard Go mocks or stub structs in `_test.go` files without spinning up external servers or databases.
+
+## 3. 🛑 Graceful Shutdown & Cloud-Native Execution Directive
+- **Signal Notification**:
+  - `cmd/server/main.go` MUST listen for OS signals (`syscall.SIGINT`, `syscall.SIGTERM`) via `signal.Notify(quit, os.Interrupt, syscall.SIGTERM)`.
+- **Server Shutdown**:
+  - Upon signal catch, trigger `srv.Shutdown(ctx)` with `context.WithTimeout(context.Background(), 10*time.Second)` to allow clean request draining without 503 errors during Cloud Run scaling/redeployments.
