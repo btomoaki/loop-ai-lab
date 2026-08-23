@@ -38,22 +38,23 @@ class RefinementEngine:
         return "gemini"
 
     def extract_epics_from_overall_log(self, debate_text: str) -> list:
-        """全体ディベートログからエピックリストと Scope を抽出。結合キーワード (and/with) を物理ハーネスでチェック。"""
+        """全体ディベートログからエピックリストと Scope を抽出。見出し・リストあらゆる記法に対応。"""
         epics = []
         
-        p1 = r'(?:-|\*|\d+\.)?\s*\*\*(epic_[a-zA-Z0-9_]+)\*\*:\s*(.*)'
+        # Match ### **epic_1_name** or - **epic_1_name**: Scope
+        p1 = r'(?:#+|\-|\*|\d+\.)?\s*\*\*(epic_[a-zA-Z0-9_]+)\*\*[:\s]*(.*)'
         for m in re.finditer(p1, debate_text):
             e_dir = m.group(1).strip()
             title = e_dir.replace("_", " ").title()
-            scope = m.group(2).strip().replace('`', '')
+            scope = m.group(2).strip().replace('`', '') or f"Scope for {e_dir}"
             epics.append((e_dir, title, scope, len(epics) + 1))
 
         if not epics:
-            p2 = r'(epic_[a-zA-Z0-9_]+):\s*(.*)'
+            p2 = r'(epic_[a-zA-Z0-9_]+)[:\s]*(.*)'
             for m in re.finditer(p2, debate_text):
                 e_dir = m.group(1).strip()
                 title = e_dir.replace("_", " ").title()
-                scope = m.group(2).strip().replace('`', '')
+                scope = m.group(2).strip().replace('`', '') or f"Scope for {e_dir}"
                 epics.append((e_dir, title, scope, len(epics) + 1))
 
         # 🛡️ Physical Harness Check: Detect forbidden conjunctions in epic names
@@ -131,11 +132,11 @@ class RefinementEngine:
             raise RuntimeError("⚖️ [RefinementEngine Trade-off Escalation] Unfeasible requirement detected! Alternatives proposed in state/.evaluator/overall_debate_log.md. Halting for user decision.")
 
     def refine_single_epic(self, dir_name: str, title: str, scope: str, epic_idx: int):
-        """Step 1: debate_log.md (議論対話) を出力。 Step 2: epic_backlog.yaml (スコープ＆タスクデータ) を直接生成。生成失敗時は即座に例外停止。"""
+        """Step 1: debate_log.md (議論対話) を出力。 Step 2: epic_backlog.yaml (スコープ＆タスクデータ) を直接生成。プレフィックス補完。"""
         epic_folder = self.init_dir / dir_name
         epic_folder.mkdir(parents=True, exist_ok=True)
 
-        print(f"�� [RefinementEngine] Step 1: Generating debate_log.md for: {title}...", flush=True)
+        print(f"💬 [RefinementEngine] Step 1: Generating debate_log.md for: {title}...", flush=True)
         
         refs = ContextLoader.get_refinement_file_references(self.root_dir)
 
@@ -170,25 +171,22 @@ class RefinementEngine:
         else:
             current_test_cmd = test_cmd
 
+        yaml_prefix = (
+            f"epic: \"{title}\"\n"
+            f"scope: \"{scope}\"\n"
+            f"target_workspace: \"{ws}\"\n"
+            f"test_command: \"{current_test_cmd}\"\n"
+            "tasks:\n"
+        )
+
         yaml_prompt = (
             f"[TASK: DIRECT EPIC BACKLOG YAML GENERATION - {title}]\n"
             f"Epic Scope: {scope}\n\n"
             f"=== DEBATE LOG REFERENCE ===\n"
             f"File Path: {epic_log_path.relative_to(self.root_dir)}\n\n"
             "【INSTRUCTION】\n"
-            "Output ONLY valid YAML (no markdown codeblock formatting, raw YAML text) representing epic_backlog.yaml. "
-            "Decompose this epic scope into fine-grained file creation tasks.\n\n"
-            "【REQUIRED YAML STRUCTURE】\n"
-            f"epic: \"{title}\"\n"
-            f"scope: \"{scope}\"\n"
-            f"target_workspace: \"{ws}\"\n"
-            f"test_command: \"{current_test_cmd}\"\n"
-            "tasks:\n"
-            f"  - id: \"TASK-{epic_idx}.1\"\n"
-            "    name: \"[FILE] path/to/file1.go\"\n"
-            "    description: \"Task description\"\n"
-            "    definition_of_done:\n"
-            "      - \"DoD criteria\"\n"
+            "Generate ONLY the YAML tasks array starting with `- id: \"TASK-1.1\"` under `tasks:`.\n\n"
+            + yaml_prefix
         )
 
         yaml_response = self.refinement_agent.generate_text(yaml_prompt)
@@ -202,11 +200,16 @@ class RefinementEngine:
             clean_yaml = clean_yaml[:-3]
         clean_yaml = clean_yaml.strip()
 
-        if not clean_yaml or "tasks:" not in clean_yaml:
+        if not clean_yaml.startswith("epic:"):
+            full_yaml = yaml_prefix + clean_yaml
+        else:
+            full_yaml = clean_yaml
+
+        if "tasks:" not in full_yaml or "TASK-" not in full_yaml:
             raise RuntimeError(f"❌ [RefinementEngine Escalation] LLM failed to generate valid epic_backlog.yaml for epic '{title}'! Raw response: '{yaml_response}'. Halting pipeline for user escalation.")
 
         epic_backlog_file = epic_folder / "epic_backlog.yaml"
-        CodeParser.atomic_write_text(epic_backlog_file, clean_yaml)
+        CodeParser.atomic_write_text(epic_backlog_file, full_yaml)
         print(f"📝 [RefinementEngine] Saved direct epic_backlog.yaml for: {dir_name}")
 
     def run_refinement(self) -> bool:
