@@ -23,7 +23,7 @@ class GeminiAdapter(LLMAdapter):
 
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
-            headers = {"Content-Type": "application/json"}
+            headers = {"Content-Type": "application/json", "Connection": "close"}
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}]
             }
@@ -44,14 +44,23 @@ class LlamaCppAdapter(LLMAdapter):
     def generate_text(self, prompt: str) -> str:
         try:
             print(f"🔍 [LLM:Local] Requesting completion from Local LLM ({self.endpoint_url}). Prompt length: {len(prompt)} chars...")
-            headers = {"Content-Type": "application/json"}
+            
+            # 🛡️ Connection: close ヘッダーを強制付与し、ローカルLLMサーバー側にソケットを即座に解放させる
+            headers = {
+                "Content-Type": "application/json",
+                "Connection": "close"
+            }
             payload = {
                 "prompt": prompt,
                 "temperature": 0.2,
-                "n_predict": 2048,
+                "n_predict": 1024,
                 "stop": ["</s>", "[END_OF_TEXT]"]
             }
-            resp = requests.post(self.endpoint_url, headers=headers, json=payload, timeout=120)
+
+            session = requests.Session()
+            session.keep_alive = False  # コネクションプール保持を禁止し、ゾンビソケットを防止
+
+            resp = session.post(self.endpoint_url, headers=headers, json=payload, timeout=120)
             resp.raise_for_status()
             data = resp.json()
             content = data.get("content", "")

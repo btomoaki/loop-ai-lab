@@ -75,7 +75,7 @@ class RefinementEngine:
         return valid_epics
 
     def run_overall_debate(self):
-        """【Phase 1】全体アーキテクチャディベートを実行。送信前の初回コンテキストを自動ファイル保存。"""
+        """【Phase 1】全体アーキテクチャディベートを実行。生成プレフィックス付きでLLM呼び出し。"""
         print("🌐 [RefinementEngine Phase 1] Pure Rule-Driven Overall Multi-Persona Debate...", flush=True)
         proj_name = self.config.project_name or "identicon-generator"
         lang = self.config.language or "Go"
@@ -97,7 +97,10 @@ class RefinementEngine:
             "Dynamically classify single-responsibility Epics under section '## 3. Classified Actionable Epics List'.\n"
             "Required Naming Pattern:\n"
             "- **epic_1_feature_name**: Scope description directly derived from specification\n\n"
-            "End with STATUS: OVERALL_DEBATE_PASSED (or STATUS: REQUIRES_SPEC_DECISION if trade-offs needed)."
+            "End with STATUS: OVERALL_DEBATE_PASSED (or STATUS: REQUIRES_SPEC_DECISION if trade-offs needed).\n\n"
+            "# 🌐 Overall System Architecture Multi-Persona Debate Log\n\n"
+            "## 1. System Goals & Specification Alignment\n"
+            f"- Specification Target: {proj_name}\n"
         )
 
         # 📄 Save initial raw prompt context automatically to file for user inspection
@@ -105,10 +108,17 @@ class RefinementEngine:
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
         print(f"📄 [RefinementEngine] Saved initial Phase 1 prompt context ({len(prompt)} chars) to: {actual_prompt_file.relative_to(self.root_dir)}")
 
-        llm_response = self.refinement_agent.generate_text(prompt)
+        llm_raw_response = self.refinement_agent.generate_text(prompt)
         
-        if not llm_response or not llm_response.strip():
+        if not llm_raw_response or not llm_raw_response.strip():
             raise RuntimeError("❌ [RefinementEngine Escalation] LLM returned an empty response for Phase 1 Overall Debate! Halting pipeline for user escalation.")
+
+        llm_response = (
+            "# 🌐 Overall System Architecture Multi-Persona Debate Log\n\n"
+            "## 1. System Goals & Specification Alignment\n"
+            f"- Specification Target: {proj_name}\n"
+            + llm_raw_response
+        )
 
         overall_log_path = self.eval_dir / "overall_debate_log.md"
         CodeParser.atomic_write_text(overall_log_path, llm_response)
@@ -125,7 +135,7 @@ class RefinementEngine:
         epic_folder = self.init_dir / dir_name
         epic_folder.mkdir(parents=True, exist_ok=True)
 
-        print(f"💬 [RefinementEngine] Step 1: Generating debate_log.md for: {title}...", flush=True)
+        print(f"�� [RefinementEngine] Step 1: Generating debate_log.md for: {title}...", flush=True)
         
         refs = ContextLoader.get_refinement_file_references(self.root_dir)
 

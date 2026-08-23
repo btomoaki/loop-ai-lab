@@ -381,3 +381,9 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Added automatic file-writing logic for `actual_phase1_prompt.md` in `RefinementEngine`.
+
+## Step - Add Connection Auto-Cleanup & Self-Healing to `LlamaCppAdapter` (2026-08-23)
+- **Prompt Summary**: Implemented `Connection: close` headers and socket cleanup harness in `LlamaCppAdapter` to prevent connection queue saturation and zombie HTTP blocking on local LLM endpoints.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `runner/adapters/llm_adapter.py` with strict socket disconnection and `Connection: close` headers.
