@@ -362,3 +362,22 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Updated `.agents/rules/refinement/overall_debate.md` placing CRITICAL DIRECTIVE #1 at the top of the file.
+
+## Step - Restore Full Specification Context in `ContextLoader` (2026-08-23)
+- **Prompt Summary**: Restored complete text of `icon_generator.md` in `ContextLoader.get_refinement_file_references()` to provide 100% full specification context for overall debate and epic classification.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `runner/utils/context_loader.py` to embed full specification content without lossy summarization.
+
+## Step - Replace Concrete Epic Names with Abstract Placeholder `epic_<number>_<epic_name>` (2026-08-23)
+- **Prompt Summary**: Removed specific example epic names (e.g. `epic_1_domain_entities`) from Python prompt instructions to prevent LLM bias/anchoring. Replaced with generic syntax pattern `epic_<number>_<epic_name>` and reverted file context to clean file-path references.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `RefinementEngine.py` to use generic placeholder `epic_<number>_<epic_name>` in prompt format rules.
+  - Updated `ContextLoader.py` to use clean file-path references (`references/icon_generator.md`).
+
+## Step - Automatically Save Initial Phase 1 Prompt Context to File (`actual_phase1_prompt.md`) (2026-08-23)
+- **Prompt Summary**: Updated `RefinementEngine.run_overall_debate()` to automatically output the exact initial prompt context to `state/.evaluator/actual_phase1_prompt.md` before every LLM request.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Added automatic file-writing logic for `actual_phase1_prompt.md` in `RefinementEngine`.

@@ -3,23 +3,22 @@ from pathlib import Path
 
 
 class ContextLoader:
-    """Utility for loading lightweight file path references for LLM prompts."""
+    """Utility for loading clean file path references for LLM prompts."""
 
     @staticmethod
     def get_refinement_file_references(root_dir: Path) -> dict:
-        """リファインメントフェーズで本当に必要な参照のみをワイルドカード表記で返却。無関係な開発ルールは除外。"""
+        """仕様書およびルール・ペルソナのクリーンな参照表現を出力。"""
         
-        # Specification references
         specs_ref = "- references/icon_generator.md"
-        
-        # Refinement-relevant rules only (excluding development/*.md)
+
         rules_ref = (
-            "- .agents/rules/refinement/*.md\n"
-            "- .agents/rules/policies/*.md"
+            "- .agents/rules/refinement/overall_debate.md (Alternative Proposal Escalation Directive)\n"
+            "- .agents/rules/refinement/epic_granularity.md (Single Responsibility Principle & No 'and/with')"
         )
         
-        # Personas references
-        personas_ref = "- .agents/personas/*.md"
+        personas_ref = (
+            "- .agents/personas/*.md (PO, Specification Auditor, Software Architect, DevOps Cloud Architect, QA Engineer, Security Auditor)"
+        )
 
         return {
             "specs": specs_ref,

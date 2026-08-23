@@ -75,7 +75,7 @@ class RefinementEngine:
         return valid_epics
 
     def run_overall_debate(self):
-        """【Phase 1】全体アーキテクチャディベートを実行。仕様書変更要求や生成失敗時は即座に例外停止・差し戻し。"""
+        """【Phase 1】全体アーキテクチャディベートを実行。送信前の初回コンテキストを自動ファイル保存。"""
         print("🌐 [RefinementEngine Phase 1] Pure Rule-Driven Overall Multi-Persona Debate...", flush=True)
         proj_name = self.config.project_name or "identicon-generator"
         lang = self.config.language or "Go"
@@ -93,8 +93,17 @@ class RefinementEngine:
             f"=== 1. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 2. REPOSITORY RULES & POLICIES ===\n{refs['rules']}\n\n"
             f"=== 3. PARTICIPATING PERSONAS ===\n{refs['personas']}\n\n"
-            "Execute overall architecture debate and epic classification strictly following the rules above."
+            "Analyze the specification with all 6 personas strictly following the rules above.\n"
+            "Dynamically classify single-responsibility Epics under section '## 3. Classified Actionable Epics List'.\n"
+            "Required Naming Pattern:\n"
+            "- **epic_1_feature_name**: Scope description directly derived from specification\n\n"
+            "End with STATUS: OVERALL_DEBATE_PASSED (or STATUS: REQUIRES_SPEC_DECISION if trade-offs needed)."
         )
+
+        # 📄 Save initial raw prompt context automatically to file for user inspection
+        actual_prompt_file = self.eval_dir / "actual_phase1_prompt.md"
+        CodeParser.atomic_write_text(actual_prompt_file, prompt)
+        print(f"📄 [RefinementEngine] Saved initial Phase 1 prompt context ({len(prompt)} chars) to: {actual_prompt_file.relative_to(self.root_dir)}")
 
         llm_response = self.refinement_agent.generate_text(prompt)
         

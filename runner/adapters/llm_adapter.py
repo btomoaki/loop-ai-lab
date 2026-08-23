@@ -48,10 +48,9 @@ class LlamaCppAdapter(LLMAdapter):
             payload = {
                 "prompt": prompt,
                 "temperature": 0.2,
-                "n_predict": 1024,
-                "stop": ["[END]", "User:"]
+                "n_predict": 2048,
+                "stop": ["</s>", "[END_OF_TEXT]"]
             }
-            # タイムアウト時間を 120秒（2分）に拡張
             resp = requests.post(self.endpoint_url, headers=headers, json=payload, timeout=120)
             resp.raise_for_status()
             data = resp.json()
