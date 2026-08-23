@@ -11,7 +11,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class RefinementEngine:
-    """Handles Scrum Refinement: Strict Rule-driven Pipeline with Immediate User Escalation on Failure."""
+    """Handles Scrum Refinement: Strict Rule-driven Pipeline with Alternative Proposal Escalation."""
 
     FORBIDDEN_CONJUNCTIONS = ["_and_", "_with_", "_plus_", "_&_"]
 
@@ -75,12 +75,17 @@ class RefinementEngine:
         return valid_epics
 
     def run_overall_debate(self):
-        """【Phase 1】全体アーキテクチャディベートを実行。生成失敗時は即座に例外停止。"""
+        """【Phase 1】全体アーキテクチャディベートを実行。仕様書変更要求や生成失敗時は即座に例外停止・差し戻し。"""
         print("🌐 [RefinementEngine Phase 1] Pure Rule-Driven Overall Multi-Persona Debate...", flush=True)
         proj_name = self.config.project_name or "identicon-generator"
         lang = self.config.language or "Go"
 
         refs = ContextLoader.get_refinement_file_references(self.root_dir)
+        
+        # 🚨 Specification Existence Guard
+        spec_files = list((self.root_dir / "references").glob("*.md")) if (self.root_dir / "references").exists() else []
+        if not spec_files:
+            raise RuntimeError("❌ [RefinementEngine Alert] Missing System Specification in references/! Cannot proceed without input specification. Halting for user escalation.")
 
         prompt = (
             f"[SYSTEM INSTRUCTION: OVERALL SYSTEM DEBATE & EPIC CLASSIFICATION - {proj_name}]\n"
@@ -99,6 +104,12 @@ class RefinementEngine:
         overall_log_path = self.eval_dir / "overall_debate_log.md"
         CodeParser.atomic_write_text(overall_log_path, llm_response)
         print(f"📝 [RefinementEngine Phase 1 Complete] Saved overall debate log: {overall_log_path.relative_to(self.root_dir)}")
+
+        if "ERROR_MISSING_SPECIFICATION" in llm_response:
+            raise RuntimeError("❌ [RefinementEngine Escalation] LLM reported missing system specification! Halting pipeline for user escalation.")
+
+        if "REQUIRES_SPEC_DECISION" in llm_response:
+            raise RuntimeError("⚖️ [RefinementEngine Trade-off Escalation] Unfeasible requirement detected! Alternatives proposed in state/.evaluator/overall_debate_log.md. Halting for user decision.")
 
     def refine_single_epic(self, dir_name: str, title: str, scope: str, epic_idx: int):
         """Step 1: debate_log.md (議論対話) を出力。 Step 2: epic_backlog.yaml (スコープ＆タスクデータ) を直接生成。生成失敗時は即座に例外停止。"""

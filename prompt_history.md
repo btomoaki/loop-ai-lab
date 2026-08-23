@@ -343,3 +343,16 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Updated `RefinementEngine.py` to raise `RuntimeError` on empty LLM responses or missing epic extractions, halting execution immediately for user escalation.
+
+## Step - Enforce Strict Specification Bounds & Missing Spec Alert in `overall_debate.md` (2026-08-23)
+- **Prompt Summary**: Added core constraints to `.agents/rules/refinement/overall_debate.md` forbidding hallucinated/out-of-scope discussions (e.g. database, mobile app) and requiring exact completion of input specs. Added missing specification alert rule.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `.agents/rules/refinement/overall_debate.md` with Specification Bounds & Missing Spec Alert rules.
+  - Required output format `epic_<number>_<name>` to prevent generic textbook outputs.
+
+## Step - Add Alternative Proposal Escalation Rule to `overall_debate.md` (2026-08-23)
+- **Prompt Summary**: Introduced `Alternative Proposal Escalation Rule` allowing AI personas to propose 2 pragmatic alternative solutions (`Option A`, `Option B`) and escalate with `STATUS: REQUIRES_SPEC_DECISION` when a specification requirement cannot be strictly fulfilled 100%.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `.agents/rules/refinement/overall_debate.md` with trade-off & alternative proposal escalation instructions.
