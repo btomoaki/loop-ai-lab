@@ -405,3 +405,9 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Created `references/decisions.md` capturing the user's architectural decision.
+
+## Step - Add Interface Injection Decision to `references/decisions.md` (2026-08-23)
+- **Prompt Summary**: User directed to use Interface Injection for Dependency Injection (DI) to ensure clean mockability and easy unit testing (UT). Added Decision #4 to `references/decisions.md`.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Appended Decision #4 to `references/decisions.md`.
