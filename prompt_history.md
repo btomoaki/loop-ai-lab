@@ -431,3 +431,9 @@
   - Updated `devops_cloud_architect.md` persona with explicit SIGTERM/SIGINT handling requirements.
   - Appended Graceful Shutdown rule to `go_clean_architecture.md`.
   - Added Decision #5 to `references/decisions.md`.
+
+## Step - Implement Checkpoint & Resume Mode in `RefinementEngine` (2026-08-23)
+- **Prompt Summary**: Implemented epic-level checkpointing and automatic resume mode in `RefinementEngine` to skip already completed overall debate logs (`overall_debate_log.md`), epic debate logs (`debate_log.md`), and epic backlogs (`epic_backlog.yaml`).
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `runner/engine/refinement_engine.py` with file-based idempotency/checkpoint checks.

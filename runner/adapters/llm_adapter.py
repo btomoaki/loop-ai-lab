@@ -48,7 +48,7 @@ class LlamaCppAdapter(LLMAdapter):
             payload = {
                 "prompt": prompt,
                 "temperature": 0.2,
-                "n_predict": 1024,
+                "n_predict": 2048,  # 🌟 2048トークンに拡張し、途切れを解消
                 "stop": ["</s>", "[END_OF_TEXT]"]
             }
 

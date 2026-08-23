@@ -11,7 +11,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class RefinementEngine:
-    """Handles Scrum Refinement: Strict Rule-driven Pipeline with Alternative Proposal Escalation."""
+    """Handles Scrum Refinement: Strict Rule-driven Pipeline with Checkpoint & Resume Mode."""
 
     FORBIDDEN_CONJUNCTIONS = ["_and_", "_with_", "_plus_", "_&_"]
 
@@ -38,10 +38,8 @@ class RefinementEngine:
         return "gemini"
 
     def extract_epics_from_overall_log(self, debate_text: str) -> list:
-        """全体ディベートログからエピックリストと Scope を抽出。見出し・リストあらゆる記法に対応。"""
+        """全体ディベートログからエピックリストと Scope を抽出。"""
         epics = []
-        
-        # Match ### **epic_1_name** or - **epic_1_name**: Scope
         p1 = r'(?:#+|\-|\*|\d+\.)?\s*\*\*(epic_[a-zA-Z0-9_]+)\*\*[:\s]*(.*)'
         for m in re.finditer(p1, debate_text):
             e_dir = m.group(1).strip()
@@ -57,7 +55,6 @@ class RefinementEngine:
                 scope = m.group(2).strip().replace('`', '') or f"Scope for {e_dir}"
                 epics.append((e_dir, title, scope, len(epics) + 1))
 
-        # 🛡️ Physical Harness Check: Detect forbidden conjunctions in epic names
         valid_epics = []
         for e_dir, title, scope, idx in epics:
             has_conjunction = any(conj in e_dir.lower() for conj in self.FORBIDDEN_CONJUNCTIONS)
@@ -76,14 +73,20 @@ class RefinementEngine:
         return valid_epics
 
     def run_overall_debate(self):
-        """【Phase 1】全体アーキテクチャディベートを実行。生成プレフィックス付きでLLM呼び出し。"""
+        """【Phase 1】全体アーキテクチャディベートを実行。チェックポイント再開対応。"""
+        overall_log_path = self.eval_dir / "overall_debate_log.md"
+
+        # ⚡ Resume Checkpoint: 既存の全体ディベートログがある場合は再利用
+        if overall_log_path.exists() and len(overall_log_path.read_text(encoding="utf-8").strip()) > 100:
+            print(f"⏩ [RefinementEngine Checkpoint] Found existing overall_debate_log.md ({overall_log_path.stat().st_size} bytes). Skipping Phase 1 LLM call!", flush=True)
+            return
+
         print("🌐 [RefinementEngine Phase 1] Pure Rule-Driven Overall Multi-Persona Debate...", flush=True)
         proj_name = self.config.project_name or "identicon-generator"
         lang = self.config.language or "Go"
 
         refs = ContextLoader.get_refinement_file_references(self.root_dir)
         
-        # 🚨 Specification Existence Guard
         spec_files = list((self.root_dir / "references").glob("*.md")) if (self.root_dir / "references").exists() else []
         if not spec_files:
             raise RuntimeError("❌ [RefinementEngine Alert] Missing System Specification in references/! Cannot proceed without input specification. Halting for user escalation.")
@@ -104,13 +107,11 @@ class RefinementEngine:
             f"- Specification Target: {proj_name}\n"
         )
 
-        # 📄 Save initial raw prompt context automatically to file for user inspection
         actual_prompt_file = self.eval_dir / "actual_phase1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
         print(f"📄 [RefinementEngine] Saved initial Phase 1 prompt context ({len(prompt)} chars) to: {actual_prompt_file.relative_to(self.root_dir)}")
 
         llm_raw_response = self.refinement_agent.generate_text(prompt)
-        
         if not llm_raw_response or not llm_raw_response.strip():
             raise RuntimeError("❌ [RefinementEngine Escalation] LLM returned an empty response for Phase 1 Overall Debate! Halting pipeline for user escalation.")
 
@@ -121,7 +122,6 @@ class RefinementEngine:
             + llm_raw_response
         )
 
-        overall_log_path = self.eval_dir / "overall_debate_log.md"
         CodeParser.atomic_write_text(overall_log_path, llm_response)
         print(f"📝 [RefinementEngine Phase 1 Complete] Saved overall debate log: {overall_log_path.relative_to(self.root_dir)}")
 
@@ -132,31 +132,47 @@ class RefinementEngine:
             raise RuntimeError("⚖️ [RefinementEngine Trade-off Escalation] Unfeasible requirement detected! Alternatives proposed in state/.evaluator/overall_debate_log.md. Halting for user decision.")
 
     def refine_single_epic(self, dir_name: str, title: str, scope: str, epic_idx: int):
-        """Step 1: debate_log.md (議論対話) を出力。 Step 2: epic_backlog.yaml (スコープ＆タスクデータ) を直接生成。プレフィックス補完。"""
+        """Step 1: debate_log.md を出力。 Step 2: epic_backlog.yaml を直接生成。各チェックポイント対応。"""
         epic_folder = self.init_dir / dir_name
         epic_folder.mkdir(parents=True, exist_ok=True)
+        epic_log_path = epic_folder / "debate_log.md"
+        epic_backlog_file = epic_folder / "epic_backlog.yaml"
 
-        print(f"💬 [RefinementEngine] Step 1: Generating debate_log.md for: {title}...", flush=True)
-        
         refs = ContextLoader.get_refinement_file_references(self.root_dir)
 
-        debate_prompt = (
-            f"[TASK: EPIC REFINEMENT DEBATE LOG - {title}]\n"
-            f"Epic Directory: {dir_name}\n"
-            f"Epic Scope: {scope}\n\n"
-            f"=== OVERALL ARCHITECTURE CONTEXT ===\n"
-            f"File Path: state/.evaluator/overall_debate_log.md\n\n"
-            f"=== REPOSITORY RULES ===\n{refs['rules']}\n\n"
-            f"=== PERSONAS ===\n{refs['personas']}\n\n"
-            "Write multi-persona debate log strictly following repository rules above."
-        )
+        # ⚡ Step 1 Checkpoint: Check debate_log.md
+        if epic_log_path.exists() and len(epic_log_path.read_text(encoding="utf-8").strip()) > 50:
+            print(f"⏩ [RefinementEngine Checkpoint] debate_log.md exists for '{dir_name}'. Skipping Step 1 LLM call!", flush=True)
+        else:
+            print(f"💬 [RefinementEngine] Step 1: Generating debate_log.md for: {title}...", flush=True)
+            debate_prefix = f"# 💬 Epic Architecture Debate Log: {title}\n\n## 1. Multi-Persona Discussion\n- **[PO Persona]**: Core business requirements for {title}.\n"
 
-        debate_response = self.refinement_agent.generate_text(debate_prompt)
-        if not debate_response or not debate_response.strip():
-            raise RuntimeError(f"❌ [RefinementEngine Escalation] LLM failed to generate debate_log.md for epic '{title}'! Halting pipeline for user escalation.")
+            debate_prompt = (
+                f"[TASK: EPIC REFINEMENT DEBATE LOG - {title}]\n"
+                f"Epic Directory: {dir_name}\n"
+                f"Epic Scope: {scope}\n\n"
+                f"=== OVERALL ARCHITECTURE CONTEXT ===\n"
+                f"File Path: state/.evaluator/overall_debate_log.md\n\n"
+                f"=== REPOSITORY RULES ===\n{refs['rules']}\n\n"
+                f"=== PERSONAS ===\n{refs['personas']}\n\n"
+                "Write multi-persona debate log strictly following repository rules above.\n\n"
+                + debate_prefix
+            )
 
-        epic_log_path = epic_folder / "debate_log.md"
-        CodeParser.atomic_write_text(epic_log_path, debate_response)
+            actual_epic_prompt_file = self.eval_dir / "actual_epic_prompt.md"
+            CodeParser.atomic_write_text(actual_epic_prompt_file, debate_prompt)
+
+            debate_raw_response = self.refinement_agent.generate_text(debate_prompt)
+            if not debate_raw_response or not debate_raw_response.strip():
+                raise RuntimeError(f"❌ [RefinementEngine Escalation] LLM failed to generate debate_log.md for epic '{title}'! Halting pipeline for user escalation.")
+
+            debate_response = debate_prefix + debate_raw_response
+            CodeParser.atomic_write_text(epic_log_path, debate_response)
+
+        # ⚡ Step 2 Checkpoint: Check epic_backlog.yaml
+        if epic_backlog_file.exists() and "tasks:" in epic_backlog_file.read_text(encoding="utf-8"):
+            print(f"⏩ [RefinementEngine Checkpoint] epic_backlog.yaml exists for '{dir_name}'. Skipping Step 2 LLM call!", flush=True)
+            return
 
         print(f"📝 [RefinementEngine] Step 2: Generating direct epic_backlog.yaml for: {title}...", flush=True)
         
@@ -189,6 +205,9 @@ class RefinementEngine:
             + yaml_prefix
         )
 
+        actual_epic_prompt_file = self.eval_dir / "actual_epic_prompt.md"
+        CodeParser.atomic_write_text(actual_epic_prompt_file, yaml_prompt)
+
         yaml_response = self.refinement_agent.generate_text(yaml_prompt)
         
         clean_yaml = (yaml_response or "").strip()
@@ -208,7 +227,6 @@ class RefinementEngine:
         if "tasks:" not in full_yaml or "TASK-" not in full_yaml:
             raise RuntimeError(f"❌ [RefinementEngine Escalation] LLM failed to generate valid epic_backlog.yaml for epic '{title}'! Raw response: '{yaml_response}'. Halting pipeline for user escalation.")
 
-        epic_backlog_file = epic_folder / "epic_backlog.yaml"
         CodeParser.atomic_write_text(epic_backlog_file, full_yaml)
         print(f"📝 [RefinementEngine] Saved direct epic_backlog.yaml for: {dir_name}")
 
