@@ -3,13 +3,13 @@ from pathlib import Path
 
 
 class ContextLoader:
-    """Utility for loading clean file path references for LLM prompts."""
+    """Utility for loading clean file path references and user decisions for LLM prompts."""
 
     @staticmethod
     def get_refinement_file_references(root_dir: Path) -> dict:
-        """仕様書およびルール・ペルソナのクリーンな参照表現を出力。"""
+        """仕様書、決定事項、およびルール・ペルソナの参照テキストを出力。"""
         
-        specs_ref = "- references/icon_generator.md"
+        specs_ref = "- references/icon_generator.md\n- references/decisions.md (Architectural Decisions & Escalation Resolutions)"
 
         rules_ref = (
             "- .agents/rules/refinement/overall_debate.md (Alternative Proposal Escalation Directive)\n"

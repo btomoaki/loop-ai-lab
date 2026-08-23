@@ -399,3 +399,9 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Enhanced Regex pattern matching in `RefinementEngine` to support header-styled epic definitions.
+
+## Step - Record User Decision on Escalated Trade-offs in `references/decisions.md` (2026-08-23)
+- **Prompt Summary**: User selected Option: Simple, PNG-only format, and Strict 100% Determinism. Recorded decision in `references/decisions.md` for permanent reference.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created `references/decisions.md` capturing the user's architectural decision.
