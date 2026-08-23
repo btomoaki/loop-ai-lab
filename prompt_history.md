@@ -411,3 +411,9 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Appended Decision #4 to `references/decisions.md`.
+
+## Step - Add Interface Injection Rule to `.agents/rules/development/go_clean_architecture.md` (2026-08-23)
+- **Prompt Summary**: Enforced Interface Injection pattern across all Go Clean Architecture layer boundaries in `.agents/rules/development/go_clean_architecture.md` for seamless unit testing (UT) and mockability.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created/Updated `.agents/rules/development/go_clean_architecture.md` with explicit Interface Injection guidelines.
