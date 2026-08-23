@@ -443,3 +443,19 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Updated `RefinementEngine` log messages to clear Japanese terminology: `⏯️ [RefinementEngine 中断再開]`.
+
+## Step - Clean Reset & Start Full Refinement Pipeline (2026-08-23)
+- **Prompt Summary**: Executed full clean reset (`init`) and launched fresh refinement pipeline (`run --phase refinement`) incorporating all updated rules (Interface Injection, Graceful Shutdown, Decisions #1-#5).
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Removed old initiative files and evaluator logs for clean start.
+  - Re-initialized configuration via `python3 runner/main.py init`.
+  - Started fresh refinement pipeline.
+
+## Step - Add OpenAPI 3.0 (Swagger) Specification Mandate to Architect Persona & Rules (2026-08-23)
+- **Prompt Summary**: User pointed out missing Swagger / OpenAPI specification for API Contract Definition. Added OpenAPI 3.0 (Swagger) mandate to `.agents/personas/software_architect.md`, `.agents/rules/development/go_clean_architecture.md`, and `references/decisions.md`.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created/Updated `.agents/personas/software_architect.md` with OpenAPI 3.0 specification mandate.
+  - Appended OpenAPI 3.0 specification requirement to `go_clean_architecture.md`.
+  - Added Decision #6 to `references/decisions.md`.

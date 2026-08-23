@@ -21,3 +21,9 @@
   - `cmd/server/main.go` MUST listen for OS signals (`syscall.SIGINT`, `syscall.SIGTERM`) via `signal.Notify(quit, os.Interrupt, syscall.SIGTERM)`.
 - **Server Shutdown**:
   - Upon signal catch, trigger `srv.Shutdown(ctx)` with `context.WithTimeout(context.Background(), 10*time.Second)` to allow clean request draining without 503 errors during Cloud Run scaling/redeployments.
+
+## 4. 📜 OpenAPI 3.0 (Swagger) Specification Standard
+- **Contract Specification**:
+  - API delivery boundaries MUST be documented via OpenAPI 3.0 specification (`docs/openapi.yaml`).
+- **Endpoint Documentation**:
+  - Explicitly document `/avatar` or `/identicon` endpoints, `seed` query validation, HTTP 200 `image/png` binary response, and error payload schemas.
