@@ -465,3 +465,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Rewrote `README.md` with clean, concise user operational guidance.
+
+## Step - Update `README.md` with Trade-off Q&A Guidance and Clean Operations (2026-08-24)
+- **Prompt Summary**: Updated `README.md` to include simple operational commands, file-based Resume mode explanation, and casual Q&A response guidelines for escalated trade-offs.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Rewrote `README.md` incorporating all user-requested documentation updates.

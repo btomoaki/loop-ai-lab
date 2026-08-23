@@ -32,31 +32,49 @@ PYTHONPATH=. python3 runner/main.py run --phase development
 本フレームワークは**ファイルベースの「中断再開（Resume Mode）」**に対応しており、途中で停止した場合でも安全かつ高速に復帰できます。
 
 ### 1. 自動「中断再開」（Resume）
-`run --phase refinement` を実行すると、すでに生成・完了している成果物（`overall_debate_log.md` や各エピックの `debate_log.md`, `epic_backlog.yaml`）を自動検知してスキップします。
-途中でネットワークが切れたり中断した場合でも、**未完了のエピックの途中から即座に再開**されます。
+`run --phase refinement` を実行すると、すでに出力・完了している成果物（`overall_debate_log.md` や各エピックの `debate_log.md`, `epic_backlog.yaml`）を自動検知してスキップします。
+途中で停止した場合でも、**未完了タスクの途中から即座に自動再開**されます。
 
 ### 2. ピンポイント再開（Pin-Point Restart）
-特定のエピック以降のみを最新のルールでやり直したい場合は、該当するエピックフォルダのみを削除して再実行します。
+特定のエピック以降のみを最新ルールでやり直したい場合は、該当するエピックフォルダ（`state/initiatives/epic_X`）のみを削除して再実行します。
 
 ```bash
-# 例: epic_3 以降を削除して epic_3 から再開する場合
+# 例: epic_3 以降を削除して epic_3 からピンポイント再開する場合
 rm -rf state/initiatives/epic_3_* state/initiatives/epic_4_* ...
 
-# 再度リファインメントを実行（epic_1, epic_2 はスキップされ、epic_3 から即座に再開）
+# 再度リファインメントを実行（epic_1, epic_2 は自動スキップされ、epic_3 から即座に再開）
 PYTHONPATH=. python3 runner/main.py run --phase refinement
 ```
 
 ### 3. 完全リセット（Full Reset）
-すべての既存成果物・状態を破棄して最初からやり直す場合：
+成果物・ログ・ステートを全て消去して最初からやり直す場合：
 ```bash
-rm -rf state/initiatives/ state/.evaluator/* workspace/*
 PYTHONPATH=. python3 runner/main.py init
 ```
 
 ---
 
+## ⚖️ トレードオフ・問いへの回答方法 (Answering Escalated Trade-offs)
+
+リファインメント実行時に仕様の不備や代替案の選択（`Option A / Option B`）が発生した場合、パイプラインは安全のために `STATUS: REQUIRES_SPEC_DECISION` で一時停止します。
+
+その場合は、`references/decisions.md`（または `references/qa.yaml` など）に以下のように**「Q & A 形式」で適当な感じで回答**を追記・保存してください。
+
+```yaml
+# references/decisions.md への追記例
+- Q: 画像フォーマットは PNG ですか？
+  A: PNG 固定です。サイズは 250px × 250px とします。
+
+- Q: スタイルカスタマイズ機能は必要ですか？
+  A: 必要ありません。シンプル優先で固定パラメータにします。
+```
+
+回答追記後、再度 `python3 runner/main.py run --phase refinement` を実行すると、AIペルソナ群が回答を反映して続きから自動再開されます。
+
+---
+
 ## 📄 参照ドキュメント (References)
 - **仕様書**: `references/icon_generator.md`
-- **確定意思決定事項**: `references/decisions.md`
+- **決定・回答事項**: `references/decisions.md`
 - **リポジトリルール**: `.agents/rules/`
 - **AIペルソナ定義**: `.agents/personas/`
