@@ -459,3 +459,9 @@
   - Created/Updated `.agents/personas/software_architect.md` with OpenAPI 3.0 specification mandate.
   - Appended OpenAPI 3.0 specification requirement to `go_clean_architecture.md`.
   - Added Decision #6 to `references/decisions.md`.
+
+## Step - Update `README.md` with Simplified Operations & Resume Mode Instructions (2026-08-24)
+- **Prompt Summary**: Updated `README.md` to document core CLI commands (`init`, `run`, `reset`), file-based Resume mode behaviors, and clean restarting patterns without internal noise.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Rewrote `README.md` with clean, concise user operational guidance.
