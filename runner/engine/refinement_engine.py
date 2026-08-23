@@ -13,8 +13,6 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 class RefinementEngine:
     """Handles Scrum Refinement: Strict Rule-driven Pipeline with Checkpoint & Resume Mode."""
 
-    FORBIDDEN_CONJUNCTIONS = ["_and_", "_with_", "_plus_", "_&_"]
-
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
         self.config = config or ProjectConfig.load(root_dir)
@@ -38,7 +36,7 @@ class RefinementEngine:
         return "gemini"
 
     def extract_epics_from_overall_log(self, debate_text: str) -> list:
-        """全体ディベートログからエピックリストと Scope を抽出。"""
+        """全体ディベートログからエピックリストと Scope を抽出。ペルソナによる自然な分類をそのまま採用。"""
         epics = []
         p1 = r'(?:#+|\-|\*|\d+\.)?\s*\*\*(epic_[a-zA-Z0-9_]+)\*\*[:\s]*(.*)'
         for m in re.finditer(p1, debate_text):
@@ -55,28 +53,12 @@ class RefinementEngine:
                 scope = m.group(2).strip().replace('`', '') or f"Scope for {e_dir}"
                 epics.append((e_dir, title, scope, len(epics) + 1))
 
-        valid_epics = []
-        for e_dir, title, scope, idx in epics:
-            has_conjunction = any(conj in e_dir.lower() for conj in self.FORBIDDEN_CONJUNCTIONS)
-            if has_conjunction:
-                print(f"⚠️ [Physical Harness Warning] Composite epic detected ({e_dir}). Splitting into single-responsibility epics...")
-                parts = e_dir.split("_and_") if "_and_" in e_dir else e_dir.split("_with_")
-                sub1_dir = parts[0]
-                sub2_dir = f"epic_{idx+10}_{parts[1]}" if len(parts) > 1 else f"{sub1_dir}_details"
-                
-                valid_epics.append((sub1_dir, sub1_dir.replace("_", " ").title(), f"Core implementation for {parts[0]}", len(valid_epics)+1))
-                if len(parts) > 1:
-                    valid_epics.append((sub2_dir, sub2_dir.replace("_", " ").title(), f"Implementation for {parts[1]}", len(valid_epics)+1))
-            else:
-                valid_epics.append((e_dir, title, scope, len(valid_epics)+1))
-
-        return valid_epics
+        return epics
 
     def run_overall_debate(self):
         """【Phase 1】全体アーキテクチャディベートを実行。安全な「中断再開」対応。"""
         overall_log_path = self.eval_dir / "overall_debate_log.md"
 
-        # ⏯️ 安全な「中断再開」: 既存の全体ディベートログがある場合は自動スキップ
         if overall_log_path.exists() and len(overall_log_path.read_text(encoding="utf-8").strip()) > 100:
             print(f"⏯️ [RefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップし、既存成果物をそのまま使用します。", flush=True)
             return
@@ -140,7 +122,6 @@ class RefinementEngine:
 
         refs = ContextLoader.get_refinement_file_references(self.root_dir)
 
-        # ⏯️ 安全な「中断再開」: Step 1 debate_log.md のチェック
         if epic_log_path.exists() and len(epic_log_path.read_text(encoding="utf-8").strip()) > 50:
             print(f"⏯️ [RefinementEngine 中断再開] エピック '{dir_name}' の debate_log.md が完了済みのため Step 1 をスキップします。", flush=True)
         else:
@@ -169,7 +150,6 @@ class RefinementEngine:
             debate_response = debate_prefix + debate_raw_response
             CodeParser.atomic_write_text(epic_log_path, debate_response)
 
-        # ⏯️ 安全な「中断再開」: Step 2 epic_backlog.yaml のチェック
         if epic_backlog_file.exists() and "tasks:" in epic_backlog_file.read_text(encoding="utf-8"):
             print(f"⏯️ [RefinementEngine 中断再開] エピック '{dir_name}' の epic_backlog.yaml が完了済みのため Step 2 をスキップします。", flush=True)
             return

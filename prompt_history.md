@@ -471,3 +471,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Rewrote `README.md` incorporating all user-requested documentation updates.
+
+## Step - Remove Physical Harness Conjunction Splitter from `RefinementEngine` (2026-08-24)
+- **Prompt Summary**: User observed that LLM prompt refinement accuracy is high enough to generate single-responsibility epics directly. Removed legacy physical harness conjunction splitting logic (`FORBIDDEN_CONJUNCTIONS`) from `RefinementEngine`.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Removed `FORBIDDEN_CONJUNCTIONS` and string splitting logic in `RefinementEngine.extract_epics_from_overall_log()`.
