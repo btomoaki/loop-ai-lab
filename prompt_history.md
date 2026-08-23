@@ -185,3 +185,36 @@
   - Fixed path normalization bug in `runner/parser.py` and `runner/run_scrum.py`.
   - Verified clean compilation and `go test ./...` PASS.
   - Committed changes (`8bd5b71`).
+
+## Step 11 — 言語依存コードの分離リファクタリング (2026-08-23)
+
+- **Prompt**: 「リファクタの続きをお願いします。言語依存してる箇所が散見されるはずです。分離したい。」
+- **Summary**: runner/ 内に散在するGo固有ハードコーディング（`go test`, `go.mod`, `gofmt`, `avatar-service` 等）をProjectConfigクラスとLanguageProfile抽象に抽出し、将来的に他言語（Rust/Python等）への差し替えを可能にする。
+- **Files**: `runner/config/project_config.py` [NEW], `runner/config/language_profiles.py` [NEW], `runner/engine/sprint_engine.py`, `runner/engine/refinement_engine.py`, `runner/generators/harness_generator.py`, `runner/utils/code_parser.py`
+
+## Step 11 (改訂) — 言語依存コードの分離リファクタリング (2026-08-23)
+
+- **Prompt**: 「その方向で軌道修正をお願いします。」（仕様書→config自動生成を先行し、runner本体は段階的にconfig参照へ置換）
+- **Summary**: 
+  1. ConfigGenerator: references/ の仕様書からLLM経由で config.yaml の project: セクションを自動生成
+  2. ProjectConfig: config.yaml を読み込むデータクラス
+  3. runner/ 内の全31箇所のハードコードを config 参照に段階的に置換
+- **背景**: Go/avatar-service固有のハードコードが強すぎ、Prometheusアラート追加等の異なるタスクに対応できない問題の解決
+
+## Step - Refinement Engine Architecture Overhaul (2026-08-23)
+- **Prompt Summary**: Overhaul RefinementEngine to support file-based personas (`.agents/personas/`), dynamic Epic classification without hardcoding, vulnerability/XSS/DoS security focus, DevOps/Cloud Architect role, and full specification/evaluator context injection.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created `.agents/personas/` with 5 modular persona definitions (`po.md`, `software_architect.md`, `devops_cloud_architect.md`, `qa_engineer.md`, `security_auditor.md`).
+  - Updated `RefinementEngine` to dynamically load personas and inject reference spec texts (`references/icon_generator.md` & `references/go_clean_architecture.md`).
+  - Removed hardcoded Epics in Phase 1; added dynamic parser to extract classified Epics from Phase 1 log.
+  - Injected Phase 1 log (`overall_debate_log.md`) content directly into Phase 2 prompts.
+
+## Step - Reorganize `.agents/rules/` Subdirectories and Trim Prefixes (2026-08-23)
+- **Prompt Summary**: Structure `.agents/rules/` into logical subdirectories (`refinement/`, `development/`, `policies/`), place policies inside `rules/`, and remove repetitive file prefixes like `dev_`.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Created `.agents/rules/refinement/`, `.agents/rules/development/`, `.agents/rules/policies/`.
+  - Moved `refinement_multi_persona.md` and `refinement_file_reference_prompt.md` to `rules/refinement/` without prefix redundancy.
+  - Trimmed `dev_` prefix from `dev_go_clean_architecture.md` and `dev_container_deployment.md` and placed in `rules/development/`.
+  - Moved `task_management.md` to `rules/policies/`.

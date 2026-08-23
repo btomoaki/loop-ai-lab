@@ -1,2 +1,19 @@
 DEV_PROVIDER: gemini
 REFINEMENT_PROVIDER: gemini
+project:
+  name: identicon-generator
+  workspace: workspace/identicon-generator
+  language: go
+  module_name: github.com/yourusername/identicon-generator
+  default_test_cmd: go test ./...
+  init_commands:
+  - go mod init github.com/yourusername/identicon-generator
+  - go mod tidy
+  project_file: go.mod
+  format_cmd: gofmt -w .
+  lint_cmd: golint ./...
+  file_extension: .go
+  container_image_name: gcr.io/your-project/identicon-generator
+  container_base: gcr.io/distroless/static-debian12
+  run_user: nonroot
+  port: 8080

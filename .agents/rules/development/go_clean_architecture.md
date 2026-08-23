@@ -12,7 +12,7 @@
 - **Application UseCases (`internal/usecase/`)**:
   - File MUST be named: `<usecase_name>_usecase.go` (e.g. `avatar_usecase.go`).
 
-## 2. Module Import & Zero-External-Dependency Rule
+## 2. Module Import & Go Standard Library Pure Standard Library & Commercial License OSS Policy Commercial-Friendly OSS Policy
 - All internal package imports MUST use the exact module path: `avatar-service/internal/...` (NEVER use `workspace/avatar-service/`).
 - Domain Core layer MUST use Go standard library ONLY (e.g. `context`, `crypto/rand`). NO third-party packages (e.g. `uuid`, `mgo`).
 
