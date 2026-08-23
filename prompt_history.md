@@ -437,3 +437,9 @@
 - **Date**: 2026-08-23
 - **Decisions & Actions**:
   - Updated `runner/engine/refinement_engine.py` with file-based idempotency/checkpoint checks.
+
+## Step - Standardize Terminology to "中断再開 (Resume)" and "リセット (Reset)" (2026-08-23)
+- **Prompt Summary**: Standardized system terminology and log messages to "中断再開 (Resume)" for skipping completed steps, and "リセット (Reset)" for full state clears to prevent accidental data loss.
+- **Date**: 2026-08-23
+- **Decisions & Actions**:
+  - Updated `RefinementEngine` log messages to clear Japanese terminology: `⏯️ [RefinementEngine 中断再開]`.

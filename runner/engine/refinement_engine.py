@@ -73,12 +73,12 @@ class RefinementEngine:
         return valid_epics
 
     def run_overall_debate(self):
-        """【Phase 1】全体アーキテクチャディベートを実行。チェックポイント再開対応。"""
+        """【Phase 1】全体アーキテクチャディベートを実行。安全な「中断再開」対応。"""
         overall_log_path = self.eval_dir / "overall_debate_log.md"
 
-        # ⚡ Resume Checkpoint: 既存の全体ディベートログがある場合は再利用
+        # ⏯️ 安全な「中断再開」: 既存の全体ディベートログがある場合は自動スキップ
         if overall_log_path.exists() and len(overall_log_path.read_text(encoding="utf-8").strip()) > 100:
-            print(f"⏩ [RefinementEngine Checkpoint] Found existing overall_debate_log.md ({overall_log_path.stat().st_size} bytes). Skipping Phase 1 LLM call!", flush=True)
+            print(f"⏯️ [RefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップし、既存成果物をそのまま使用します。", flush=True)
             return
 
         print("🌐 [RefinementEngine Phase 1] Pure Rule-Driven Overall Multi-Persona Debate...", flush=True)
@@ -140,9 +140,9 @@ class RefinementEngine:
 
         refs = ContextLoader.get_refinement_file_references(self.root_dir)
 
-        # ⚡ Step 1 Checkpoint: Check debate_log.md
+        # ⏯️ 安全な「中断再開」: Step 1 debate_log.md のチェック
         if epic_log_path.exists() and len(epic_log_path.read_text(encoding="utf-8").strip()) > 50:
-            print(f"⏩ [RefinementEngine Checkpoint] debate_log.md exists for '{dir_name}'. Skipping Step 1 LLM call!", flush=True)
+            print(f"⏯️ [RefinementEngine 中断再開] エピック '{dir_name}' の debate_log.md が完了済みのため Step 1 をスキップします。", flush=True)
         else:
             print(f"💬 [RefinementEngine] Step 1: Generating debate_log.md for: {title}...", flush=True)
             debate_prefix = f"# 💬 Epic Architecture Debate Log: {title}\n\n## 1. Multi-Persona Discussion\n- **[PO Persona]**: Core business requirements for {title}.\n"
@@ -169,9 +169,9 @@ class RefinementEngine:
             debate_response = debate_prefix + debate_raw_response
             CodeParser.atomic_write_text(epic_log_path, debate_response)
 
-        # ⚡ Step 2 Checkpoint: Check epic_backlog.yaml
+        # ⏯️ 安全な「中断再開」: Step 2 epic_backlog.yaml のチェック
         if epic_backlog_file.exists() and "tasks:" in epic_backlog_file.read_text(encoding="utf-8"):
-            print(f"⏩ [RefinementEngine Checkpoint] epic_backlog.yaml exists for '{dir_name}'. Skipping Step 2 LLM call!", flush=True)
+            print(f"⏯️ [RefinementEngine 中断再開] エピック '{dir_name}' の epic_backlog.yaml が完了済みのため Step 2 をスキップします。", flush=True)
             return
 
         print(f"📝 [RefinementEngine] Step 2: Generating direct epic_backlog.yaml for: {title}...", flush=True)
