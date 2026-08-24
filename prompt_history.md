@@ -743,3 +743,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/engine/sprint_execution_engine.py` to use file-path reference for failure feedback.
+
+## Step - Enhance `CodeParser` Fallback Extraction Logic for Header-less Code Output (2026-08-24)
+- **Prompt Summary**: Enhanced `CodeParser` (`runner/utils/code_parser.py`) to automatically deduce target file paths from first-line comments or code block patterns when LLM fails to include `# FILE:` headers.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/utils/code_parser.py` with flexible fallback extraction.

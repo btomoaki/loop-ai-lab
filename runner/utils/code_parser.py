@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 class CodeParser:
-    """Utility class for parsing LLM output and writing files atomically."""
+    """Utility class for parsing LLM output and writing files atomically with robust fallback handling."""
 
     @staticmethod
     def atomic_write_text(file_path: Path, content: str):
@@ -14,35 +14,36 @@ class CodeParser:
 
     @staticmethod
     def apply_code_changes(llm_output: str, target_dir: Path, config=None):
-        """Extract # FILE: header blocks and apply code changes.
-
-        Args:
-            llm_output: LLMからの出力テキスト
-            target_dir: コード書き込み先のディレクトリ
-            config: ProjectConfig（パスプレフィックス除去用、省略可）
-        """
-        if not llm_output or "# FILE:" not in llm_output:
-            print(" ⚠️ [CodeParser] No valid # FILE: path blocks found in LLM output.")
+        if not llm_output or not llm_output.strip():
+            print(" ⚠️ [CodeParser] Empty LLM output provided.")
             return []
 
-        pattern = r'# FILE:\s*([^\n]+)\n```(?:[a-zA-Z0-9_-]+)?\n(.*?)```'
-        matches = re.findall(pattern, llm_output, re.DOTALL)
+        # Pattern 1: Standard `# FILE: path/to/file`
+        pattern1 = r'(?:#|//)\s*FILE:\s*([^\n]+)\n```(?:[a-zA-Z0-9_-]+)?\n(.*?)```'
+        matches = re.findall(pattern1, llm_output, re.DOTALL)
+
+        # Pattern 2: Fallback without backticks `# FILE: path/to/file`
+        if not matches:
+            pattern2 = r'(?:#|//)\s*FILE:\s*([^\n]+)\n(.*?)(?=\n(?:#|//)\s*FILE:|\Z)'
+            matches = re.findall(pattern2, llm_output, re.DOTALL)
+
+        # Pattern 3: Fallback from first-line comments inside ```go codeblocks like `// main.go` or `// internal/core/identicon.go`
+        if not matches:
+            pattern3 = r'```(?:go|golang|yaml|yml|markdown)?\n(?://|#)\s*([a-zA-Z0-9_\-/\.]+\.(?:go|yaml|yml|mod|sum))\n(.*?)```'
+            matches = re.findall(pattern3, llm_output, re.DOTALL)
 
         if not matches:
-            pattern_fallback = r'# FILE:\s*([^\n]+)\n(.*?)(?=\n# FILE:|\Z)'
-            matches = re.findall(pattern_fallback, llm_output, re.DOTALL)
+            print(" ⚠️ [CodeParser] No valid file path blocks found in LLM output.")
+            return []
 
-        # config からワークスペースプレフィックスを取得、なければ target_dir.name でフォールバック
+        ws_prefixes = [f"{target_dir.name}/", "./"]
         if config and hasattr(config, "workspace_prefixes"):
-            ws_prefixes = config.workspace_prefixes + [f"{target_dir.name}/"]
-        else:
-            ws_prefixes = [f"{target_dir.name}/"]
+            ws_prefixes += config.workspace_prefixes
 
         applied_paths = []
         for rel_path_str, code_content in matches:
             rel_path_str = rel_path_str.strip().lstrip("./")
 
-            # Remove duplicate workspace prefix if present
             for ws_pfx in ws_prefixes:
                 if rel_path_str.startswith(ws_pfx):
                     rel_path_str = rel_path_str[len(ws_pfx):]
@@ -55,7 +56,7 @@ class CodeParser:
 
             target_path = (target_dir / rel_path_str).resolve()
             CodeParser.atomic_write_text(target_path, code_content + "\n")
-            print(f" ✍️ [Applied Changes] Updated target file: {target_path}")
+            print(f" ✍️ [Applied Changes] Updated target file: {target_path.relative_to(target_dir.parent.parent)}")
             applied_paths.append(target_path)
 
         return applied_paths
