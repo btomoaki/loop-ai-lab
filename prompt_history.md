@@ -562,3 +562,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/utils/context_loader.py` with isolated ceremony context loading.
+
+## Step - Clean Up `HarnessGenerator` for Direct DoD Backlog Verification (2026-08-24)
+- **Prompt Summary**: Cleaned up `HarnessGenerator` to eliminate obsolete policy reference traces and generate bash test harnesses directly from `sprint_x_backlog.yaml` DoD requirements.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Refactored `runner/generators/harness_generator.py`.

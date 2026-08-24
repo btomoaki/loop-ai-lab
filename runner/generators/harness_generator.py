@@ -5,7 +5,7 @@ from runner.utils.code_parser import CodeParser
 
 
 class HarnessGenerator:
-    """Pure script generator: Creates bash verification harness scripts from sprint_x_backlog.yaml files."""
+    """Creates bash verification harness scripts directly from sprint_x_backlog.yaml DoD definitions."""
 
     @classmethod
     def generate_sprint_harness(cls, epic_dir: Path, sprint_num: int, sprint_backlog_path: Path):
@@ -27,9 +27,9 @@ class HarnessGenerator:
         task_verifications = []
         for t in tasks:
             t_id = t.get("id", "TASK")
-            t_name = t.get("name", "Task")
+            t_title = t.get("title", t.get("name", "Task"))
             task_verifications.append(f"""
-echo "🔍 Verifying Task {t_id}: {t_name}"
+echo "🔍 Verifying DoD for Task {t_id}: {t_title}"
 if ! {test_cmd}; then
     echo "❌ Task {t_id} Verification Failed!"
     exit 1
@@ -69,7 +69,6 @@ echo "=================================================="
         for epic_dir in sorted(list(init_dir.glob("epic_*"))):
             if epic_dir.is_dir():
                 for sprint_file in sorted(list(epic_dir.glob("sprint_*_backlog.yaml"))):
-                    # Extract sprint number from filename sprint_1_backlog.yaml
                     m = sprint_file.name.split("_")
                     if len(m) >= 2 and m[1].isdigit():
                         s_num = int(m[1])
