@@ -3,22 +3,23 @@ from pathlib import Path
 
 
 class ContextLoader:
-    """Utility for loading clean file path references and user decisions for LLM prompts."""
+    """Utility for dynamically loading clean file references, rules, and personas for LLM prompts."""
 
     @staticmethod
     def get_refinement_file_references(root_dir: Path) -> dict:
-        """仕様書、決定事項、およびルール・ペルソナの参照テキストを出力。"""
+        """references/, .agents/rules/, .agents/personas/ 配下のファイルを完全動的ロード。"""
         
-        specs_ref = "- references/icon_generator.md\n- references/decisions.md (Architectural Decisions & Escalation Resolutions)"
+        ref_dir = root_dir / "references"
+        spec_files = sorted([f"references/{f.name}" for f in ref_dir.glob("*.md")]) if ref_dir.exists() else []
+        specs_ref = "\n".join([f"- {f}" for f in spec_files]) or "- references/system_specification.md"
 
-        rules_ref = (
-            "- .agents/rules/refinement/overall_debate.md (Alternative Proposal Escalation Directive)\n"
-            "- .agents/rules/refinement/epic_granularity.md (Single Responsibility Principle & No 'and/with')"
-        )
-        
-        personas_ref = (
-            "- .agents/personas/*.md (PO, Specification Auditor, Software Architect, DevOps Cloud Architect, QA Engineer, Security Auditor)"
-        )
+        rules_dir = root_dir / ".agents" / "rules"
+        rule_files = sorted([str(f.relative_to(root_dir)) for f in rules_dir.glob("**/*.md")]) if rules_dir.exists() else []
+        rules_ref = "\n".join([f"- {f}" for f in rule_files]) or "- .agents/rules/development/go_clean_architecture.md"
+
+        personas_dir = root_dir / ".agents" / "personas"
+        persona_files = sorted([f.name for f in personas_dir.glob("*.md")]) if personas_dir.exists() else []
+        personas_ref = "\n".join([f"- .agents/personas/{p}" for p in persona_files]) or "- .agents/personas/*.md"
 
         return {
             "specs": specs_ref,
