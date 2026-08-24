@@ -593,3 +593,9 @@
 - **Decisions & Actions**:
   - Created ceremony engines in `runner/engine/`.
   - Updated `ScrumRunner` in `runner/engine/scrum_runner.py`.
+
+## Step - Reorganize `agents/` Prompts by Ceremony (2026-08-24)
+- **Prompt Summary**: Replaced obsolete agent prompt files under `agents/` with ceremony-aligned prompt guidance (`1_epic_refinement_planner.md`, `2_sprint_refinement_planner.md`, `3_sprint_dev_executor.md`, `3_sprint_review_gate.md`).
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Reorganized `agents/` prompt files matching the 3 Scrum Ceremonies.
