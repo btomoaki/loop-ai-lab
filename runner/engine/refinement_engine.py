@@ -79,7 +79,7 @@ class RefinementEngine:
             f"=== 1. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 2. REPOSITORY RULES & POLICIES ===\n{refs['rules']}\n\n"
             f"=== 3. PARTICIPATING PERSONAS ===\n{refs['personas']}\n\n"
-            "Analyze the specification with all 6 personas strictly following the rules above.\n"
+            "Analyze the specification with all participating personas strictly following the rules above.\n"
             "Dynamically classify single-responsibility Epics under section '## 3. Classified Actionable Epics List'.\n"
             "Required Naming Pattern:\n"
             "- **epic_1_feature_name**: Scope description directly derived from specification\n\n"

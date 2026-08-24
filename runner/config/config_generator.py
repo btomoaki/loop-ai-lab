@@ -5,7 +5,7 @@ from runner.utils.code_parser import CodeParser
 
 
 class ConfigGenerator:
-    """仕様書 (references/icon_generator.md など) から自動的に config.yaml を設定生成するクラス。"""
+    """仕様書 (references/*.md) から自動的に config.yaml を設定生成するクラス。"""
 
     def __init__(self, root_dir: Path):
         self.root_dir = root_dir

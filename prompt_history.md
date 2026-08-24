@@ -568,3 +568,15 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Refactored `runner/generators/harness_generator.py`.
+
+## Step - Test Pipeline Execution to Detect Refactoring Breakages (2026-08-24)
+- **Prompt Summary**: Triggered refinement and sprint execution pipeline to identify breakages resulting from ceremony restructuring and ContextLoader updates.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Ran `PYTHONPATH=. python3 runner/main.py run --phase refinement`.
+
+## Step - Refactor `ContextLoader` & `RefinementEngine` for Clean Folder-Level Prompt References (2026-08-24)
+- **Prompt Summary**: Replaced individual file path listing with clean folder-level references (`.agents/personas/`, `.agents/rules/1_epic_refinement/`) in `ContextLoader` and fixed legacy prompt strings ("all 6 personas") in `RefinementEngine`.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/utils/context_loader.py` and `runner/engine/refinement_engine.py`.
