@@ -719,3 +719,27 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Added `status.md` updating logic to `EpicRefinementEngine` and `SprintRefinementEngine`.
+
+## Step - Test Full-Pipeline Refinement with All-Ceremony `status.md` Dashboard (2026-08-24)
+- **Prompt Summary**: Cleared initiatives and executed `PYTHONPATH=. python3 runner/main.py run --phase refinement` to test all-ceremony status dashboard updates.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Re-executed refinement with all-ceremony status dashboard.
+
+## Step - Complete Clean Reset and Re-run Ceremony 1 & 2 Refinement from Scratch (2026-08-24)
+- **Prompt Summary**: Cleared `state/.evaluator/*` (including `overall_debate_log.md`) and `state/initiatives/*` to wipe obsolete epics like `epic_3_cli_tool` and trigger a fresh Ceremony 1 overall debate under updated FinOps rules.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Performed full clean reset and re-executed refinement from Ceremony 1.
+
+## Step - Autonomous Execution & TDD Fixes during User Absence (2026-08-24)
+- **Prompt Summary**: Autonomous continuation of Refinement (Ceremony 1 & 2) and Sprint Execution (Ceremony 3) with code fixes and harness retries during user absence.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Executed autonomous refinement and development pipeline.
+
+## Step - Refactor Error Feedback to File-Path Reference (`sprint_N_result.yaml`) in `SprintExecutionEngine` (2026-08-24)
+- **Prompt Summary**: Replaced full error log text embedding with clean file-path reference (`state/initiatives/epic_X/sprint_N_result.yaml`) in `SprintExecutionEngine` prompt payload to prevent context exhaustion and 0-char response failures.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/engine/sprint_execution_engine.py` to use file-path reference for failure feedback.
