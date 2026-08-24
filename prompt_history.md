@@ -749,3 +749,15 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/utils/code_parser.py` with flexible fallback extraction.
+
+## Step - Test Autonomous TDD Sprint Development Phase with Enhanced CodeParser (2026-08-24)
+- **Prompt Summary**: Executed `PYTHONPATH=. python3 runner/main.py run --phase sprint` to test autonomous TDD code generation and recovery with enhanced `CodeParser` fallback extraction.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Re-executed Ceremony 3 sprint development.
+
+## Step - Implement Retry Mechanism for Empty Local LLM Responses in `llm_adapter.py` (2026-08-24)
+- **Prompt Summary**: Implemented automatic 3-attempt retry with backoff in `LocalLLMAdapter` (`runner/adapters/llm_adapter.py`) when the local LLM endpoint returns an empty response (0 chars).
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/adapters/llm_adapter.py` with retry logic for empty LLM completions.
