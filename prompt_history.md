@@ -519,3 +519,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Overwrote and created `.agents/personas/*.md` with the 10 unified persona definitions.
+
+## Step - Mandate Zero-Cost / Free-Tier Priority Policy in FinOps Persona (2026-08-24)
+- **Prompt Summary**: Strict cost policy update mandating $0 / Free-tier infrastructure priority and blocking always-on paid managed cloud services in FinOps persona.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `.agents/personas/finops_cost_governance.md` with Zero-Cost & Free Tier Mandate.
