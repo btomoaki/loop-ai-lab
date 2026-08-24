@@ -27,3 +27,17 @@
   - スプリントレビューの責務は、「リファインメントで定義されたDoD（テストハーネス100%Pass、Clean Architecture 4層構造、セキュリティ・倫理基準）を満たしているかのPass/Fail判定」のみとする。
 - **一貫性破綻時のリファインメント・ロールバック規定**:
   - 万が一、開発途中で重大な仕様矛盾や設計上の不整合が発覚した場合は、コード上で捏造修正してはならない。即座に「リファインメントフェーズへのロールバック」を宣言し、全体一貫性を保った状態でディベートからやり直すこと。
+
+## 4. 📂 セレモニー別規定成果物ファイル構造 (Standard Artifact Map)
+各セレモニーが出力・維持すべき正規の成果物ファイルパス：
+
+- **セレモニー 1 (エピックリファインメント)**:
+  - `state/.evaluator/overall_debate_log.md` (全体アーキテクチャディベート & エピック一覧)
+- **セレモニー 2 (スプリントバックログリファインメント)**:
+  - `state/initiatives/epic_X/debate_log.md` (エピック詳細ディベート)
+  - `state/initiatives/epic_X/epic_backlog.yaml` (エピック全体バックログ)
+  - `state/initiatives/epic_X/sprint_N_backlog.yaml` (DoR適合スプリントタスク定義)
+  - `state/initiatives/epic_X/sprint_N_harness.sh` (自動検証テストハーネス)
+- **セレモニー 3 (スプリント開発 & 受入判定)**:
+  - `workspace/<project_name>/...` (自動実装ソースコード & 単体テスト)
+  - `state/initiatives/epic_X/sprint_N_review_gate.md` (DoD受入判定ログ)

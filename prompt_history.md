@@ -507,3 +507,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `.agents/rules/scrum_ceremonies_and_governance.md` with section "3. 🚥 DoR (Definition of Ready)".
+
+## Step - Standardize Artifact Paths & File Names in `scrum_ceremonies_and_governance.md` (2026-08-24)
+- **Prompt Summary**: Documented strict output file paths and artifact naming conventions for each of the 3 Scrum Ceremonies in `scrum_ceremonies_and_governance.md`.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `.agents/rules/scrum_ceremonies_and_governance.md` with section "4. 📂 セレモニー別規定成果物ファイル構造 (Standard Artifact Map)".
