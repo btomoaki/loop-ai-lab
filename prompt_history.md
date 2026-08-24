@@ -635,3 +635,15 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Fixed method call in `SprintExecutionEngine`.
+
+## Step - Refine FinOps Directives to Green Computing & Processing Efficiency (2026-08-24)
+- **Prompt Summary**: Refined FinOps persona directives to use professional "Processing Efficiency & Green Computing" phrasing instead of raw electricity cost language.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `.agents/personas/finops_cost_governance.md` with Green Computing & ROI Optimization directives.
+
+## Step - Add Time Value & Time-to-Market Directives to FinOps Persona (2026-08-24)
+- **Prompt Summary**: Added directives for Time Value, Opportunity Cost, and Time-to-Market Optimization to FinOps persona to treat time as the ultimate finite resource.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `.agents/personas/finops_cost_governance.md`.
