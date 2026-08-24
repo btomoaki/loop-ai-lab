@@ -713,3 +713,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Fixed `debate_prefix` in `SprintRefinementEngine`.
+
+## Step - Integrate `status.md` Dashboard Updates across All Ceremonies (Ceremony 1, 2, 3) (2026-08-24)
+- **Prompt Summary**: Integrated `status.md` dashboard progress updating into `EpicRefinementEngine` and `SprintRefinementEngine` so that `watch cat state/status.md` reflects real-time status across all 3 ceremonies.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Added `status.md` updating logic to `EpicRefinementEngine` and `SprintRefinementEngine`.

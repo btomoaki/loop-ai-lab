@@ -1,5 +1,6 @@
 import os
 import yaml
+from datetime import datetime
 from pathlib import Path
 from runner.config.project_config import ProjectConfig
 from runner.utils.code_parser import CodeParser
@@ -10,13 +11,14 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントバックログリファインメントエンジン"""
+    """【セレモニー 2】スプリントバックログリファインメントエンジン (status.md 更新機能付き)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
         self.config = config or ProjectConfig.load(root_dir)
         self.init_dir = root_dir / "state" / "initiatives"
         self.eval_dir = root_dir / "state" / ".evaluator"
+        self.status_file = root_dir / "state" / "status.md"
         self.init_dir.mkdir(parents=True, exist_ok=True)
 
         refinement_provider = self._get_refinement_provider()
@@ -32,8 +34,24 @@ class SprintRefinementEngine:
                 pass
         return "gemini"
 
+    def update_status_dashboard(self, active_epic: str, step_text: str):
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        content = f"""# 📌 Loop AI Lab - リアルタイム Scrum 進行状況ダッシュボード
+
+- **現在実行中のフェーズ**: 📝 【セレモニー 2】スプリントバックログリファインメント & ハーネス生成
+- **処理中エピック**: `{active_epic}`
+- **ステータス**: {step_text}
+- **最終更新日時**: `{now_str}`
+
+---
+
+## �� 全エピック進捗ステータス
+- 📝 バックログ分解 & DoR検証 (`Acceptance Criteria <= 2`) & ハーネス生成中...
+"""
+        CodeParser.atomic_write_text(self.status_file, content)
+        print(f"📊 [Status Dashboard] Updated state/status.md (Refinement: {active_epic})", flush=True)
+
     def refine_single_epic(self, dir_name: str, title: str, scope: str, epic_idx: int):
-        """Step 1: debate_log.md を出力。 Step 2: epic_backlog.yaml を直接生成。各チェックポイント対応。"""
         epic_folder = self.init_dir / dir_name
         epic_folder.mkdir(parents=True, exist_ok=True)
         epic_log_path = epic_folder / "debate_log.md"
@@ -45,7 +63,13 @@ class SprintRefinementEngine:
             print(f"⏯️ [SprintRefinementEngine 中断再開] エピック '{dir_name}' の debate_log.md が完了済みのため Step 1 をスキップします。", flush=True)
         else:
             print(f"💬 [Ceremony 2] Step 1: Generating debate_log.md for: {title}...", flush=True)
-            debate_prefix = f"# 💬 Epic Architecture Debate Log: {title}\n\n## 1. Multi-Persona Discussion\n- **[Scrum Master Persona]**: Welcome team to the refinement session for {title}. Let us review the primary business goals and architectural constraints.\n"
+            self.update_status_dashboard(title, "💬 スクラムマスター主導 Multi-Persona Debate 出力中...")
+            
+            debate_prefix = (
+                f"# 💬 Epic Architecture Debate Log: {title}\n\n"
+                f"## 1. Multi-Persona Discussion\n"
+                f"- **[Scrum Master Persona]**: Welcome team to the refinement session for {title}. Let us review the primary business goals and architectural constraints.\n"
+            )
 
             debate_prompt = (
                 f"[TASK: CEREMONY 2 EPIC REFINEMENT DEBATE - {title}]\n"
@@ -74,7 +98,8 @@ class SprintRefinementEngine:
             return
 
         print(f"📝 [Ceremony 2] Step 2: Generating epic_backlog.yaml for: {title}...", flush=True)
-        
+        self.update_status_dashboard(title, "📝 DoR適合 (Acceptance Criteria <= 2) epic_backlog.yaml 生成中...")
+
         ws = self.config.workspace_rel or "workspace/identicon-generator"
         test_cmd = self.config.default_test_cmd or "go test ./..."
         img_name = self.config.container_image_name or "identicon-generator"
@@ -137,10 +162,13 @@ class SprintRefinementEngine:
             self.refine_single_epic(dir_name, title, scope, idx)
 
         print("🚀 [Ceremony 2] Step 1: Splitting epic_backlog.yaml into sprint_x_backlog.yaml...", flush=True)
+        self.update_status_dashboard("All Epics", "📦 スプリント単位へのバックログ分割中...")
         BacklogSplitter.process_all_epics(self.root_dir, self.config)
 
         print("🚀 [Ceremony 2] Step 2: Generating automated test harness scripts...", flush=True)
+        self.update_status_dashboard("All Epics", "🛠️ 自動テストハーネス (sprint_x_harness.sh) 生成中...")
         HarnessGenerator.generate_all_harnesses(self.root_dir, self.config)
 
+        self.update_status_dashboard("All Epics", "🎉 【合格】スプリントリファインメント完了！開発準備完了")
         print("🎉 [Ceremony 2 Complete] Sprint Refinement pipeline completed successfully!", flush=True)
         return True

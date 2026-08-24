@@ -1,5 +1,6 @@
 import re
 import yaml
+from datetime import datetime
 from pathlib import Path
 from runner.config.project_config import ProjectConfig
 from runner.utils.code_parser import CodeParser
@@ -8,12 +9,13 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】全体エピックリファインメントエンジン"""
+    """【セレモニー 1】全体エピックリファインメントエンジン (status.md 更新機能付き)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
         self.config = config or ProjectConfig.load(root_dir)
         self.eval_dir = root_dir / "state" / ".evaluator"
+        self.status_file = root_dir / "state" / "status.md"
         self.eval_dir.mkdir(parents=True, exist_ok=True)
 
         refinement_provider = self._get_refinement_provider()
@@ -29,8 +31,22 @@ class EpicRefinementEngine:
                 pass
         return "gemini"
 
+    def update_status_dashboard(self, status_text: str):
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        content = f"""# 📌 Loop AI Lab - リアルタイム Scrum 進行状況ダッシュボード
+
+- **現在実行中のフェーズ**: 🌐 【セレモニー 1】全体アーキテクチャ・エピックリファインメント
+- **ステータス**: {status_text}
+- **最終更新日時**: `{now_str}`
+
+---
+
+## 📊 全エピック進捗ステータス
+- 🌐 全体仕様解釈 & 多ペルソナディベート実行中...
+"""
+        CodeParser.atomic_write_text(self.status_file, content)
+
     def extract_epics_from_overall_log(self, debate_text: str) -> list:
-        """全体ディベートログからエピックリストと Scope を抽出。"""
         epics = []
         p1 = r'(?:#+|\-|\*|\d+\.)?\s*\*\*(epic_[a-zA-Z0-9_]+)\*\*[:\s]*(.*)'
         for m in re.finditer(p1, debate_text):
@@ -50,14 +66,16 @@ class EpicRefinementEngine:
         return epics
 
     def run_epic_refinement(self) -> str:
-        """セレモニー 1: 全体アーキテクチャディベートを実行。"""
         overall_log_path = self.eval_dir / "overall_debate_log.md"
 
         if overall_log_path.exists() and len(overall_log_path.read_text(encoding="utf-8").strip()) > 100:
             print(f"⏯️ [EpicRefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップします。", flush=True)
+            self.update_status_dashboard("⏯️ 全体ディベート完了 (ログ読み込み完了)")
             return overall_log_path.read_text(encoding="utf-8")
 
         print("🌐 [Ceremony 1: Epic Refinement] Overall Multi-Persona Debate...", flush=True)
+        self.update_status_dashboard("💬 全10ペルソナによる全体アーキテクチャディベート中...")
+        
         proj_name = self.config.project_name or "identicon-generator"
         lang = self.config.language or "Go"
 
@@ -101,6 +119,8 @@ class EpicRefinementEngine:
         print(f"📝 [Ceremony 1 Complete] Saved overall debate log: {overall_log_path.relative_to(self.root_dir)}")
 
         if "REQUIRES_SPEC_DECISION" in llm_response:
+            self.update_status_dashboard("⚖️ トレードオフ検出により安全停止中 (User Decision Required)")
             raise RuntimeError("⚖️ [EpicRefinementEngine Escalation] Trade-off detected! Alternatives proposed in overall_debate_log.md. Halting for user decision.")
 
+        self.update_status_dashboard("✅ セレモニー 1 全体ディベート合格完了")
         return llm_response
