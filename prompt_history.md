@@ -538,3 +538,9 @@
 - **Decisions & Actions**:
   - Reorganized rules directories.
   - Added `persona_participants.md` to each ceremony directory.
+
+## Step - Update `scrum_runner.py` Artifact Path to New Ceremony 3 Standard (2026-08-24)
+- **Prompt Summary**: Updated `scrum_runner.py` to output Sprint Review Gate log to `state/initiatives/epic_X/sprint_N_review_gate.md` complying with Ceremony 3 standards.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `run_epic_review()` path in `runner/engine/scrum_runner.py`.

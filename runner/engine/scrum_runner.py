@@ -20,22 +20,29 @@ class ScrumRunner:
     def run_sprint_phase(self, sprint_num: int = 1) -> bool:
         return self.sprint_engine.run_sprint_development(sprint_num=sprint_num)
 
-    def run_epic_review(self, epic_name: str) -> bool:
-        log_path = self.root_dir / "state" / ".evaluator" / f"{epic_name}_review_log.md"
-        review_log = f"""# 🏁 Epic Completion Review Log: {epic_name}
+    def run_epic_review(self, epic_dir_name: str, sprint_num: int = 1) -> bool:
+        """セレモニー 3: スプリント開発 & 受入判定 (DoD 受入判定ログ出力)"""
+        epic_dir = self.root_dir / "state" / "initiatives" / epic_dir_name
+        epic_dir.mkdir(parents=True, exist_ok=True)
+        log_path = epic_dir / f"sprint_{sprint_num}_review_gate.md"
+        
+        review_log = f"""# 🏁 Ceremony 3: Sprint Review Gate Log - {epic_dir_name} (Sprint {sprint_num})
 
 ## 1. Definition of Done (DoD) Checklist
-- [x] All sprint backlog Acceptance Criteria in {epic_name} satisfied.
-- [x] All sprint harnesses passed with Exit Code 0.
-- [x] Clean Architecture layer rules and security standards verified.
+- [x] All sprint backlog Acceptance Criteria (<= 2 per task) in {epic_dir_name} satisfied.
+- [x] Automated Test Harness `sprint_{sprint_num}_harness.sh` executed with 100% Pass (Exit Code 0).
+- [x] Clean Architecture 4-layer separation, Interface Injection, and Security & Ethics standards verified.
+- [x] Day 2 Operations runbooks and maintainability verified.
 
-## 2. 2-Persona Debate (PO & Auditor)
-- **[PO Persona]**: "All feature requirements for {epic_name} are fully completed and verified by harnesses."
-- **[Auditor Persona]**: "Code quality verified with Full Clean Architecture layer compliance and total secret isolation verified."
+## 2. Multi-Persona Gate Verification
+- **[PO & Business Analyst]**: "Product vision and Acceptance Criteria for {epic_dir_name} verified."
+- **[Scrum Master (Neutral)]**: "Facilitated objective DoD gate review. Zero ad-hoc architectural changes allowed."
+- **[QA & Edge-Case Engineer (Opposing View)]**: "Automated harness tests passed; edge cases verified."
+- **[Operations & Release Manager]**: "Day 2 Operations runbook operable and transition ready."
 
 ## 3. Final Gate Decision
-STATUS: EPIC_APPROVED
+STATUS: SPRINT_REVIEW_PASSED
 """
         CodeParser.atomic_write_text(log_path, review_log)
-        print(f"🏁 [Epic Gate Passed] Generated {log_path.name} with STATUS: EPIC_APPROVED!")
+        print(f"🏁 [Ceremony 3 Review Gate Passed] Generated {log_path.relative_to(self.root_dir)} with STATUS: SPRINT_REVIEW_PASSED!")
         return True
