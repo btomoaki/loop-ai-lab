@@ -13,6 +13,16 @@ class CodeParser:
         temp_path.replace(file_path)
 
     @staticmethod
+    def is_invalid_path(path_str: str) -> bool:
+        """Check if path string contains invalid placeholder characters like <relative_path>."""
+        if not path_str or not path_str.strip():
+            return True
+        p_lower = path_str.lower()
+        if "<" in path_str or ">" in path_str or "relative_path" in p_lower or "file_path" in p_lower:
+            return True
+        return False
+
+    @staticmethod
     def apply_code_changes(llm_output: str, target_dir: Path, config=None):
         if not llm_output or not llm_output.strip():
             print(" ⚠️ [CodeParser] Empty LLM output provided.")
@@ -43,6 +53,10 @@ class CodeParser:
         applied_paths = []
         for rel_path_str, code_content in matches:
             rel_path_str = rel_path_str.strip().lstrip("./")
+
+            if CodeParser.is_invalid_path(rel_path_str):
+                print(f" ⚠️ [CodeParser Warning] Skipped invalid placeholder path: '{rel_path_str}'")
+                continue
 
             for ws_pfx in ws_prefixes:
                 if rel_path_str.startswith(ws_pfx):

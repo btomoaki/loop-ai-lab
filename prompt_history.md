@@ -786,3 +786,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/engine/sprint_execution_engine.py` with dynamic file injection.
+
+## Step - Add Path Validation Guard in `CodeParser` to Reject Placeholder File Paths (2026-08-24)
+- **Prompt Summary**: Added file path validation in `CodeParser` (`runner/utils/code_parser.py`) to reject placeholder paths containing `<` or `>` or `relative_path` strings.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/utils/code_parser.py` with path guard validation.
