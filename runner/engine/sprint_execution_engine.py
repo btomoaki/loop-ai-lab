@@ -79,7 +79,7 @@ class SprintExecutionEngine:
             return False
 
         # 出力レスポンスから # FILE: ブロックを抽出して保存
-        written_files = CodeParser.parse_and_write_files(llm_response, target_ws)
+        written_files = CodeParser.apply_code_changes(llm_response, target_ws)
         print(f"📝 [SprintExecutionEngine] Written {len(written_files)} files into {target_ws.relative_to(self.root_dir)}", flush=True)
         return len(written_files) > 0
 
