@@ -653,3 +653,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Rewrote `.agents/personas/finops_cost_governance.md` with explicit Electricity Cost & Time Cost directives.
+
+## Step - Refine FinOps Directives to Professional English/Japanese Wording (2026-08-24)
+- **Prompt Summary**: Re-refined FinOps directives to use elegant, highly professional wording ("Physical Compute & Energy Efficiency" and "Time-to-Market Optimization").
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `.agents/personas/finops_cost_governance.md` with elegant professional wording.
