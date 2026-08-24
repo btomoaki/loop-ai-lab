@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class SprintExecutionEngine:
-    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (Fail-Fast 安全停止機能付き)"""
+    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (status.md & sprint_N_result.yaml 自動出力機能付き)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -20,7 +20,7 @@ class SprintExecutionEngine:
         self.status_file = root_dir / "state" / "status.md"
         
         dev_provider = self._get_dev_provider()
-        print(f"🧠 [SprintExecutionEngine] Using Provider '{dev_provider}' for Autonomous TDD Loop.", flush=True)
+        print(f"�� [SprintExecutionEngine] Using Provider '{dev_provider}' for Autonomous TDD Loop.", flush=True)
         self.dev_agent = LLMAdapterFactory.get_adapter(provider=dev_provider)
 
     def _get_dev_provider(self) -> str:
@@ -58,25 +58,29 @@ class SprintExecutionEngine:
         CodeParser.atomic_write_text(self.status_file, dashboard_content)
         print(f"📊 [Status Dashboard] Updated state/status.md (Active: {active_epic} | Status: {tdd_status})", flush=True)
 
-    def write_sprint_done_log(self, epic_dir: Path, sprint_num: int, backlog_data: dict, written_files: list):
-        """スプリント合格時に sprint_N_done.yaml を作成保存"""
-        done_file = epic_dir / f"sprint_{sprint_num}_done.yaml"
+    def write_sprint_result_log(self, epic_dir: Path, sprint_num: int, backlog_data: dict, status: str, exit_code: int, written_files: list, error_log: str = None):
+        """スプリント結果 (sprint_N_result.yaml) を成功・失敗問わず保存"""
+        result_file = epic_dir / f"sprint_{sprint_num}_result.yaml"
         now_str = datetime.now().isoformat()
         
         rel_files = [str(f.relative_to(self.root_dir)) for f in written_files] if written_files else []
         
-        done_data = {
+        result_data = {
             "sprint": sprint_num,
             "epic": backlog_data.get("epic", epic_dir.name),
-            "completed_at": now_str,
-            "harness_result": "PASSED (Exit Code 0)",
+            "timestamp": now_str,
+            "status": status,  # "PASSED" or "FAILED"
+            "harness_exit_code": exit_code,
             "generated_files": rel_files,
             "tasks": backlog_data.get("tasks", [])
         }
+
+        if error_log:
+            result_data["last_error_log"] = error_log.strip()
         
-        yaml_text = yaml.dump(done_data, default_flow_style=False, allow_unicode=True)
-        CodeParser.atomic_write_text(done_file, yaml_text)
-        print(f"🎉 [Sprint Done Log] Generated {done_file.relative_to(self.root_dir)}", flush=True)
+        yaml_text = yaml.dump(result_data, default_flow_style=False, allow_unicode=True)
+        CodeParser.atomic_write_text(result_file, yaml_text)
+        print(f"📝 [Sprint Result Log] Generated {result_file.relative_to(self.root_dir)} (Status: {status})", flush=True)
 
     def get_active_epic_harness(self, epic_dir: Path, sprint_num: int = 1) -> Path:
         return epic_dir / f"sprint_{sprint_num}_harness.sh"
@@ -156,7 +160,9 @@ class SprintExecutionEngine:
             self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, tdd_status, epic_statuses)
 
             print(f"🔄 [TDD Cycle Attempt {attempt}/{max_retries}] Generating/Updating code...", flush=True)
-            last_written_files = self.generate_code_for_backlog(epic_dir, sprint_num, backlog_data, last_error)
+            new_files = self.generate_code_for_backlog(epic_dir, sprint_num, backlog_data, last_error)
+            if new_files:
+                last_written_files = new_files
 
             if harness_path.exists():
                 print(f"🧪 [TDD Cycle] Running Test Harness: {harness_path.name}", flush=True)
@@ -167,7 +173,8 @@ class SprintExecutionEngine:
                     epic_statuses[epic_dir.name] = f"✅ 【Pass】スプリント {sprint_num} ハーネス合格!"
                     self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, "✅ ハーネス合格", epic_statuses)
                     
-                    self.write_sprint_done_log(epic_dir, sprint_num, backlog_data, last_written_files)
+                    # 🎉 sprint_N_result.yaml (PASSED) を出力！
+                    self.write_sprint_result_log(epic_dir, sprint_num, backlog_data, "PASSED", 0, last_written_files)
                     return True
                 else:
                     last_error = res.stdout + "\n" + res.stderr
@@ -175,6 +182,9 @@ class SprintExecutionEngine:
 
         epic_statuses[epic_dir.name] = f"❌ 【Fail】リトライ上限到達 ({max_retries} 回)"
         self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, "🛑 開発失敗・安全停止", epic_statuses)
+        
+        # ❌ sprint_N_result.yaml (FAILED + last_error) を出力！
+        self.write_sprint_result_log(epic_dir, sprint_num, backlog_data, "FAILED", 1, last_written_files, last_error)
         return False
 
     def run_sprint_development(self, sprint_num: int = 1) -> bool:

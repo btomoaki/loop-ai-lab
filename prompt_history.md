@@ -683,3 +683,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/engine/sprint_execution_engine.py` to raise RuntimeError on harness failure.
+
+## Step - Implement `sprint_N_result.yaml` Execution Log for Both Pass & Fail Results (2026-08-24)
+- **Prompt Summary**: Replaced `sprint_N_done.yaml` with unified `sprint_N_result.yaml` in `SprintExecutionEngine` to capture complete audit logs (including last error log on failure) for both PASSED and FAILED sprints.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/engine/sprint_execution_engine.py` to write `sprint_N_result.yaml`.
