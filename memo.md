@@ -14,16 +14,19 @@
 - **セレモニー別エンジン分割**: `EpicRefinementEngine`, `SprintRefinementEngine`, `SprintExecutionEngine` へ構造分離。
 - **エージェントフォルダ隔離**: `agents/` ディレクトリを 3 セレモニーサブフォルダに完全分類。
 - **リアルタイムダッシュボード (`state/status.md`)**: 実行中のエピック/タスク/TDD試行回数を可視化。
-- **監査ログ (`sprint_N_result.yaml`)**: ハーネス結果 (PASSED/FAILED)、Exit Code、生成ファイル、失敗時の詳細エラーログを自動保存。
+- **監査ログ (`sprint_N_result.yaml`)**: ハーネス結果 (PASSED/FAILED)、Exit Code、生成ファイル、詳細エラーログを自動保存。
 - **Fail-Fast 安全停止メカニズム**: ハーネス不合格時に無駄な後続実行を止め、安全停止する機能の検証完了。
 - **ファイルパス参照＆動的インジェクション**: プロンプト内のエラーログや指示のファイルパス参照化によるスリム化。
 - **`CodeParser` パスガード**: `<relative_path>` 等のプレースホルダー異常パスの自動検知・排除ガード。
 - **ローカルLLM自動リトライ**: `0 chars` 空レスポンス時の 3 回自動再試行と 180 秒タイムアウト設定。
-- **`[Capacity Guardian Persona]` (無理をするなペルソナ)**: バックログを LLM の出力コンテキスト限界に配慮した極小ユニット（Micro-Sized Backlog）へ強制分割させる新守護者ペルソナの完全組み込み。
+- **`[Capacity Guardian Persona]` (無理をするなペルソナ)**: LLM のコンテキスト限界に配慮した極小ユニット（Micro-Sized Backlog）へ強制分割させる新守護者ペルソナの完全組み込み。
 
 ---
 
 ## 3. 将来的ロードマップ (Future Architecture Roadmap)
+
+### 🚀 GitHub Actions CI/CD パイプライン標準化 (CI/CD Standardization)
+- **構想**: 今後のテストハーネス検証や自動ビルド・デプロイパイプラインは、ローカルシェル依存から **GitHub Actions**（`.github/workflows/`）を基本インフラとして活用・標準化する。
 
 ### ⚡ エピック／スプリントの並列実行エンジン化 (Parallel Execution)
 - **現状**: 各エピックおよびスプリントは現在シングルスレッド（直列）で順番に処理されている。
