@@ -605,3 +605,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Reorganized `agents/` into ceremony subfolders.
+
+## Step - Document "Scrum Package & Plugin Architecture" Concept in `memo.md` (2026-08-24)
+- **Prompt Summary**: Logged future refactoring task to consolidate scattered Scrum files (`.agents/`, `agents/`, `runner/engine/`) into a single self-contained package (`packages/scrum/`).
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `memo.md` with the Scrum Package / Plugin Architecture task for future execution.
