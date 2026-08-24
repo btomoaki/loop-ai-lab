@@ -513,3 +513,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `.agents/rules/scrum_ceremonies_and_governance.md` with section "4. 📂 セレモニー別規定成果物ファイル構造 (Standard Artifact Map)".
+
+## Step - Update All 10 Unified Persona Definitions in `.agents/personas/` (2026-08-24)
+- **Prompt Summary**: Updated all 10 persona definition files under `.agents/personas/` removing specific technology leaks, adding Ethics Safety Stopper, pure Scrum Master facilitation, Day 2 Operations, and maintaining Opposing View negative audit roles.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Overwrote and created `.agents/personas/*.md` with the 10 unified persona definitions.
