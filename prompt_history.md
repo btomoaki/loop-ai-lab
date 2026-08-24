@@ -701,3 +701,15 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated rules and agent prompts for Ceremony 2.
+
+## Step - Clear Initiatives and Re-run Ceremony 2 with Scrum Master Facilitation Rule (2026-08-24)
+- **Prompt Summary**: Cleared `state/initiatives/*` and re-executed `PYTHONPATH=. python3 runner/main.py run --phase refinement` to apply the mandatory Scrum Master facilitation opening rule.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Cleared initiatives and restarted Ceremony 2.
+
+## Step - Update `debate_prefix` in `SprintRefinementEngine` to Scrum Master Opening (2026-08-24)
+- **Prompt Summary**: Updated `debate_prefix` in `runner/engine/sprint_refinement_engine.py` from `[PO Persona]` to `[Scrum Master Persona]` for neutral facilitation opening.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Fixed `debate_prefix` in `SprintRefinementEngine`.

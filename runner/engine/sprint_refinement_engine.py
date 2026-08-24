@@ -45,7 +45,7 @@ class SprintRefinementEngine:
             print(f"⏯️ [SprintRefinementEngine 中断再開] エピック '{dir_name}' の debate_log.md が完了済みのため Step 1 をスキップします。", flush=True)
         else:
             print(f"💬 [Ceremony 2] Step 1: Generating debate_log.md for: {title}...", flush=True)
-            debate_prefix = f"# 💬 Epic Architecture Debate Log: {title}\n\n## 1. Multi-Persona Discussion\n- **[PO Persona]**: Core business requirements for {title}.\n"
+            debate_prefix = f"# 💬 Epic Architecture Debate Log: {title}\n\n## 1. Multi-Persona Discussion\n- **[Scrum Master Persona]**: Welcome team to the refinement session for {title}. Let us review the primary business goals and architectural constraints.\n"
 
             debate_prompt = (
                 f"[TASK: CEREMONY 2 EPIC REFINEMENT DEBATE - {title}]\n"
