@@ -689,3 +689,15 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/engine/sprint_execution_engine.py` to write `sprint_N_result.yaml`.
+
+## Step - Reset Initiatives and Re-run Sprint Refinement (Ceremony 2) (2026-08-24)
+- **Prompt Summary**: Cleared `state/initiatives/*` and executed `PYTHONPATH=. python3 runner/main.py run --phase refinement` to re-trigger Ceremony 2 Sprint Refinement and harness generation.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Re-executed Ceremony 2 refinement.
+
+## Step - Add Scrum Master Facilitation Rule to Ceremony 2 Rules & Agents (2026-08-24)
+- **Prompt Summary**: Enforced Scrum Master neutral facilitation opening in Ceremony 2 rules (`.agents/rules/2_sprint_refinement/persona_participants.md`) and agent instructions (`agents/2_sprint_refinement/sprint_refinement_planner.md`).
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated rules and agent prompts for Ceremony 2.
