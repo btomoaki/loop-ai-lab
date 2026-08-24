@@ -767,3 +767,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/engine/sprint_execution_engine.py`.
+
+## Step - Add Cooling Sleep & Extend LLM Request Timeout (2026-08-24)
+- **Prompt Summary**: Increased Local LLM timeout from 120s to 180s in `LocalLLMAdapter` and added a 3-second cooling delay before requests to prevent local LLM server HTTP read timeouts.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/adapters/llm_adapter.py`.

@@ -31,10 +31,13 @@ class LocalLLMAdapter(LLMAdapter):
         session = requests.Session()
         session.trust_env = False
 
+        # ローカルLLMの高負荷を避けるため短いクッション
+        time.sleep(3)
+
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
-                resp = session.post(self.endpoint_url, headers=headers, json=payload, timeout=120)
+                resp = session.post(self.endpoint_url, headers=headers, json=payload, timeout=180)
                 if resp.status_code == 200:
                     res_json = resp.json()
                     content = res_json.get("content", "").strip()
@@ -42,14 +45,14 @@ class LocalLLMAdapter(LLMAdapter):
                         print(f"✅ [LLM:Local] Successfully received {len(content)} chars from local LLM!", flush=True)
                         return content
                     else:
-                        print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] Received empty response (0 chars). Retrying in 2s...", flush=True)
-                        time.sleep(2)
+                        print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] Received empty response (0 chars). Retrying in 3s...", flush=True)
+                        time.sleep(3)
                 else:
-                    print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] HTTP Status {resp.status_code}. Retrying in 2s...", flush=True)
-                    time.sleep(2)
+                    print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] HTTP Status {resp.status_code}. Retrying in 3s...", flush=True)
+                    time.sleep(3)
             except Exception as e:
-                print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] Error: {e}. Retrying in 2s...", flush=True)
-                time.sleep(2)
+                print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] Error: {e}. Retrying in 3s...", flush=True)
+                time.sleep(3)
 
         print("❌ [LLM:Local Failure] Max attempts reached for local LLM request.", flush=True)
         return ""
