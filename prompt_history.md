@@ -773,3 +773,10 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/adapters/llm_adapter.py`.
+
+## Step - Refactor Instruction Embedding to File-Path Reference (`agents/3_sprint_execution/sprint_dev_executor.md`) in `SprintExecutionEngine` (2026-08-24)
+- **Prompt Summary**: Replaced embedded INSTRUCTION text with file-path reference to `agents/3_sprint_execution/sprint_dev_executor.md` in `SprintExecutionEngine` prompt, achieving zero-embedded text architecture.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `agents/3_sprint_execution/sprint_dev_executor.md` with output rules.
+  - Updated `runner/engine/sprint_execution_engine.py` to reference instruction file path.

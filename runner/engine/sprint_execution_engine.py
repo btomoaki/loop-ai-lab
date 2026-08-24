@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class SprintExecutionEngine:
-    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (ファイルパス参照 & status.md 自動更新)"""
+    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (Zero-Embedded Text: 完全ファイルパス参照アーキテクチャ)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -41,7 +41,7 @@ class SprintExecutionEngine:
             epic_rows.append(f"- **{e_name}**: {status}")
         epic_summary_block = "\n".join(epic_rows)
 
-        dashboard_content = f"""# �� Loop AI Lab - リアルタイム Scrum 進行状況ダッシュボード
+        dashboard_content = f"""# 📌 Loop AI Lab - リアルタイム Scrum 進行状況ダッシュボード
 
 - **現在実行中のフェーズ**: 🏃 【セレモニー 3】スプリント開発 & DoD受入判定
 - **実行中エピック**: `{active_epic}` (Sprint {sprint_num})
@@ -85,41 +85,30 @@ class SprintExecutionEngine:
         return epic_dir / f"sprint_{sprint_num}_harness.sh"
 
     def generate_code_for_backlog(self, epic_dir: Path, sprint_num: int, backlog_data: dict, result_file_ref: Path = None) -> list:
-        tasks = backlog_data.get("tasks", [])
-        scope = backlog_data.get("scope", "")
         epic_name = backlog_data.get("epic", epic_dir.name)
         target_ws = self.root_dir / backlog_data.get("target_workspace", "workspace/identicon-generator")
         target_ws.mkdir(parents=True, exist_ok=True)
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="3_sprint_execution", include_dev_rules=True)
 
-        # 💡 エラーテキスト直接埋め込みではなく、result.yaml のファイルパス参照を指定！
+        # 💡 指示テキスト・ルール・バックログ・エラーログすべてを徹底的に物理ファイルパス参照化！
+        inst_file = "agents/3_sprint_execution/sprint_dev_executor.md"
+        backlog_file = epic_dir / f"sprint_{sprint_num}_backlog.yaml"
+
         error_ref_block = (
-            f"\n=== PREVIOUS TEST HARNESS FAILURE REFERENCE ===\n"
+            f"\n=== 4. PREVIOUS TEST HARNESS FAILURE REFERENCE ===\n"
             f"File Path: {result_file_ref.relative_to(self.root_dir)}\n"
-            f"Read the failure details and error logs from the physical file above to fix implementation issues."
+            f"Read failure details and compiler errors from the physical file above to fix implementation issues."
         ) if result_file_ref and result_file_ref.exists() else ""
 
         prompt = (
             f"[TASK: CEREMONY 3 TDD CODE GENERATION - {epic_name} (Sprint {sprint_num})]\n"
-            f"Target Workspace: {target_ws.relative_to(self.root_dir)}\n"
-            f"Scope: {scope}\n\n"
-            f"=== 1. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 2. BACKLOG TASKS ===\n{yaml.dump(tasks, default_flow_style=False, allow_unicode=True)}\n"
+            f"Target Workspace: {target_ws.relative_to(self.root_dir)}\n\n"
+            f"=== 1. EXECUTION INSTRUCTIONS ===\nFile Path: {inst_file}\n\n"
+            f"=== 2. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+            f"=== 3. BACKLOG TASKS ===\nFile Path: {backlog_file.relative_to(self.root_dir)}\n"
             f"{error_ref_block}\n\n"
-            "【INSTRUCTION】\n"
-            "Generate complete implementation and test code files in Go using `# FILE: internal/core/identicon.go` format.\n"
-            "Example:\n"
-            "# FILE: go.mod\n"
-            "module github.com/yourusername/identicon-generator\n\n"
-            "go 1.22\n\n"
-            "# FILE: main.go\n"
-            "package main\n\n"
-            "import \"fmt\"\n\n"
-            "func main() {\n"
-            "    fmt.Println(\"Identicon Generator Started\")\n"
-            "}\n\n"
-            "Write un-truncated, production-ready Go code strictly following Clean Architecture 4-layer separation and Graceful Shutdown."
+            "Strictly follow the instructions, rules, and backlog requirements specified in the physical files above."
         )
 
         actual_prompt_file = self.eval_dir / "actual_dev_prompt.md"
