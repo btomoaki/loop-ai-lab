@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class SprintExecutionEngine:
-    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン（status.md & sprint_N_done.yaml 自動出力機能付き）"""
+    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (Fail-Fast 安全停止機能付き)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -155,7 +155,7 @@ class SprintExecutionEngine:
             epic_statuses[epic_dir.name] = f"🏃 開発進行中 [{tdd_status}]"
             self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, tdd_status, epic_statuses)
 
-            print(f"�� [TDD Cycle Attempt {attempt}/{max_retries}] Generating/Updating code...", flush=True)
+            print(f"🔄 [TDD Cycle Attempt {attempt}/{max_retries}] Generating/Updating code...", flush=True)
             last_written_files = self.generate_code_for_backlog(epic_dir, sprint_num, backlog_data, last_error)
 
             if harness_path.exists():
@@ -167,7 +167,6 @@ class SprintExecutionEngine:
                     epic_statuses[epic_dir.name] = f"✅ 【Pass】スプリント {sprint_num} ハーネス合格!"
                     self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, "✅ ハーネス合格", epic_statuses)
                     
-                    # 🎉 sprint_N_done.yaml を出力！
                     self.write_sprint_done_log(epic_dir, sprint_num, backlog_data, last_written_files)
                     return True
                 else:
@@ -175,7 +174,7 @@ class SprintExecutionEngine:
                     print(f"⚠️ [TDD Cycle Failed] Attempt {attempt} returned exit code {res.returncode}. Feedback recorded.", flush=True)
 
         epic_statuses[epic_dir.name] = f"❌ 【Fail】リトライ上限到達 ({max_retries} 回)"
-        self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, "❌ リトライ上限到達", epic_statuses)
+        self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, "🛑 開発失敗・安全停止", epic_statuses)
         return False
 
     def run_sprint_development(self, sprint_num: int = 1) -> bool:
@@ -187,13 +186,12 @@ class SprintExecutionEngine:
             return False
 
         epic_statuses = {d.name: "⏳ 待機中" for d in epic_dirs}
-        executed_count = 0
-        passed_count = 0
         
         for epic_dir in epic_dirs:
-            executed_count += 1
-            if self.run_sprint_task(epic_dir, sprint_num, epic_statuses):
-                passed_count += 1
+            success = self.run_sprint_task(epic_dir, sprint_num, epic_statuses)
+            if not success:
+                print(f"🛑 [Fail-Fast Safety Halt] Sprint {sprint_num} failed for '{epic_dir.name}'. Halting pipeline for safety.")
+                raise RuntimeError(f"🛑 [SprintExecutionEngine] Harness failed for '{epic_dir.name}'. Pipeline safely halted.")
 
-        print(f"🎉 [Ceremony 3 Complete] Sprint {sprint_num} TDD execution complete ({passed_count}/{executed_count} harnesses PASSED)!", flush=True)
-        return passed_count > 0
+        print(f"🎉 [Ceremony 3 Complete] Sprint {sprint_num} TDD execution complete (All active harnesses PASSED)!", flush=True)
+        return True
