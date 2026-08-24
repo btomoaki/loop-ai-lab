@@ -805,3 +805,9 @@
 - **Decisions & Actions**:
   - Created `.agents/personas/capacity_guardian.md`.
   - Updated `.agents/rules/2_sprint_refinement/persona_participants.md`.
+
+## Step - Integrate `Capacity Guardian Persona` across all Ceremony Agent Prompts & Rules (2026-08-24)
+- **Prompt Summary**: Registered Capacity Guardian persona across Ceremony 1 & 2 planner agents (`agents/1_epic_refinement/epic_refinement_planner.md` & `agents/2_sprint_refinement/sprint_refinement_planner.md`) and ceremony governance rules to guarantee micro-sized backlog decomposition in all refinement phases.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated Ceremony 1 & 2 planner agents and governance rules.
