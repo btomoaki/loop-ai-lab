@@ -798,3 +798,10 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Logged architecture plan to implement stepped multi-request generation per Attempt.
+
+## Step - Create `Capacity Guardian Persona` to Enforce Micro-Sized Backlog Decomposition (2026-08-24)
+- **Prompt Summary**: Created `.agents/personas/capacity_guardian.md` and added Capacity Guardian persona to Ceremony 2 Sprint Refinement rules (`.agents/rules/2_sprint_refinement/persona_participants.md`) to prevent over-scoping sprint backlogs beyond LLM output context limits.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Created `.agents/personas/capacity_guardian.md`.
+  - Updated `.agents/rules/2_sprint_refinement/persona_participants.md`.

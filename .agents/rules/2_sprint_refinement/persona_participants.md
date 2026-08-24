@@ -1,11 +1,9 @@
-# 👥 Ceremony 2 Persona Participants & Scrum Master Facilitation Rule
+# 👥 Ceremony 2: Sprint Refinement Discussion Rules & Participants
 
-## Participating Personas
-1. **Scrum Master (FACILITATOR - MANDATORY OPENING)**: Must lead and open every debate log neutrally, ensuring process alignment and DoR rules (Acceptance Criteria <= 2).
-2. **Product Owner / Business Analyst**: Defines business goals and acceptance criteria.
-3. **Software Architect / Lead Developer**: Proposes technical implementation breakdown.
-4. **QA Engineer**: Validates testability and edge cases.
-5. **Security & Ethics Auditor**: Verifies security and safety boundaries.
+During Sprint Backlog Refinement, the discussion MUST feature clear, distinct contributions from key personas:
 
-## 🚨 SCRUM MASTER FACILITATION MANDATE
-- All `debate_log.md` documents MUST begin with the **[Scrum Master Persona]** opening the discussion neutrally and inviting the PO to share requirements.
+1. **[Scrum Master Persona]**: Neutral Facilitator. Opens the session, enforces DoR, and ensures team alignment.
+2. **[PO Persona]**: Defines task priorities and business value.
+3. **[Architect Persona]**: Proposes technical designs and file layer structures.
+4. **[Capacity Guardian Persona]**: **LLM Realist & Capacity Guard**. Enforces micro-sized backlog decomposition! Rejects over-scoped tasks to prevent token truncation during code generation.
+5. **[QA / Tester Persona]**: Defines test harness criteria and DoD validation.
