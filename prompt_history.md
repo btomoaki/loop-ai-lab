@@ -531,3 +531,10 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `.agents/personas/security_ethics_auditor.md` and `.agents/personas/finops_cost_governance.md`.
+
+## Step - Reorganize `.agents/rules/` by Ceremony & Enforce Scrum Master Neutrality (2026-08-24)
+- **Prompt Summary**: Reorganized `.agents/rules/` by Ceremony (1_epic_refinement, 2_sprint_refinement, 3_sprint_execution, development) and created ceremony-specific persona participant rules with strong Scrum Master neutrality mandates.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Reorganized rules directories.
+  - Added `persona_participants.md` to each ceremony directory.
