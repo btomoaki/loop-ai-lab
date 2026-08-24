@@ -544,3 +544,15 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `run_epic_review()` path in `runner/engine/scrum_runner.py`.
+
+## Step - Generalize `config_generator.py` Docstring (2026-08-24)
+- **Prompt Summary**: Generalized `config_generator.py` docstring to reference `references/*.md` dynamically instead of a hardcoded file name.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated docstring in `runner/config/config_generator.py`.
+
+## Step - Document Agent Prompt Refactoring Tasks in `memo.md` (2026-08-24)
+- **Prompt Summary**: Identified future refactoring tasks for monolithic agent prompt files like `agents/refinement-planner.md` to split them by ceremony.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Logged future task in `memo.md`.

@@ -3,11 +3,13 @@
 ## 1. 次回着手する残課題 (Next Tasks)
 
 ### ① スプリント自動開発ループ (Development Phase) の完走
-- **目標**: `state/initiatives/` 内の全エピックにおける `sprint_1_backlog.yaml` を読み込み、LLM 開発エージェントによる `workspace/identicon-generator/` 下への Go ソースコード自動生成と、`sprint_1_harness.sh` によるテスト自動検証（Red ➔ Green）ループを実行・完遂する。
+- **目標**: `state/initiatives/` 内の全エピックにおける `sprint_1_backlog.yaml` を読み込み、LLM 開発エージェントによる Go ソースコード自動生成と `sprint_1_harness.sh` によるテスト自動検証（Red ➔ Green）ループを実行・完遂する。
 - **実行コマンド**: `PYTHONPATH=. python3 runner/main.py run --phase sprint`
 
-### ② 生成された Go アプリケーションの動作検証
-- **目標**: 決定論的 PNG アバター生成（250px × 250px）、OpenAPI 仕様 (`docs/openapi.yaml`)、および Graceful Shutdown (`syscall.SIGTERM`/`SIGINT`) の動作が Go テスト (`go test ./...`) およびコンテナビルドで全てパスすることを確認する。
+### ② 大型ファイル・エージェントプロンプトのセレモニー別分割検討
+- **目標**: 影響範囲を見ながら慎重にリファクタリングを進行する。
+  - `runner/engine/refinement_engine.py` のセレモニー別分離検討
+  - `agents/refinement-planner.md` 等のモノリシックなエージェント定義ファイルを【セレモニー1】【セレモニー2】用に分割整理
 
 ---
 
