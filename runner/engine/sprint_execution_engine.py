@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class SprintExecutionEngine:
-    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (Zero-Embedded Text: 完全ファイルパス参照アーキテクチャ)"""
+    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (動的ファイルインジェクション・アーキテクチャ)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -91,24 +91,31 @@ class SprintExecutionEngine:
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="3_sprint_execution", include_dev_rules=True)
 
-        # 💡 指示テキスト・ルール・バックログ・エラーログすべてを徹底的に物理ファイルパス参照化！
-        inst_file = "agents/3_sprint_execution/sprint_dev_executor.md"
+        # 💡 物理ファイルから指示・バックログ・エラーログを動的ロード（インジェクション）！
+        inst_file = self.root_dir / "agents" / "3_sprint_execution" / "sprint_dev_executor.md"
+        inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else "Write Go code using # FILE: <path>."
+        
         backlog_file = epic_dir / f"sprint_{sprint_num}_backlog.yaml"
+        backlog_content = backlog_file.read_text(encoding="utf-8") if backlog_file.exists() else yaml.dump(backlog_data)
 
-        error_ref_block = (
-            f"\n=== 4. PREVIOUS TEST HARNESS FAILURE REFERENCE ===\n"
-            f"File Path: {result_file_ref.relative_to(self.root_dir)}\n"
-            f"Read failure details and compiler errors from the physical file above to fix implementation issues."
-        ) if result_file_ref and result_file_ref.exists() else ""
+        error_content = ""
+        if result_file_ref and result_file_ref.exists():
+            try:
+                res_data = yaml.safe_load(result_file_ref.read_text(encoding="utf-8")) or {}
+                last_log = res_data.get("last_error_log", "")
+                if last_log:
+                    error_content = f"\n=== 4. PREVIOUS HARNESS FAILURE FEEDBACK ===\n{last_log}\nFix the implementation to resolve the above compiler or test errors."
+            except Exception:
+                pass
 
         prompt = (
             f"[TASK: CEREMONY 3 TDD CODE GENERATION - {epic_name} (Sprint {sprint_num})]\n"
             f"Target Workspace: {target_ws.relative_to(self.root_dir)}\n\n"
-            f"=== 1. EXECUTION INSTRUCTIONS ===\nFile Path: {inst_file}\n\n"
+            f"=== 1. EXECUTION INSTRUCTIONS ({inst_file.relative_to(self.root_dir)}) ===\n{inst_content}\n\n"
             f"=== 2. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 3. BACKLOG TASKS ===\nFile Path: {backlog_file.relative_to(self.root_dir)}\n"
-            f"{error_ref_block}\n\n"
-            "Strictly follow the instructions, rules, and backlog requirements specified in the physical files above."
+            f"=== 3. BACKLOG TASKS ({backlog_file.relative_to(self.root_dir)}) ===\n{backlog_content}\n"
+            f"{error_content}\n\n"
+            "Generate complete, production-ready Go implementation and test code strictly adhering to all instructions above."
         )
 
         actual_prompt_file = self.eval_dir / "actual_dev_prompt.md"

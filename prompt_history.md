@@ -780,3 +780,9 @@
 - **Decisions & Actions**:
   - Updated `agents/3_sprint_execution/sprint_dev_executor.md` with output rules.
   - Updated `runner/engine/sprint_execution_engine.py` to reference instruction file path.
+
+## Step - Refactor Engine to Dynamic File Content Injection Architecture (2026-08-24)
+- **Prompt Summary**: Updated `SprintExecutionEngine` to dynamically inject full text from physical instruction markdown (`sprint_dev_executor.md`), backlog (`sprint_1_backlog.yaml`), and result logs (`sprint_1_result.yaml`) into the LLM payload while maintaining clean file isolation in code.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/engine/sprint_execution_engine.py` with dynamic file injection.
