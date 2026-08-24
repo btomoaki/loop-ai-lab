@@ -599,3 +599,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Reorganized `agents/` prompt files matching the 3 Scrum Ceremonies.
+
+## Step - Structure `agents/` Directory by Ceremony Subfolders (2026-08-24)
+- **Prompt Summary**: Reorganized `agents/` into ceremony-specific subdirectories (`1_epic_refinement`, `2_sprint_refinement`, `3_sprint_execution`) to prevent indiscriminate loading of unrelated agent prompts.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Reorganized `agents/` into ceremony subfolders.
