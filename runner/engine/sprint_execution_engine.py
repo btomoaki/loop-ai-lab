@@ -108,7 +108,7 @@ class SprintExecutionEngine:
             f"=== 2. BACKLOG TASKS ===\n{yaml.dump(tasks, default_flow_style=False, allow_unicode=True)}\n"
             f"{error_ref_block}\n\n"
             "【INSTRUCTION】\n"
-            "Generate complete implementation and test code files in Go using `# FILE: <relative_path>` format.\n"
+            "Generate complete implementation and test code files in Go using `# FILE: internal/core/identicon.go` format.\n"
             "Example:\n"
             "# FILE: go.mod\n"
             "module github.com/yourusername/identicon-generator\n\n"

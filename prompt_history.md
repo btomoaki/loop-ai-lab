@@ -761,3 +761,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/adapters/llm_adapter.py` with retry logic for empty LLM completions.
+
+## Step - Replace Placeholder in Prompt Example with Concrete Path in `SprintExecutionEngine` (2026-08-24)
+- **Prompt Summary**: Replaced `<relative_path>` placeholder with a concrete path example (`internal/core/identicon.go`) in `SprintExecutionEngine` prompt to prevent LLM from generating literal `<relative_path>` strings.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/engine/sprint_execution_engine.py`.
