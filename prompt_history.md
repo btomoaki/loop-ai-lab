@@ -665,3 +665,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Implemented `state/status.md` auto-updater in `SprintExecutionEngine`.
+
+## Step - Implement `sprint_N_done.yaml` Output on Successful Sprint Completion (2026-08-24)
+- **Prompt Summary**: Added automatic generation of `sprint_N_done.yaml` in `SprintExecutionEngine` when a sprint's test harness passes (Exit Code 0), recording completed tasks, generated files, and execution timestamps.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/engine/sprint_execution_engine.py` to write `sprint_N_done.yaml`.
