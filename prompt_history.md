@@ -647,3 +647,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `.agents/personas/finops_cost_governance.md`.
+
+## Step - Mandate Explicit "Electricity Cost" & "Time Cost" Directives in FinOps Persona (2026-08-24)
+- **Prompt Summary**: Clarified the two core cost constraints in FinOps persona: 1. Electricity & Physical Compute Cost, and 2. Time & Opportunity Cost.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Rewrote `.agents/personas/finops_cost_governance.md` with explicit Electricity Cost & Time Cost directives.
