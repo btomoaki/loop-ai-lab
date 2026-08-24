@@ -489,3 +489,21 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Added `run_sprint_development` to `SprintEngine` in `runner/engine/sprint_engine.py`.
+
+## Step - Resume Session: Connect Code Generation to `SprintEngine` for TDD Development (2026-08-24)
+- **Prompt Summary**: Resumed session based on `memo.md`. Connecting LLM Code Generator to `SprintEngine` to write Go implementation files into `workspace/identicon-generator/` and verify TDD test harnesses.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Resumed project workflow.
+
+## Step - Add Scrum Ceremonies & Governance Rules (`scrum_ceremonies_and_governance.md`) (2026-08-24)
+- **Prompt Summary**: Added new Scrum Ceremonies & Governance Rules prohibiting ad-hoc architectural design changes during Sprint Review to maintain total system consistency.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Created `.agents/rules/scrum_ceremonies_and_governance.md`.
+
+## Step - Add DoR (Definition of Ready) Rules to `scrum_ceremonies_and_governance.md` (2026-08-24)
+- **Prompt Summary**: Added DoR rules enforcing `acceptance_criteria <= 2`, exclusion of non-functional requirements from DoR, explicit file paths, and test harness availability.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `.agents/rules/scrum_ceremonies_and_governance.md` with section "3. 🚥 DoR (Definition of Ready)".
