@@ -586,3 +586,10 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `memo.md` with accurate handover status.
+
+## Step - Split Engine & Agents by Ceremony (2026-08-24)
+- **Prompt Summary**: Split `refinement_engine.py` into ceremony-specific engines (`epic_refinement_engine.py`, `sprint_refinement_engine.py`, `sprint_execution_engine.py`) matching the 3 Scrum Ceremonies.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Created ceremony engines in `runner/engine/`.
+  - Updated `ScrumRunner` in `runner/engine/scrum_runner.py`.
