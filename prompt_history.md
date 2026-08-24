@@ -792,3 +792,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `runner/utils/code_parser.py` with path guard validation.
+
+## Step - Plan Layer-by-Layer Stepped Code Generation in `SprintExecutionEngine` (2026-08-24)
+- **Prompt Summary**: Identified root cause of context limit truncation as single-request monolithic code generation. Planned layer-by-layer stepped requests (Domain -> Usecase -> Delivery -> Tests) in `SprintExecutionEngine`.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Logged architecture plan to implement stepped multi-request generation per Attempt.

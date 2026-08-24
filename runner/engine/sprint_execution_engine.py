@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class SprintExecutionEngine:
-    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (動的ファイルインジェクション・アーキテクチャ)"""
+    """【セレモニー 3】スプリント開発 & DoD受入判定エンジン (ステップ型レイヤー分割リクエスト・アーキテクチャ)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -84,17 +84,16 @@ class SprintExecutionEngine:
     def get_active_epic_harness(self, epic_dir: Path, sprint_num: int = 1) -> Path:
         return epic_dir / f"sprint_{sprint_num}_harness.sh"
 
-    def generate_code_for_backlog(self, epic_dir: Path, sprint_num: int, backlog_data: dict, result_file_ref: Path = None) -> list:
+    def generate_layer_code(self, epic_dir: Path, sprint_num: int, backlog_data: dict, layer_name: str, layer_target: str, result_file_ref: Path = None) -> list:
+        """1回のレスポンスで1つのレイヤーのみを出力させる段階型生成関数"""
         epic_name = backlog_data.get("epic", epic_dir.name)
         target_ws = self.root_dir / backlog_data.get("target_workspace", "workspace/identicon-generator")
         target_ws.mkdir(parents=True, exist_ok=True)
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="3_sprint_execution", include_dev_rules=True)
-
-        # 💡 物理ファイルから指示・バックログ・エラーログを動的ロード（インジェクション）！
         inst_file = self.root_dir / "agents" / "3_sprint_execution" / "sprint_dev_executor.md"
-        inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else "Write Go code using # FILE: <path>."
-        
+        inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else "Write Go code."
+
         backlog_file = epic_dir / f"sprint_{sprint_num}_backlog.yaml"
         backlog_content = backlog_file.read_text(encoding="utf-8") if backlog_file.exists() else yaml.dump(backlog_data)
 
@@ -104,33 +103,53 @@ class SprintExecutionEngine:
                 res_data = yaml.safe_load(result_file_ref.read_text(encoding="utf-8")) or {}
                 last_log = res_data.get("last_error_log", "")
                 if last_log:
-                    error_content = f"\n=== 4. PREVIOUS HARNESS FAILURE FEEDBACK ===\n{last_log}\nFix the implementation to resolve the above compiler or test errors."
+                    error_content = f"\n=== PREVIOUS HARNESS FAILURE FEEDBACK ===\n{last_log}\nFix the implementation to resolve the above compiler or test errors."
             except Exception:
                 pass
 
         prompt = (
-            f"[TASK: CEREMONY 3 TDD CODE GENERATION - {epic_name} (Sprint {sprint_num})]\n"
-            f"Target Workspace: {target_ws.relative_to(self.root_dir)}\n\n"
-            f"=== 1. EXECUTION INSTRUCTIONS ({inst_file.relative_to(self.root_dir)}) ===\n{inst_content}\n\n"
-            f"=== 2. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 3. BACKLOG TASKS ({backlog_file.relative_to(self.root_dir)}) ===\n{backlog_content}\n"
+            f"[TASK: CEREMONY 3 STEPPED CODE GENERATION - {epic_name} (Sprint {sprint_num})]\n"
+            f"Target Workspace: {target_ws.relative_to(self.root_dir)}\n"
+            f"🎯 CURRENT TARGET LAYER FOCUS: {layer_name} ({layer_target})\n\n"
+            f"=== 1. EXECUTION INSTRUCTIONS ===\n{inst_content}\n\n"
+            f"=== 2. REPOSITORY RULES ===\n{refs['rules']}\n\n"
+            f"=== 3. BACKLOG TASKS ===\n{backlog_content}\n"
             f"{error_content}\n\n"
-            "Generate complete, production-ready Go implementation and test code strictly adhering to all instructions above."
+            f"【STRICT FOCUS MANDATE】\n"
+            f"Generate ONLY the Go source files for the {layer_name} layer ({layer_target}).\n"
+            f"Do NOT generate files for other layers in this request to avoid token truncation.\n"
+            f"Use `# FILE: <relative_path>` format."
         )
 
-        actual_prompt_file = self.eval_dir / "actual_dev_prompt.md"
+        actual_prompt_file = self.eval_dir / f"actual_dev_prompt_{layer_name.lower()}.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
-        print(f"💻 [SprintExecutionEngine] Requesting LLM code generation for {epic_name}...", flush=True)
+        print(f"💻 [SprintExecutionEngine Step: {layer_name}] Requesting LLM code generation...", flush=True)
         llm_response = self.dev_agent.generate_text(prompt)
 
         if not llm_response or not llm_response.strip():
-            print(f"⚠️ [SprintExecutionEngine Warning] LLM returned empty code response!")
+            print(f"⚠️ [SprintExecutionEngine Warning] LLM returned empty response for layer {layer_name}!")
             return []
 
         written_files = CodeParser.apply_code_changes(llm_response, target_ws)
-        print(f"📝 [SprintExecutionEngine] Written {len(written_files)} files into {target_ws.relative_to(self.root_dir)}", flush=True)
+        print(f"📝 [SprintExecutionEngine] Written {len(written_files)} files for layer {layer_name}", flush=True)
         return written_files
+
+    def generate_code_in_steps(self, epic_dir: Path, sprint_num: int, backlog_data: dict, result_file_ref: Path = None) -> list:
+        """レイヤーごとにリクエストを4分割して順次生成し、コンテキスト溢れを根絶する"""
+        layers = [
+            ("Domain", "internal/domain/"),
+            ("Usecase", "internal/usecase/"),
+            ("Interface_and_Main", "main.go, go.mod, internal/interface/"),
+            ("Unit_Tests", "*_test.go files across all layers")
+        ]
+
+        all_written_files = []
+        for l_name, l_target in layers:
+            files = self.generate_layer_code(epic_dir, sprint_num, backlog_data, l_name, l_target, result_file_ref)
+            all_written_files.extend(files)
+
+        return all_written_files
 
     def run_sprint_task(self, epic_dir: Path, sprint_num: int, epic_statuses: dict, max_retries: int = 3) -> bool:
         backlog_path = epic_dir / f"sprint_{sprint_num}_backlog.yaml"
@@ -160,8 +179,8 @@ class SprintExecutionEngine:
             epic_statuses[epic_dir.name] = f"🏃 開発進行中 [{tdd_status}]"
             self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, tdd_status, epic_statuses)
 
-            print(f"🔄 [TDD Cycle Attempt {attempt}/{max_retries}] Generating/Updating code...", flush=True)
-            new_files = self.generate_code_for_backlog(epic_dir, sprint_num, backlog_data, result_file_ref)
+            print(f"🔄 [TDD Cycle Attempt {attempt}/{max_retries}] Generating code in 4 stepped layer requests...", flush=True)
+            new_files = self.generate_code_in_steps(epic_dir, sprint_num, backlog_data, result_file_ref)
             if new_files:
                 last_written_files = new_files
 
