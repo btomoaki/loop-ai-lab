@@ -556,3 +556,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Logged future task in `memo.md`.
+
+## Step - Refactor `ContextLoader` for Ceremony-Specific Isolated Context Loading (2026-08-24)
+- **Prompt Summary**: Refactored `ContextLoader` to eliminate indiscriminate rule/persona loading and support isolated context filtering based on `ceremony` ("1_epic_refinement", "2_sprint_refinement", "3_sprint_execution") and `include_dev_rules` flag.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `runner/utils/context_loader.py` with isolated ceremony context loading.
