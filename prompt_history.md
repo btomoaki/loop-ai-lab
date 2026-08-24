@@ -525,3 +525,9 @@
 - **Date**: 2026-08-24
 - **Decisions & Actions**:
   - Updated `.agents/personas/finops_cost_governance.md` with Zero-Cost & Free Tier Mandate.
+
+## Step - Add Rate Limiting & Swagger Authentication Directives (2026-08-24)
+- **Prompt Summary**: Added directives for Rate Limiting (HTTP 429 for DoS/wallet-draining abuse) and API/Swagger authentication protections in Security & FinOps personas.
+- **Date**: 2026-08-24
+- **Decisions & Actions**:
+  - Updated `.agents/personas/security_ethics_auditor.md` and `.agents/personas/finops_cost_governance.md`.
