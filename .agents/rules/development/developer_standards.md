@@ -1,4 +1,4 @@
-# 📜 API & Interface Design Standards
+# 💻 Universal Developer & Interface Standards
 
 ## 1. Modern API & Delivery Standards
 When designing and implementing application delivery interfaces (HTTP/REST, RPC, or CLI):
@@ -8,3 +8,4 @@ When designing and implementing application delivery interfaces (HTTP/REST, RPC,
 
 ## 2. Interface Segregation & Loose Coupling
 - Design minimal, focused interfaces at delivery boundaries to enable straightforward unit test mockability without tight coupling to concrete implementations.
+- Accept interfaces in constructors and return concrete types.
