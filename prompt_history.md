@@ -14,3 +14,10 @@
   - Created `.agents/personas/pragmatic_anti_complexity_engineer.md`.
   - Updated and consolidated `.agents/personas/software_architect_developer.md`, `.agents/personas/devops_cloud_architect.md`, `.agents/personas/spec_compliance_auditor.md`, `.agents/personas/capacity_guardian.md`.
   - Removed obsolete files `database_performance_architect.md` and `operations_release_manager.md` after full integration.
+
+## Step - Neutralize Language and Vendor-Specific Biases in Personas (2026-08-26)
+- **Prompt Summary**: Removed language-specific references (e.g. "Go package") and cloud vendor-specific references (e.g. "GCP Cloud Run") from `pragmatic_anti_complexity_engineer.md` and `finops_cost_governance.md` to ensure multi-language and multi-cloud neutrality across all personas.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `pragmatic_anti_complexity_engineer.md` with language-agnostic module terms.
+  - Updated `finops_cost_governance.md` with cloud-agnostic free tier terms.
