@@ -46,3 +46,11 @@
   - Updated `agents/1_epic_refinement/epic_refinement_planner.md` and `.agents/rules/1_epic_refinement/persona_participants.md`.
   - Updated `agents/2_sprint_refinement/sprint_refinement_planner.md` and `.agents/rules/2_sprint_refinement/persona_participants.md`.
   - Updated `runner/engine/epic_refinement_engine.py`.
+
+## Step - Enhance Spec Compliance Auditor with AC Refinement & Requirement Integrity Verification in Ceremony 2 (2026-08-26)
+- **Prompt Summary**: Assigned Spec Compliance Auditor in Ceremony 2 the explicit responsibility of reviewing Acceptance Criteria (AC) and executing a strict Requirement Integrity Audit to ensure any AC modification/decomposition 100% maintains original specification fidelity with Veto power.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `.agents/personas/spec_compliance_auditor.md`.
+  - Updated `.agents/rules/2_sprint_refinement/persona_participants.md`.
+  - Updated `agents/2_sprint_refinement/sprint_refinement_planner.md`.
