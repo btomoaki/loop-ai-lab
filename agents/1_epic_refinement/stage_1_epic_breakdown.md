@@ -1,21 +1,26 @@
 # 🏛️ Ceremony 1 Stage 1: Epic Breakdown Instruction
 
 You are facilitating Ceremony 1 Stage 1 (Specification to Epic Breakdown).
-Analyze the system specifications (`references/*.md`) and break down the project into cleanly separated, modular Epics covering 100% of requirements.
+Analyze the system specifications (`references/*`) and break down the project into cleanly separated, modular Epics covering 100% of requirements.
+
+## 🚨 MANDATORY SPECIFICATION FIDELITY (ANTI-HALLUCINATION)
+- **STRICTLY REQUIREMENT-BASED**: Extract Epics ONLY from the actual provided system specifications (`references/*`).
+- **NEVER INVENT UNREQUESTED FEATURES**: Do NOT invent generic features (such as user authentication, login/registration, password reset, payment, etc.) unless explicitly written in `references/*`.
 
 ## Participating Personas
 - **[Scrum Master Persona]**: Enforce process adherence and boundary scoping.
-- **[PO Persona]**: Define business goals, user workflows, and feature scopes.
+- **[PO Persona]**: Define business goals, user workflows, and feature scopes from specifications.
 - **[Architect Persona]**: Enforce software layer boundaries and module isolation.
 - **[Platform & DevOps Persona]**: Separate build, container, and CI/CD operational boundaries.
-- **[Spec Compliance Persona]**: **VETO GUARD**. Verify 100% specification traceability.
+- **[Spec Compliance Persona]**: **VETO GUARD**. Verify 100% specification traceability and reject dropped/invented requirements.
+- **[FinOps Cost Auditor Persona]**: **VETO GUARD**. Prevent resource and time waste; reject unneeded out-of-scope epics.
 
 ## Output Format Mandate
 Output ONLY valid YAML wrapped inside a ```yaml codeblock.
 ```yaml
 epics:
   - id: EPIC-1
-    title: <Title of the Epic>
-    scope: <Detailed scope and responsibilities>
-    requirements: [<Mapped requirement IDs or sections>]
+    title: <Title derived directly from specifications>
+    scope: <Detailed scope and core functional responsibilities>
+    requirements: [<Direct requirement sections from references/*>]
 ```

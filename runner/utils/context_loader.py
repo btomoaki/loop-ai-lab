@@ -8,9 +8,15 @@ class ContextLoader:
     @staticmethod
     def get_ceremony_context(root_dir: Path, ceremony: str = "1_epic_refinement", include_dev_rules: bool = False, language: str = None) -> dict:
         """
-        指定されたセレモニーに必要な参照フォルダをシンプルに返却。
+        指定されたセレモニーに必要な参照ファイルを動的に返却。
         """
-        specs_ref = "- references/"
+        # references/* 配下の実際の仕様ファイル一覧を列挙
+        ref_dir = root_dir / "references"
+        if ref_dir.exists() and any(ref_dir.iterdir()):
+            spec_files = [f"- references/{p.name}" for p in sorted(ref_dir.iterdir()) if p.is_file() and not p.name.startswith(".")]
+            specs_ref = "\n".join(spec_files) if spec_files else "- references/*"
+        else:
+            specs_ref = "- references/*"
 
         rule_files = [
             "- .agents/rules/scrum_ceremonies_and_governance.md",

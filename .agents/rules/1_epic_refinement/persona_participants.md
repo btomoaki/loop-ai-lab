@@ -5,16 +5,18 @@ Ceremony 1 is executed in **two distinct sequential stages** to ensure clean bou
 ---
 
 ## 🏛️ Stage 1: Epic Breakdown (Specification to Epics)
-Transform source specifications (`references/*.md`) into logically separated, non-overlapping Epics (`epics.yaml`).
+Transform source specifications (`references/*`) into logically separated, non-overlapping Epics (`epics.yaml`).
 
 ### Participating Personas & Core Focus:
 1. 🎤 **Scrum Master Persona**: Neutral Facilitation, process adherence, and DoR enforcement.
-2. 👑 **Product Owner & Business Analyst Persona**: Define business goals, core user value, and functional feature boundaries.
+2. 👑 **Product Owner & Business Analyst Persona**: Define business goals, core user value, and functional feature boundaries from specifications.
 3. 🏗️ **Software & Data Architect Persona**: Enforce clean software boundary separation, domain model boundaries, and API contract modularity.
 4. ☁️ **Platform, DevOps & SRE Persona**: Enforce infrastructure, containerization, Makefile targets, and CI/CD boundary separation.
 5. 🕵️ **Spec Compliance Auditor Persona (ABSOLUTE VETO GUARD)**:
-   - Verify 100% requirement coverage from input specifications.
-   - **Immediate Veto**: If ANY functional requirement, API, or operational behavior is omitted, IMMEDIATELY mandate a dedicated Epic!
+   - Verify 100% requirement coverage from input specifications (`references/*`).
+   - **Immediate Veto**: If ANY functional requirement is omitted or ANY unrequested feature is invented, IMMEDIATELY Reject!
+6. 💰 **FinOps Cost & Time Auditor Persona (VETO GUARD)**:
+   - Prevent compute/token waste; reject unnecessary, out-of-scope epics.
 
 ---
 
