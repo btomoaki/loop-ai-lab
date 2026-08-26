@@ -60,3 +60,9 @@ Story points are estimated exclusively at the individual **Ticket/Task** level.
 2. **1-Sprint Capacity Limit Rule**:
    - The total story points assigned to a single sprint backlog (`sprint_x_backlog.yaml`) MUST NOT exceed **3-4 points (Max 5 points)**. Overbudget tickets must be deferred to subsequent sprints.
 
+
+---
+
+## 🚨 5. Escalation Protocol for Missing Specifications
+- **No Guessing or Fabricating Features**: If specification documents (`references/*`) are missing, empty, or completely ambiguous, the team and all AI agents MUST NOT invent speculative generic features (such as generic login, payment, or unrelated templates).
+- **Mandatory Escalation Halt**: The Scrum Master and Spec Compliance Auditor MUST immediately halt refinement and issue an explicit escalation to the human stakeholder requesting the input specification files.
