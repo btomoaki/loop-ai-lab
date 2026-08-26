@@ -74,3 +74,9 @@
 - **Date**: 2026-08-26
 - **Decisions & Actions**:
   - Updated `runner/engine/refinement_engine.py`.
+
+## Step - Remove Hardcoded Multi-Persona Discussion Example in `EpicRefinementEngine` (2026-08-26)
+- **Prompt Summary**: Removed hardcoded multi-persona discussion text in `EpicRefinementEngine` prompt construction (`runner/engine/epic_refinement_engine.py`) and refactored to dynamically load instructions from `agents/1_epic_refinement/epic_refinement_planner.md`.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `runner/engine/epic_refinement_engine.py`.

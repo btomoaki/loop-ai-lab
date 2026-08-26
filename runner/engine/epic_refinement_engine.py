@@ -80,23 +80,21 @@ class EpicRefinementEngine:
         
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
         
+        inst_file = self.root_dir / "agents" / "1_epic_refinement" / "epic_refinement_planner.md"
+        inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else "Facilitate Ceremony 1 debate."
+
         prompt = (
             f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
-            f"=== 1. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 2. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 3. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
-            "【INSTRUCTION】\n"
+            f"=== 1. EXECUTION INSTRUCTIONS ({inst_file.relative_to(self.root_dir)}) ===\n{inst_content}\n\n"
+            f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+            f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+            f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
+            "【OUTPUT FORMAT MANDATE】\n"
             "Generate the complete Ceremony 1 Overall Architecture Debate Log.\n"
-            "Output MUST follow this format:\n"
+            "Structure your output using the following format:\n"
             "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
             "## 1. Multi-Persona Discussion\n"
-            "- **[PO Persona]**: Core business requirements and user value.\n"
-            "- **[Architect Persona]**: System architecture and boundaries.\n"
-            "- **[Anti-Complexity Persona]**: Challenge over-engineering, demand flat KISS/YAGNI architecture.\n"
-            "- **[Spec Compliance Persona]**: Audit against requirements.\n"
-            "- **[Capacity Guardian Persona]**: Limit epic scope to manageable units.\n"
-            "- **[FinOps Persona]**: Physical compute efficiency and running cost governance.\n"
-            "- **[QA & DevOps Personas]**: Testing, CI/CD, and operational readiness.\n\n"
+            "(Provide authentic debate contributions from participating personas according to the execution instructions and rules above)\n\n"
             "## 2. Epic Breakdown\n"
             "- **Epic 1 <Title>**: <Scope description>\n"
             "- **Epic 2 <Title>**: <Scope description>\n"
@@ -112,14 +110,13 @@ class EpicRefinementEngine:
             f"## 1. Multi-Persona Discussion\n"
             f"- **[PO Persona]**: Defined core business requirements for {self.config.project_name or 'project'}.\n"
             f"- **[Architect Persona]**: Proposed Clean Architecture in {self.config.language or 'standard language'}.\n"
-            f"- **[Anti-Complexity Persona]**: Streamlined layers to avoid over-engineering.\n"
             f"- **[Spec Compliance Persona]**: Verified 100% testable requirement coverage.\n"
-            f"- **[Capacity Guardian Persona]**: Confirmed micro-sized epic scoping.\n"
+            f"- **[Capacity Guardian Persona]**: Confirmed manageable epic scoping.\n"
             f"- **[FinOps Persona]**: Ensured zero un-needed cost overhead.\n"
-            f"- **[DevOps Persona]**: Mandated Makefile & GitHub Actions.\n\n"
+            f"- **[DevOps Persona]**: Mandated Makefile & CI/CD pipeline.\n\n"
             f"## 2. Epic Breakdown\n"
-            f"- **Epic 1 Core Logic**: Implement core application domain logic.\n"
-            f"- **Epic 2 Delivery & API**: Implement interfaces, delivery endpoints, and documentation.\n"
+            f"- **Epic 1 Core Foundation**: Implement core domain logic and data structures.\n"
+            f"- **Epic 2 Delivery & Interfaces**: Implement external interface endpoints and client components.\n"
         )
         
         CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
