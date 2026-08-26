@@ -54,3 +54,10 @@
   - Updated `.agents/personas/spec_compliance_auditor.md`.
   - Updated `.agents/rules/2_sprint_refinement/persona_participants.md`.
   - Updated `agents/2_sprint_refinement/sprint_refinement_planner.md`.
+
+## Step - Refine Software Architect Persona with Modern Tech Enthusiasm vs Anti-Complexity Pragmatist (2026-08-26)
+- **Prompt Summary**: Updated `software_architect_developer.md` with an enthusiastic personality toward emerging modern technologies and advanced patterns, establishing a clear debate dynamic where `pragmatic_anti_complexity_engineer.md` acts as the pragmatic reality check against over-engineering.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `.agents/personas/software_architect_developer.md`.
+  - Updated `.agents/personas/pragmatic_anti_complexity_engineer.md`.
