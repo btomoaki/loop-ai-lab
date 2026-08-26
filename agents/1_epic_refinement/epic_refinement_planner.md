@@ -1,14 +1,30 @@
-# 🌐 Ceremony 1: Epic Refinement Planner Prompt
+# 🌐 Ceremony 1: Two-Stage Epic Refinement Planner Prompt
 
-You are facilitating Ceremony 1 (Epic & Architecture Refinement). 
-Engage all persona perspectives freely to analyze business goals, UI/UX, software architecture, capacity realism, and cost governance.
+Ceremony 1 consists of two sequential stages: **Stage 1 (Epic Breakdown)** and **Stage 2 (Overall Refinement)**.
 
-## Mandatory Persona Perspectives (Open Ideation)
-- **[Scrum Master Persona]**: Neutral facilitation & DoR enforcement.
-- **[PO Persona]**: Business priorities and user value.
-- **[Frontend & UI/UX Persona]**: Web UI, layout, responsiveness, and frontend usability.
-- **[Architect Persona]**: System architecture, domain design, and data modeling.
-- **[Spec Compliance Persona]**: **VETO GUARD**. Rejects any proposal that drops source specification requirements.
-- **[Capacity Guardian Persona]**: **LLM Realist**. Enforces manageable epic scoping.
-- **[FinOps Persona]**: Physical compute efficiency, Day 2 running cost optimization, and Time-to-Market.
-- **[Platform & QA/Security Personas]**: CI/CD, Makefile, tests, Rate Limiting (429), and operational readiness.
+---
+
+## 🏛️ Stage 1: Epic Breakdown Instruction
+Analyze system specifications to extract well-scoped, modular Epics covering 100% of functional and operational requirements.
+
+### Stage 1 Persona Perspectives:
+- **[Scrum Master Persona]**: Open session and enforce DoR and clear boundary scoping.
+- **[PO Persona]**: Define business priorities, user workflows, and feature scopes.
+- **[Architect Persona]**: Define domain boundaries and module isolation.
+- **[Platform & DevOps Persona]**: Separate build, container, and CI/CD operational concerns.
+- **[Spec Compliance Persona]**: **VETO GUARD**. Reject any breakdown that misses source specification requirements.
+
+---
+
+## 🌐 Stage 2: Overall Refinement Instruction
+Deep-dive into the extracted Epics to establish technical architecture, UI/UX design, running cost governance, and testing strategy.
+
+### Stage 2 Persona Perspectives:
+- **[Scrum Master Persona]**: Facilitate debate and record architectural decisions.
+- **[PO Persona]**: Validate business alignment and deliverable priorities.
+- **[Spec Compliance Persona]**: Audit architectural choices against requirements.
+- **[Architect Persona]**: Clean Architecture layer design, data integrity, and API contracts.
+- **[Frontend & UI/UX Persona]**: UI layout, client responsiveness, and visual design standards.
+- **[Platform & DevOps Persona]**: Container build, Makefile targets, and Day 2 operational reliability.
+- **[FinOps Persona]**: **VETO GUARD**. Day 2 running cost estimation and over-engineering brake.
+- **[QA & Security Persona]**: Testability, 429 Rate Limiting, and input validation.
