@@ -64,7 +64,7 @@ class EpicRefinementEngine:
             if m_epic:
                 title = m_epic.group(1).strip()
                 scope = m_epic.group(2).strip()
-                if not title.startswith("ADR") and not title.startswith("Capacity") and "<Title>" not in title:
+                if not title.startswith("ADR") and not title.startswith("Capacity") and "<Concrete Name>" not in title and "<Title>" not in title:
                     epics.append({
                         "title": title,
                         "scope": scope
@@ -84,7 +84,7 @@ class EpicRefinementEngine:
         # すでに overall_debate_log.md がある場合は再利用
         if overall_debate_file.exists():
             content = overall_debate_file.read_text(encoding="utf-8").strip()
-            if len(content) > 500 and "<Title>" not in content:
+            if len(content) > 500 and "<Title>" not in content and "<Concrete Name>" not in content:
                 print("⏯️ [EpicRefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップします。")
                 return content
 
@@ -92,12 +92,11 @@ class EpicRefinementEngine:
         self.update_status_dashboard("💬 全ペルソナによる全体アーキテクチャディベート中...")
         
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
-        inst_file = self.root_dir / "agents" / "1_epic_refinement" / "epic_refinement_planner.md"
-        inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else "Facilitate Ceremony 1 debate."
+        inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
 
         prompt = (
             f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
-            f"=== 1. EXECUTION INSTRUCTIONS ({inst_file.relative_to(self.root_dir)}) ===\n{inst_content}\n\n"
+            f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
             f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
@@ -123,7 +122,7 @@ class EpicRefinementEngine:
         else:
             overall_debate_log = (llm_raw_response or "").strip()
 
-        if len(overall_debate_log) < 300 or "<Title>" in overall_debate_log:
+        if len(overall_debate_log) < 300 or "<Title>" in overall_debate_log or "<Concrete Name>" in overall_debate_log:
             # Fallback default if LLM response failed or produced template
             overall_debate_log = (
                 f"# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"

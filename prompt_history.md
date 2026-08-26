@@ -92,3 +92,9 @@
 - **Date**: 2026-08-26
 - **Decisions & Actions**:
   - Updated `runner/engine/epic_refinement_engine.py`.
+
+## Step - Unify Ceremony 1 Execution Instructions to File Path Reference (2026-08-26)
+- **Prompt Summary**: Replaced embedded `read_text()` of `agents/1_epic_refinement/epic_refinement_planner.md` in `EpicRefinementEngine` with clean file path reference to match repository rules and specifications.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `runner/engine/epic_refinement_engine.py`.
