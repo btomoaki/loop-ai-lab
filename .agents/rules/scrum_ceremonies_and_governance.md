@@ -1,43 +1,62 @@
 # ⚙️ Scrum Ceremonies & Governance Rules
 
-## 1. 🎯 AI自律スクラムセレモニー体系 (Ceremony Lifecycle)
-本パイプラインは以下の 3 つのセレモニー（フェーズ）で構成される：
+## 1. 🎯 Autonomous Scrum Ceremony Lifecycle
+The pipeline consists of the following 3 autonomous ceremonies:
 
-1. **エピックリファインメント (Epic Refinement)**:
-   - 全体要求仕様書（System Specification）を読み解き、全体アーキテクチャディベートおよび単一責任エピック（`epic_1`〜`epic_N`）の抽出・分類を行う。
-2. **スプリントバックログリファインメント (Sprint Backlog Refinement)**:
-   - 各エピックごとにマルチペルソナディベートを行い、詳細タスク定義（`sprint_x_backlog.yaml`）および自動テストハーネス（`sprint_x_harness.sh`）を自動生成する。
-3. **スプリント開発 & 受入判定 (Sprint Execution & Review Gate)**:
-   - 自律TDD実装（Red ➔ Green）を行い、テストハーネスおよび完成の定義（DoD）を満たしているかを検証する。
+1. **Epic Refinement (Ceremony 1)**:
+   - Analyzes system specification documents (`references/*.md`) and conducts overall multi-persona architecture debate to extract single-responsibility Epics (`epic_1` to `epic_N`).
+2. **Sprint Backlog Refinement (Ceremony 2)**:
+   - Conducts multi-persona refinement for each Epic to generate single-responsibility task definitions (`sprint_x_backlog.yaml`) and automated test harnesses (`sprint_x_harness.sh`).
+3. **Sprint Execution & Review Gate (Ceremony 3)**:
+   - Executes autonomous TDD implementation loops (Red ➔ Green) and validates DoD compliance using automated test harnesses.
 
-## 2. 🚥 DoR (Definition of Ready: 開発着手準備完了の定義)
-スプリント開発（TDD実装）に着手・進入するための必須条件：
+## 2. 🚥 DoR (Definition of Ready Rules)
+Prerequisites for initiating TDD implementation in Sprint Execution:
 
-1. **受入要件の厳格制限 (Acceptance Criteria <= 2)**:
-   - 各タスクの受入基準（`acceptance_criteria`）は **2 個以下** であり、単一責任に限定されていること。（3 個以上の場合はリファインメント段階で即座に複数の小タスクへ分解する）。
-   - **非機能要件の除外**: パフォーマンス、セキュリティ、コスト等の非機能要件（NFR）は DoR に含めず、開発後の DoD（完成の定義）で検証する。
-2. **明確な物理ファイルパスの指定**:
-   - タスクに作成・変更対象の物理ファイルパスが明記されていること。
-3. **自動検証テストハーネスの存在**:
-   - タスク動作を客観テストする `sprint_x_harness.sh` が生成されていること。
+1. **Strict Acceptance Criteria Limit (Acceptance Criteria <= 2)**:
+   - Each task MUST have **at most 2 Acceptance Criteria** ensuring single responsibility. (Tasks with 3+ criteria MUST be split during refinement).
+   - **Exclusion of NFRs**: Non-functional requirements (NFRs) like performance or security are excluded from DoR and validated during DoD.
+2. **Explicit Physical File Paths**:
+   - Every task MUST specify explicit target file paths for creation or modification.
+3. **Automated Test Harness**:
+   - Each task MUST have a corresponding `sprint_x_harness.sh` script for objective verification.
 
-## 3. 🚫 スプリントレビューにおけるアドホックな設計変更禁止ルール (CRITICAL)
-- **全体一貫性の保護 (System Architecture Consistency Guarantee)**:
-  - スプリント開発・レビュー段階において、リファインメントフェーズで合意・決定されたアーキテクチャ、API契約、データ構造の**アドホック（場当たり的）な設計変更・仕様追加は厳重に禁止**する。
-  - スプリントレビューの責務は、「リファインメントで定義されたDoD（テストハーネス100%Pass、Clean Architecture 4層構造、セキュリティ・倫理基準）を満たしているかのPass/Fail判定」のみとする。
-- **一貫性破綻時のリファインメント・ロールバック規定**:
-  - 万が一、開発途中で重大な仕様矛盾や設計上の不整合が発覚した場合は、コード上で捏造修正してはならない。即座に「リファインメントフェーズへのロールバック」を宣言し、全体一貫性を保った状態でディベートからやり直すこと。
+## 3. 🚫 No Ad-Hoc Design Modifications Rule (CRITICAL)
+- **System Architecture Consistency Guarantee**:
+  - Ad-hoc design changes or specification additions during Sprint Execution are strictly forbidden.
+  - The Sprint Review Gate evaluates only Pass/Fail against DoD criteria (100% harness pass, Clean Architecture 4-layer structure, security standards).
+- **Refinement Rollback Directive**:
+  - If critical spec contradictions are discovered during development, rollback to Ceremony 1 or Ceremony 2 refinement to maintain systemic architecture consistency.
 
-## 4. 📂 セレモニー別規定成果物ファイル構造 (Standard Artifact Map)
-各セレモニーが出力・維持すべき正規の成果物ファイルパス：
+## 4. 📂 Ceremony Artifact Map
+Official artifact paths generated and maintained across ceremonies:
 
-- **セレモニー 1 (エピックリファインメント)**:
-  - `state/.evaluator/overall_debate_log.md` (全体アーキテクチャディベート & エピック一覧)
-- **セレモニー 2 (スプリントバックログリファインメント)**:
-  - `state/initiatives/epic_X/debate_log.md` (エピック詳細ディベート)
-  - `state/initiatives/epic_X/epic_backlog.yaml` (エピック全体バックログ)
-  - `state/initiatives/epic_X/sprint_N_backlog.yaml` (DoR適合スプリントタスク定義)
-  - `state/initiatives/epic_X/sprint_N_harness.sh` (自動検証テストハーネス)
-- **セレモニー 3 (スプリント開発 & 受入判定)**:
-  - `workspace/<project_name>/...` (自動実装ソースコード & 単体テスト)
-  - `state/initiatives/epic_X/sprint_N_review_gate.md` (DoD受入判定ログ)
+- **Ceremony 1 (Epic Refinement)**:
+  - `state/.evaluator/overall_debate_log.md` (Overall Architecture Debate & Epics List)
+- **Ceremony 2 (Sprint Backlog Refinement)**:
+  - `state/initiatives/epic_X/debate_log.md` (Epic Multi-Persona Debate)
+  - `state/initiatives/epic_X/epic_backlog.yaml` (Epic Backlog)
+  - `state/initiatives/epic_X/sprint_N_backlog.yaml` (Sprint Task Definitions)
+  - `state/initiatives/epic_X/sprint_N_harness.sh` (Automated Verification Test Harness)
+- **Ceremony 3 (Sprint Execution & Review Gate)**:
+  - `workspace/<project_name>/...` (Source Code & Unit Tests)
+  - `state/initiatives/epic_X/sprint_N_review_gate.md` (DoD Review Gate Log)
+
+## 5. 📊 Ticket Story Point Matrix & Capacity Governance
+
+### Ticket Story Point Matrix
+Story points are estimated exclusively at the individual **Ticket/Task** level.
+
+* **5 pt**: Domain core design and critical interface modeling
+* **4 pt**: CI/CD pipeline setup, public cloud release design, initial alert setup
+* **3 pt**: DI container assembly and wiring
+* **2 pt**: Unit test implementation (1 file), Docker Compose setup
+* **1 - 2 pt**: Single business logic usecase implementation
+* **1 pt**: API implementation (2 endpoints), Dockerization, basic alerts
+
+### Capacity Governance Hard Rules
+1. **8pt+ Ticket Decomposition Rule**:
+   - Any ticket estimated at **8pt or higher** MUST be immediately decomposed into smaller tickets during Ceremony 2.
+2. **1-Sprint Capacity Limit Rule**:
+   - The total story points assigned to a single sprint backlog (`sprint_x_backlog.yaml`) MUST NOT exceed **3-4 points (Max 5 points)**. Overbudget tickets must be deferred to subsequent sprints.
+

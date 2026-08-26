@@ -30,3 +30,11 @@
   - Updated `runner/engine/epic_refinement_engine.py`.
   - Updated `runner/engine/sprint_refinement_engine.py`.
   - Updated `runner/utils/backlog_splitter.py`.
+
+## Step - Refactor `.agents/rules/*/persona_participants.md` with Neutral Multi-Persona Lineup (2026-08-26)
+- **Prompt Summary**: Updated `persona_participants.md` across all 3 ceremonies (`1_epic_refinement`, `2_sprint_refinement`, `3_sprint_execution`) to integrate new Frontend UI/UX, Anti-Complexity, Capacity Guardian, Spec Compliance Veto, and Platform/SRE personas while eliminating vendor/language-specific dependencies.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `.agents/rules/1_epic_refinement/persona_participants.md`.
+  - Updated `.agents/rules/2_sprint_refinement/persona_participants.md`.
+  - Updated `.agents/rules/3_sprint_execution/persona_participants.md`.

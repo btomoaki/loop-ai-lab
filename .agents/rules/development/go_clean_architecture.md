@@ -27,3 +27,11 @@
   - API delivery boundaries MUST be documented via OpenAPI 3.0 specification (`docs/openapi.yaml`).
 - **Endpoint Documentation**:
   - Explicitly document `/avatar` or `/identicon` endpoints, `seed` query validation, HTTP 200 `image/png` binary response, and error payload schemas.
+
+## 5. 📦 Go Module Naming & Import Path Standard
+- **Simple Local Module Name**:
+  - The module name defined in `go.mod` MUST NOT use dummy URL placeholders like `github.com/yourusername/...`. It MUST use the project name itself (e.g. `module identicon-generator`) or an official organization domain name.
+- **Import Path Consistency**:
+  - All internal package import statements MUST use absolute paths starting from the module name defined above (e.g. `import "identicon-generator/internal/domain"`).
+
+
