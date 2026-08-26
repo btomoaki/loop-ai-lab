@@ -6,7 +6,7 @@ class ContextLoader:
     """Utility for clean, folder-level ceremony-specific context loading for LLM prompts."""
 
     @staticmethod
-    def get_ceremony_context(root_dir: Path, ceremony: str = "1_epic_refinement", include_dev_rules: bool = False) -> dict:
+    def get_ceremony_context(root_dir: Path, ceremony: str = "1_epic_refinement", include_dev_rules: bool = False, language: str = None) -> dict:
         """
         指定されたセレモニーに必要な参照フォルダをシンプルに返却。
         """
@@ -18,6 +18,12 @@ class ContextLoader:
         ]
         if include_dev_rules:
             rule_files.append("- .agents/rules/development/")
+            if language:
+                lang_file = f".agents/rules/languages/{language.lower()}.md"
+                if (root_dir / lang_file).exists():
+                    rule_files.append(f"- {lang_file}")
+            else:
+                rule_files.append("- .agents/rules/languages/")
 
         rules_ref = "\n".join(rule_files)
         personas_ref = "- .agents/personas/"
