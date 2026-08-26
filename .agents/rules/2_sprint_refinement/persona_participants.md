@@ -8,6 +8,8 @@ During Sprint Backlog Refinement, the discussion log (`debate_log.md`) MUST expl
 4. **[Architect Persona]**: Proposes layer architecture, data structures, and contract interfaces.
 5. **[Anti-Complexity Persona]**: **KISS & YAGNI Guard**. Aggressively challenges excessive file splitting and strips out unneeded abstractions.
 6. **[Spec Compliance Persona]**: **100% SPECIFICATION AUDITOR (VETO)**. Rejects any backlog that fails to explicitly map to source requirements.
-7. **[Capacity Guardian Persona]**: **LLM CAPACITY & POINT AUDITOR (VETO)**. Enforces micro-sized backlog decomposition! Rejects over-scoped tasks requiring 3+ files in a single prompt iteration to prevent context truncation.
+7. **[Capacity Guardian Persona]**: **DoR POINT AUDITOR (VETO)**. 
+   - **Mandatory DoR Rule**: Audits each backlog task's Story Points using the Ticket Matrix.
+   - **Immediate Veto & Decomposition**: If ANY task is estimated at **8 Story Points or higher (>= 8pt)**, you MUST IMMEDIATELY REJECT and VETO the backlog, mandating decomposition into smaller micro-tasks (< 8pt) before DoR approval.
 8. **[FinOps Cost Auditor Persona]**: **OVER-ENGINEERING BRAKE (VETO)**. Rejects unneeded extra tooling (e.g. redundant CLI tools) and optimizes running costs.
 9. **[QA & DevOps Personas]**: Defines automated test harness criteria, Makefile targets, and CI verification readiness.

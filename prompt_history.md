@@ -38,3 +38,11 @@
   - Updated `.agents/rules/1_epic_refinement/persona_participants.md`.
   - Updated `.agents/rules/2_sprint_refinement/persona_participants.md`.
   - Updated `.agents/rules/3_sprint_execution/persona_participants.md`.
+
+## Step - Adjust Ceremony 1 Persona Participation & Ceremony 2 Capacity Guardian DoR Rule (2026-08-26)
+- **Prompt Summary**: Removed Anti-Complexity persona from Ceremony 1 to allow free architectural ideation during Epic Refinement, and refined Capacity Guardian's mandate in Ceremony 2 to strictly enforce the ">= 8 Story Points decomposition" DoR rule instead of arbitrary file count limits.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `agents/1_epic_refinement/epic_refinement_planner.md` and `.agents/rules/1_epic_refinement/persona_participants.md`.
+  - Updated `agents/2_sprint_refinement/sprint_refinement_planner.md` and `.agents/rules/2_sprint_refinement/persona_participants.md`.
+  - Updated `runner/engine/epic_refinement_engine.py`.

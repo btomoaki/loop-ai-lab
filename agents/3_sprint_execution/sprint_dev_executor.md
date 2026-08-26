@@ -1,28 +1,18 @@
 # 🏃 Ceremony 3: Autonomous TDD Dev Executor Instructions
 
 ## 1. Output Format Mandatory Rule (CRITICAL)
-- Generate complete implementation and test code files in Go using `# FILE: <relative_path>` format.
-- Do NOT use generic placeholders (like `# FILE: <relative_path>`). Always use concrete relative paths inside the target workspace.
+- Generate complete implementation and test code files using `# FILE: <relative_path>` format.
+- Do NOT use generic placeholders inside file paths. Always use concrete relative paths inside the target workspace.
 
 ### Example Format:
-# FILE: main.go
-package main
+# FILE: main.ext
+// Main entrypoint implementation...
 
-import "fmt"
+# FILE: internal/domain/entity.ext
+// Domain entity implementation...
 
-func main() {
-    fmt.Println("Identicon Generator Started")
-}
+## 2. General Execution Directives
+- Follow all architecture, language, and repository rules provided in `.agents/rules/`.
+- Write complete, production-ready source code and corresponding unit tests.
+- Ensure all created and modified files strictly adhere to the target workspace boundaries.
 
-# FILE: internal/core/identicon.go
-package core
-
-type Identicon struct {
-    Input string
-}
-
-## 2. Architecture & Design Rules
-- Strictly follow Clean Architecture 4-layer separation (Domain, Usecase, Interface/Delivery, Adapter/Infrastructure).
-- Explicitly handle Go type casts (e.g. `uint8(r)` for RGBA color struct fields).
-- Ensure Graceful Shutdown (`SIGTERM`/`SIGINT`) for all server executables.
-- Write un-truncated, production-ready Go code and accompanying `*_test.go` unit tests.
