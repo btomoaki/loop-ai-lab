@@ -1,59 +1,67 @@
+import os
+import re
 import yaml
 from pathlib import Path
-from runner.config.project_config import ProjectConfig
 from runner.utils.code_parser import CodeParser
 
 
 class BacklogSplitter:
-    """Strict 1-task per 1-sprint step-by-step backlog splitter preserving epic scope."""
+    """Utility to split monolithic epic_backlog.yaml into sprint_1_backlog.yaml, sprint_2_backlog.yaml, etc."""
 
-    TASKS_PER_SPRINT = 1  # Exactly 1 task per sprint for step-by-step verification
-
-    @classmethod
-    def split_epic_backlog(cls, epic_dir: Path, config: ProjectConfig):
-        """Splits epic_backlog.yaml tasks strictly into individual sprint_1_backlog.yaml, sprint_2_backlog.yaml, etc. preserving scope."""
-        epic_backlog_path = epic_dir / "epic_backlog.yaml"
-        if not epic_backlog_path.exists():
-            return
+    @staticmethod
+    def split_epic_backlog(epic_dir: Path, config=None):
+        epic_backlog_file = epic_dir / "epic_backlog.yaml"
+        if not epic_backlog_file.exists():
+            return []
 
         try:
-            raw_yaml = epic_backlog_path.read_text(encoding="utf-8")
-            data = yaml.safe_load(raw_yaml) or {}
+            raw_text = epic_backlog_file.read_text(encoding="utf-8")
+            data = yaml.safe_load(raw_text) or {}
         except Exception as e:
-            print(f"⚠️ [BacklogSplitter Warning] Failed to parse {epic_backlog_path}: {e}")
-            return
+            print(f"⚠️ [BacklogSplitter] Failed to parse {epic_backlog_file}: {e}")
+            return []
 
         tasks = data.get("tasks", [])
         if not tasks:
-            return
+            print(f"⚠️ [BacklogSplitter] No tasks found in {epic_backlog_file}")
+            return []
 
-        epic_title = data.get("epic", epic_dir.name.replace("_", " ").title())
-        epic_scope = data.get("scope", "Epic implementation scope")
-        target_ws = data.get("target_workspace", config.workspace_rel or "workspace/identicon-generator")
-        test_cmd = data.get("test_command", config.default_test_cmd or "go test ./...")
+        epic_title = data.get("epic", epic_dir.name)
+        scope = data.get("scope", "")
+        
+        ws_fallback = "workspace/app"
+        if config and hasattr(config, "workspace_rel") and config.workspace_rel:
+            ws_fallback = config.workspace_rel
+        target_ws = data.get("target_workspace", ws_fallback)
 
-        # 1 Task = 1 Sprint (Step-by-step execution with scope)
-        for s_idx, single_task in enumerate(tasks, 1):
+        created_files = []
+        for idx, task in enumerate(tasks, 1):
+            sprint_file = epic_dir / f"sprint_{idx}_backlog.yaml"
+            
             sprint_data = {
-                "sprint": s_idx,
+                "sprint": idx,
                 "epic": epic_title,
-                "scope": epic_scope,
+                "scope": scope,
                 "target_workspace": target_ws,
-                "test_command": test_cmd,
-                "tasks": [single_task]  # Single task per sprint
+                "tasks": [task]
             }
 
-            sprint_backlog_file = epic_dir / f"sprint_{s_idx}_backlog.yaml"
-            CodeParser.atomic_write_text(sprint_backlog_file, yaml.dump(sprint_data, sort_keys=False, allow_unicode=True))
-            print(f"📦 [BacklogSplitter] Created step-by-step Sprint {s_idx} ({single_task.get('id')}) with scope in {epic_dir.name}")
+            yaml_str = yaml.dump(sprint_data, default_flow_style=False, allow_unicode=True)
+            CodeParser.atomic_write_text(sprint_file, yaml_str)
+            created_files.append(sprint_file)
+            print(f"📦 [BacklogSplitter] Created step-by-step Sprint {idx} ({task.get('id', 'TASK')}) with scope in {epic_dir.name}")
 
-    @classmethod
-    def process_all_epics(cls, root_dir: Path, config: ProjectConfig):
-        """Processes all initiative directories into step-by-step 1-task sprints."""
+        return created_files
+
+    @staticmethod
+    def split_all_epics(root_dir: Path, config=None):
         init_dir = root_dir / "state" / "initiatives"
         if not init_dir.exists():
-            return
+            return {}
 
-        for epic_dir in sorted(list(init_dir.glob("epic_*"))):
+        results = {}
+        for epic_dir in sorted(init_dir.glob("epic_*")):
             if epic_dir.is_dir():
-                cls.split_epic_backlog(epic_dir, config)
+                sprint_files = BacklogSplitter.split_epic_backlog(epic_dir, config)
+                results[epic_dir.name] = sprint_files
+        return results

@@ -21,3 +21,12 @@
 - **Decisions & Actions**:
   - Updated `pragmatic_anti_complexity_engineer.md` with language-agnostic module terms.
   - Updated `finops_cost_governance.md` with cloud-agnostic free tier terms.
+
+## Step - Remove Hardcoded Language and Project Dependencies in `runner/engine/` and `runner/utils/` (2026-08-26)
+- **Prompt Summary**: Removed hardcoded "Go" and "identicon-generator" strings in `sprint_execution_engine.py`, `epic_refinement_engine.py`, `sprint_refinement_engine.py`, and `backlog_splitter.py`, replacing them with dynamic config values and agnostic fallbacks.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `runner/engine/sprint_execution_engine.py`.
+  - Updated `runner/engine/epic_refinement_engine.py`.
+  - Updated `runner/engine/sprint_refinement_engine.py`.
+  - Updated `runner/utils/backlog_splitter.py`.

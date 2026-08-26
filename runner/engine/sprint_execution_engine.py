@@ -87,12 +87,14 @@ class SprintExecutionEngine:
     def generate_layer_code(self, epic_dir: Path, sprint_num: int, backlog_data: dict, layer_name: str, layer_target: str, result_file_ref: Path = None) -> list:
         """1回のレスポンスで1つのレイヤーのみを出力させる段階型生成関数"""
         epic_name = backlog_data.get("epic", epic_dir.name)
-        target_ws = self.root_dir / backlog_data.get("target_workspace", "workspace/identicon-generator")
+        target_ws_rel = backlog_data.get("target_workspace") or self.config.workspace_rel or "workspace/app"
+        target_ws = self.root_dir / target_ws_rel
         target_ws.mkdir(parents=True, exist_ok=True)
 
+        lang = self.config.language or "target programming language"
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="3_sprint_execution", include_dev_rules=True)
         inst_file = self.root_dir / "agents" / "3_sprint_execution" / "sprint_dev_executor.md"
-        inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else "Write Go code."
+        inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else f"Write clean {lang} code."
 
         backlog_file = epic_dir / f"sprint_{sprint_num}_backlog.yaml"
         backlog_content = backlog_file.read_text(encoding="utf-8") if backlog_file.exists() else yaml.dump(backlog_data)
@@ -110,13 +112,14 @@ class SprintExecutionEngine:
         prompt = (
             f"[TASK: CEREMONY 3 STEPPED CODE GENERATION - {epic_name} (Sprint {sprint_num})]\n"
             f"Target Workspace: {target_ws.relative_to(self.root_dir)}\n"
+            f"Programming Language: {lang}\n"
             f"🎯 CURRENT TARGET LAYER FOCUS: {layer_name} ({layer_target})\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n{inst_content}\n\n"
             f"=== 2. REPOSITORY RULES ===\n{refs['rules']}\n\n"
             f"=== 3. BACKLOG TASKS ===\n{backlog_content}\n"
             f"{error_content}\n\n"
             f"【STRICT FOCUS MANDATE】\n"
-            f"Generate ONLY the Go source files for the {layer_name} layer ({layer_target}).\n"
+            f"Generate ONLY the source and configuration files for the {layer_name} layer ({layer_target}).\n"
             f"Do NOT generate files for other layers in this request to avoid token truncation.\n"
             f"Use `# FILE: <relative_path>` format."
         )
@@ -132,16 +135,16 @@ class SprintExecutionEngine:
             return []
 
         written_files = CodeParser.apply_code_changes(llm_response, target_ws)
-        print(f"📝 [SprintExecutionEngine] Written {len(written_files)} files for layer {layer_name}", flush=True)
+        print(f"�� [SprintExecutionEngine] Written {len(written_files)} files for layer {layer_name}", flush=True)
         return written_files
 
     def generate_code_in_steps(self, epic_dir: Path, sprint_num: int, backlog_data: dict, result_file_ref: Path = None) -> list:
         """レイヤーごとにリクエストを4分割して順次生成し、コンテキスト溢れを根絶する"""
         layers = [
-            ("Domain", "internal/domain/"),
-            ("Usecase", "internal/usecase/"),
-            ("Interface_and_Main", "main.go, go.mod, internal/interface/"),
-            ("Unit_Tests", "*_test.go files across all layers")
+            ("Domain_and_Models", "Core domain models, schemas, and business entity structures"),
+            ("Business_Logic_and_Usecase", "Application usecase / service logic handlers"),
+            ("Entrypoint_and_Interface", "Main entrypoints, interface handlers/controllers, and build configs"),
+            ("Unit_and_Integration_Tests", "Unit tests and integration test suites")
         ]
 
         all_written_files = []
