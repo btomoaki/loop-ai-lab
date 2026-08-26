@@ -80,3 +80,15 @@
 - **Date**: 2026-08-26
 - **Decisions & Actions**:
   - Updated `runner/engine/epic_refinement_engine.py`.
+
+## Step - Complete Reset & Re-run Ceremony 1 & 2 Refinement Pipeline (2026-08-26)
+- **Prompt Summary**: Wiped `state/initiatives/*`, `state/.evaluator/*`, and `workspace/identicon-generator/*` and re-executed `PYTHONPATH=. python3 runner/main.py run --phase refinement` under the updated clean dynamic architecture.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Executed clean reset and triggered refinement phase.
+
+## Step - Enhance Ceremony 1 Prompt Framing & Robust Epic Extraction (2026-08-26)
+- **Prompt Summary**: Reinforced prompt prefix and direct start directive in `EpicRefinementEngine` (`runner/engine/epic_refinement_engine.py`) and made epic extraction regex robust against varied LLM header formats.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `runner/engine/epic_refinement_engine.py`.

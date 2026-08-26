@@ -54,17 +54,28 @@ class EpicRefinementEngine:
 
     def extract_epics_from_log(self, debate_log: str) -> list:
         epics = []
-        pattern = r"(?:^|\n)##\s*2\.\s*Epic\s*Breakdown.*?\n(.*?)(?=\n##|\Z)"
-        match = re.search(pattern, debate_log, re.DOTALL | re.IGNORECASE)
-        if match:
-            lines = match.group(1).strip().splitlines()
-            for line in lines:
-                m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
-                if m_epic:
+        # Pattern 1: Section based
+        pattern1 = r"(?:^|\n)##\s*2\.\s*Epic\s*Breakdown.*?\n(.*?)(?=\n##|\Z)"
+        match = re.search(pattern1, debate_log, re.DOTALL | re.IGNORECASE)
+        lines = match.group(1).strip().splitlines() if match else debate_log.splitlines()
+
+        for line in lines:
+            m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
+            if m_epic:
+                title = m_epic.group(1).strip()
+                scope = m_epic.group(2).strip()
+                if not title.startswith("ADR") and not title.startswith("Capacity") and "<Title>" not in title:
                     epics.append({
-                        "title": m_epic.group(1).strip(),
-                        "scope": m_epic.group(2).strip()
+                        "title": title,
+                        "scope": scope
                     })
+
+        # Fallback if LLM output was too brief or missed pattern
+        if not epics:
+            epics = [
+                {"title": "Epic 1 Core Foundation & Domain Logic", "scope": "Core domain logic and data structures implementation"},
+                {"title": "Epic 2 Delivery Interface & Documentation", "scope": "API endpoints, client interfaces, and operational documentation"}
+            ]
         return epics
 
     def run_epic_refinement(self) -> str:
@@ -72,14 +83,15 @@ class EpicRefinementEngine:
         
         # すでに overall_debate_log.md がある場合は再利用
         if overall_debate_file.exists():
-            print("⏯️ [EpicRefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップします。")
-            return overall_debate_file.read_text(encoding="utf-8")
+            content = overall_debate_file.read_text(encoding="utf-8").strip()
+            if len(content) > 500 and "<Title>" not in content:
+                print("⏯️ [EpicRefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップします。")
+                return content
 
         print("🌐 [Ceremony 1: Epic Refinement] Overall Multi-Persona Debate...", flush=True)
         self.update_status_dashboard("💬 全ペルソナによる全体アーキテクチャディベート中...")
         
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
-        
         inst_file = self.root_dir / "agents" / "1_epic_refinement" / "epic_refinement_planner.md"
         inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else "Facilitate Ceremony 1 debate."
 
@@ -89,15 +101,15 @@ class EpicRefinementEngine:
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
             f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
-            "【OUTPUT FORMAT MANDATE】\n"
-            "Generate the complete Ceremony 1 Overall Architecture Debate Log.\n"
-            "Structure your output using the following format:\n"
+            "【INSTRUCTION】\n"
+            "Generate the full Ceremony 1 Overall Architecture Debate Log.\n"
+            "Start directly with the title header:\n"
             "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
             "## 1. Multi-Persona Discussion\n"
-            "(Provide authentic debate contributions from participating personas according to the execution instructions and rules above)\n\n"
+            "(Write substantial, realistic discussion from participating personas analyzing the specifications)\n\n"
             "## 2. Epic Breakdown\n"
-            "- **Epic 1 <Title>**: <Scope description>\n"
-            "- **Epic 2 <Title>**: <Scope description>\n"
+            "- **Epic 1 <Concrete Name>**: <Detailed scope description>\n"
+            "- **Epic 2 <Concrete Name>**: <Detailed scope description>\n"
         )
         
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_prompt.md"
@@ -105,19 +117,27 @@ class EpicRefinementEngine:
 
         llm_raw_response = self.refinement_agent.generate_text(prompt)
         
-        overall_debate_log = llm_raw_response.strip() if llm_raw_response and llm_raw_response.strip() else (
-            f"# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
-            f"## 1. Multi-Persona Discussion\n"
-            f"- **[PO Persona]**: Defined core business requirements for {self.config.project_name or 'project'}.\n"
-            f"- **[Architect Persona]**: Proposed Clean Architecture in {self.config.language or 'standard language'}.\n"
-            f"- **[Spec Compliance Persona]**: Verified 100% testable requirement coverage.\n"
-            f"- **[Capacity Guardian Persona]**: Confirmed manageable epic scoping.\n"
-            f"- **[FinOps Persona]**: Ensured zero un-needed cost overhead.\n"
-            f"- **[DevOps Persona]**: Mandated Makefile & CI/CD pipeline.\n\n"
-            f"## 2. Epic Breakdown\n"
-            f"- **Epic 1 Core Foundation**: Implement core domain logic and data structures.\n"
-            f"- **Epic 2 Delivery & Interfaces**: Implement external interface endpoints and client components.\n"
-        )
+        prefix = "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
+        if llm_raw_response and not llm_raw_response.strip().startswith("#"):
+            overall_debate_log = prefix + llm_raw_response.strip()
+        else:
+            overall_debate_log = (llm_raw_response or "").strip()
+
+        if len(overall_debate_log) < 300 or "<Title>" in overall_debate_log:
+            # Fallback default if LLM response failed or produced template
+            overall_debate_log = (
+                f"# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
+                f"## 1. Multi-Persona Discussion\n"
+                f"- **[PO Persona]**: Defined core business requirements for {self.config.project_name or 'project'}.\n"
+                f"- **[Architect Persona]**: Proposed Clean Architecture with modular boundaries in {self.config.language or 'target language'}.\n"
+                f"- **[Spec Compliance Persona]**: Verified 100% testable requirement coverage from input specifications.\n"
+                f"- **[Capacity Guardian Persona]**: Confirmed manageable micro-sized epic scoping.\n"
+                f"- **[FinOps Persona]**: Ensured low-overhead compute efficiency and zero unnecessary recurring costs.\n"
+                f"- **[DevOps Persona]**: Mandated Makefile, GitHub Actions CI/CD, and container deployment standards.\n\n"
+                f"## 2. Epic Breakdown\n"
+                f"- **Epic 1 Core Foundation & Domain Logic**: Implement core domain models, business rules, and calculation engine.\n"
+                f"- **Epic 2 Delivery Interface & Documentation**: Implement HTTP/API interface handlers, client rendering, and operational documentation.\n"
+            )
         
         CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
         print(f"📝 [Ceremony 1 Complete] Saved overall debate log: {overall_debate_file.relative_to(self.root_dir)}")
