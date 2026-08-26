@@ -61,3 +61,16 @@
 - **Decisions & Actions**:
   - Updated `.agents/personas/software_architect_developer.md`.
   - Updated `.agents/personas/pragmatic_anti_complexity_engineer.md`.
+
+## Step - Local LLM Connectivity Test & Fresh Refinement Execution (2026-08-26)
+- **Prompt Summary**: Tested connectivity to local LLM server at port 11435, performed complete clean workspace reset (`state/initiatives/*`, `state/.evaluator/*`), and initiated Ceremony 1 & 2 Refinement under newly refined persona line-up.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Executed connectivity check.
+  - Executed clean reset and started refinement phase.
+
+## Step - Fix Method Name Typo in `refinement_engine.py` (2026-08-26)
+- **Prompt Summary**: Fixed `extract_epics_from_overall_log` method call in `runner/engine/refinement_engine.py` to match `extract_epics_from_log`.
+- **Date**: 2026-08-26
+- **Decisions & Actions**:
+  - Updated `runner/engine/refinement_engine.py`.
