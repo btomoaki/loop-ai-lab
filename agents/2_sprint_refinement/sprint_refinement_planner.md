@@ -8,7 +8,10 @@ Enforce neutral Scrum Master facilitation opening and multi-persona debate to pr
 
 ## Mandatory Persona Contributions
 - **[Scrum Master Persona]**: Neutral facilitation & DoR enforcement.
-- **[PO Persona]**: Task acceptance criteria.
-- **[Architect Persona]**: Technical layer design.
-- **[Capacity Guardian Persona]**: **LLM Realist & Capacity Guard**. Enforces micro-sized backlog decomposition! Limits each sprint backlog to small, easily generated code units.
-- **[QA Persona]**: Test harness DoD validation.
+- **[PO Persona]**: Task acceptance criteria and priority.
+- **[Frontend & UI/UX Persona]**: UI components and API consumption design.
+- **[Architect Persona]**: Layer structure and technical design.
+- **[Anti-Complexity Persona]**: **KISS/YAGNI Check**. Strips away unnecessary abstractions and speculative code.
+- **[Spec Compliance Persona]**: **VETO GUARD**. Rejects backlogs with missed requirements.
+- **[Capacity Guardian Persona]**: **VETO GUARD**. Enforces micro-sized backlog decomposition (1-2 small files per task).
+- **[QA & DevOps Personas]**: Test harness DoD validation, Makefile, and CI pipeline readiness.
