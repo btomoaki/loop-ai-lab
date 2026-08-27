@@ -7,25 +7,35 @@ AI ペルソナ群による「アーキテクチャディベート」「バッ�
 ## 🛠️ 基本コマンド (Basic Commands)
 
 ### 1. プロジェクトの初期化 (Init / Reset)
-プロジェクトの設定 (`config.yaml`) および基本構造を初期化します。
-最初から完全にやり直す場合（フルリセット）も本コマンドを実行してください。
+仕様書（`references/`）から `config.yaml` を自動生成し、状態をクリアします。最初から完全にやり直す場合（フルリセット）も本コマンドを実行します。
 ```bash
 PYTHONPATH=. python3 runner/main.py init
 ```
 
-### 2. 設計フェーズの実行 (Refinement Phase)
-仕様書（`references/`）を元に、マルチペルソナによる全体アーキテクチャディベート、エピック分類、および `sprint_x_backlog.yaml` / ハーネススクリプトを自動生成します。
+### 2. セレモニー 1: エピック抽出 & 人間レビューゲート (Epic Phase)
+仕様書を元に、マルチペルソナによる全体アーキテクチャディベートを行い、エピック一覧を抽出して安全に一時停止（レビュー待機）します。
+```bash
+PYTHONPATH=. python3 runner/main.py run --phase epic
+```
+
+### 3. セレモニー 2: スプリントリファインメント (Refinement Phase)
+抽出された各エピックをスプリント単位（`sprint_x_backlog.yaml`）へ詳細分解し、テストハーネススクリプトを自動生成します。
 ```bash
 PYTHONPATH=. python3 runner/main.py run --phase refinement
 ```
 
-### 3. 実装スプリントの実行 (Development Phase)
+### 4. セレモニー 3: 自律TDD開発 (Sprint Phase)
 生成されたスプリントバックログに従い、自律TDD開発（テスト作成 ➔ コード実装 ➔ ハーネス検証）を実行します。
 ```bash
-PYTHONPATH=. python3 runner/main.py run --phase development
+PYTHONPATH=. python3 runner/main.py run --phase sprint --sprint 1
 ```
 
----
+### 5. 全フェーズ一括実行 (All Phases)
+全フェーズ（セレモニー1 ➔ セレモニー2 ➔ セレモニー3）を一括自律実行します。
+```bash
+PYTHONPATH=. python3 runner/main.py run --phase all
+```
+
 
 ## ⏯️ 中断と再開の仕様 (Resume & Restart Behavior)
 

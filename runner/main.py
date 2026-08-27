@@ -30,11 +30,21 @@ def cmd_run(args, root_dir: Path):
     print(f" 📌 Phase: {args.phase} | Sprint: {args.sprint}")
     print("==================================================")
 
+    if args.phase in ["all", "epic", "refinement"]:
+        dynamic_epics = runner.refinement_engine.run_epic_refinement_phase()
+        if args.phase == "epic":
+            print("==================================================")
+            print(" 🏁 [Phase Complete] Ceremony 1 Epic Refinement Complete!")
+            print(" ⏸️  Epics are ready for user review.")
+            print("==================================================")
+            sys.exit(0)
+
     if args.phase in ["all", "refinement"]:
-        runner.run_refinement_phase()
+        runner.refinement_engine.sprint_refinement_engine.run_sprint_refinement(dynamic_epics)
 
     if args.phase in ["all", "sprint"]:
         runner.run_sprint_phase(sprint_num=args.sprint)
+
 
     print("==================================================")
     print(" ✨ [Task Complete] Process finished successfully!")
@@ -63,7 +73,7 @@ def main():
     run_parser = subparsers.add_parser("run", help="パイプライン実行")
     run_parser.add_argument(
         "--phase", type=str, default="all",
-        choices=["all", "refinement", "sprint"],
+        choices=["all", "epic", "refinement", "sprint"],
         help="実行フェーズ (default: all)",
     )
     run_parser.add_argument(
@@ -73,7 +83,8 @@ def main():
 
     # --- 後方互換: サブコマンド無しで --phase を指定した場合 ---
     parser.add_argument("--phase", type=str, default=None, dest="legacy_phase",
-                        choices=["all", "refinement", "sprint"], help=argparse.SUPPRESS)
+                        choices=["all", "epic", "refinement", "sprint"], help=argparse.SUPPRESS)
+
     parser.add_argument("--sprint", type=int, default=1, dest="legacy_sprint", help=argparse.SUPPRESS)
 
     args = parser.parse_args()

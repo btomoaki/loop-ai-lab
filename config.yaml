@@ -7,10 +7,10 @@ project:
   file_extension: .go
   format_cmd: gofmt -w .
   init_commands:
-  - go mod init github.com/yourusername/identicon-generator
+  - go mod init identicon-generator
   language: go
   lint_cmd: golint ./...
-  module_name: github.com/yourusername/identicon-generator
+  module_name: identicon-generator
   name: identicon-generator
   port: 8080
   project_file: go.mod

@@ -2,35 +2,34 @@
 
 ## 1. 次回再開時のクイックスタート (Quick Start for Next Session)
 
-### 🏃 自律 TDD 開発フェーズ (Sprint Development) の継続実行
-- **状況**: `state/status.md` リアルタイムダッシュボードおよび `sprint_N_result.yaml` 監査ログ保存機能が完成済み。
-- **新ペルソナ配備**: `[Capacity Guardian Persona]`（無理をするなペルソナ）がセレモニー1＆2に常駐し、タスクを極小サイズに分割。
-- **実行コマンド**: `PYTHONPATH=. python3 runner/main.py run --phase sprint`
+### 🏃 次回再開時のクリーンスタート手順 (Ceremony 2 スプリントリファインメント直行)
+- **事前お掃除状態**: 🧹 生成物 (`sprint_x_backlog.yaml`, `sprint_x_harness.sh`, `workspace/identicon-generator`) のクリーンアップは完了済みです。
+- **1. スプリントリファインメント実行コマンド**:
+  - `PYTHONPATH=. python3 runner/main.py run --phase refinement`
+- **2. 自律TDD開発実行コマンド**:
+  - `PYTHONPATH=. python3 runner/main.py run --phase sprint --sprint 1`
+
+
 
 ---
 
 ## 2. 本日完了した主要成果 (Completed Milestones Today)
-- **プロンプト長 40% スリム化**: フォルダ単位参照 (`- .agents/personas/` 等) による軽量化。
-- **セレモニー別エンジン分割**: `EpicRefinementEngine`, `SprintRefinementEngine`, `SprintExecutionEngine` へ構造分離。
-- **エージェントフォルダ隔離**: `agents/` ディレクトリを 3 セレモニーサブフォルダに完全分類。
-- **リアルタイムダッシュボード (`state/status.md`)**: 実行中のエピック/タスク/TDD試行回数を可視化。
-- **監査ログ (`sprint_N_result.yaml`)**: ハーネス結果 (PASSED/FAILED)、Exit Code、生成ファイル、詳細エラーログを自動保存。
-- **Fail-Fast 安全停止メカニズム**: ハーネス不合格時に無駄な後続実行を止め、安全停止する機能の検証完了。
-- **ファイルパス参照＆動的インジェクション**: プロンプト内のエラーログや指示のファイルパス参照化によるスリム化。
-- **`CodeParser` パスガード**: `<relative_path>` 等のプレースホルダー異常パスの自動検知・排除ガード。
-- **ローカルLLM自動リトライ**: `0 chars` 空レスポンス時の 3 回自動再試行と 180 秒タイムアウト設定。
-- **`[Capacity Guardian Persona]` (無理をするなペルソナ)**: LLM のコンテキスト限界に配慮した極小ユニット（Micro-Sized Backlog）へ強制分割させる新守護者ペルソナの完全組み込み。
+- **セレモニー1 人間レビューゲート (`--phase epic`)**: エピック抽出完了時にサマリーを出力して一時停止する安全ゲートの実装と検証。
+- **プロンプト＆ルールの完全汎用化・汎用構造**: `agents/` 内のプロンプトから特定アプリ名・特定言語ルール・重複ペルソナを除去し、Single Source of Truth (`.agents/rules/`) へ一元化。
+- **`[FinOps Cost Auditor Persona]` の配備**: セレモニー 1 & 2 に配備し、仕様外の余剰構築（CLI構築等）やオーバーエンジニアリングを排除。
+- **`[Capacity Guardian Persona]` 8pt基準軸アジリティ調整**: 8 Story Points を基準軸とする動的分解ガバナンスルールの決定・明文化。
+- **`runner/` エンジン＆ハーネスの言語非依存化**: `go.mod` 等の直書きを排し、`config.yaml` の `init_commands` と `format_cmd` から動的実行する汎用スクラムエンジンへのリファクタリング。
 
 ---
 
 ## 3. 将来的ロードマップ (Future Architecture Roadmap)
 
-### 🚀 GitHub Actions CI/CD パイプライン標準化 (CI/CD Standardization)
-- **構想**: 今後のテストハーネス検証や自動ビルド・デプロイパイプラインは、ローカルシェル依存から **GitHub Actions**（`.github/workflows/`）を基本インフラとして活用・標準化する。
+### 🚀 GitHub Actions CI/CD パイプライン標準化
+- **構想**: 検証ハーネス実行や自動デプロイを `.github/workflows/` を基本インフラとして活用・標準化する。
 
 ### ⚡ エピック／スプリントの並列実行エンジン化 (Parallel Execution)
-- **現状**: 各エピックおよびスプリントは現在シングルスレッド（直列）で順番に処理されている。
-- **構想**: `ThreadPoolExecutor` や asyncio を導入し、独立したエピックのリファインメントおよび TDD 開発ループを並列並行（マルチスレッド）で同時実行・高速化する。
+- **構想**: `ThreadPoolExecutor` や asyncio を導入し、独立したエピックのリファインメントおよび TDD 開発ループを並列実行・高速化する。
 
 ### 💡 Scrum パッケージ＆プラグイン構造化構想 (Spaghetti Prevention)
-- **構想**: スクラム関連ファイル（`.agents/`, `agents/`, `runner/engine/`）を `packages/scrum/` パッケージへ一元統合し、完全モジュール化する。
+- **構想**: スクラム関連ファイル（`.agents/`, `agents/`, `runner/engine/`）を `packages/scrum/` パッケージへ一元統合・モジュール化する。
+

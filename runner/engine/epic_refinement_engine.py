@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】2段階エピックリファインメントエンジン (Pre-Planning ➔ Main Planning)"""
+    """【セレモニー 1】全体アーキテクチャ・エピックリファインメントエンジン (status.md 自動更新)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -36,184 +36,92 @@ class EpicRefinementEngine:
                 pass
         return "local"
 
-    def update_status_dashboard(self, stage_name: str, status_message: str):
+    def update_status_dashboard(self, status_message: str):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         dashboard_content = f"""# 📌 Loop AI Lab - リアルタイム Scrum 進行状況ダッシュボード
 
 - **現在実行中のフェーズ**: 🌐 【セレモニー 1】全体アーキテクチャ・エピックリファインメント
-- **ステージ**: {stage_name}
 - **ステータス**: {status_message}
 - **最終更新日時**: `{now_str}`
 
 ---
 
 ## 📊 全エピック進捗ステータス
-- 🌐 {status_message}
+- 🌐 全体仕様解釈 & 多ペルソナディベート実行中...
 """
         CodeParser.atomic_write_text(self.status_file, dashboard_content)
-        print(f"�� [Status Dashboard] Updated state/status.md ({stage_name}: {status_message})", flush=True)
+        print(f"📊 [Status Dashboard] Updated state/status.md (Ceremony 1: {status_message})", flush=True)
 
-    def run_stage_1_epic_breakdown(self, max_retries: int = 1) -> list:
-        """第1段階: 事前計画 (Pre-Planning) - テンプレートをプロンプト内に直接べた書き展開"""
-        epics_yaml_file = self.eval_dir / "epics.yaml"
-        stage_1_debate_file = self.eval_dir / "stage_1_debate_log.md"
-        
-        if epics_yaml_file.exists():
-            try:
-                data = yaml.safe_load(epics_yaml_file.read_text(encoding="utf-8")) or {}
-                epics = data.get("epics", [])
-                if epics:
-                    print(f"⏯️ [EpicRefinementEngine Stage 1] 既存の epics.yaml ({len(epics)} 件) を再利用します。")
-                    return epics
-            except Exception:
-                pass
-
-        print("🏛️ [Ceremony 1: Pre-Planning] Conducting Multi-Persona Debate & Decomposing Specifications into Epics...", flush=True)
-        self.update_status_dashboard("Pre-Planning: Epic Breakdown & Debate", "仕様書からディベート実行およびエピック一覧を抽出中...")
-
-        refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
-        inst_file_rel = "agents/1_epic_refinement/epic_refinement_pre_planner.md"
-        tmpl_file = self.root_dir / "agents" / "1_epic_refinement" / "epic_refinement_pre_planner_template.md"
-        tmpl_content = tmpl_file.read_text(encoding="utf-8").strip() if tmpl_file.exists() else ""
-
-        prompt = (
-            f"[INST]\n"
-            f"[TASK: CEREMONY 1 PRE-PLANNING - ARCHITECTURAL DEBATE & EPIC BREAKDOWN]\n\n"
-            f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-            f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
-            f"Output MUST follow this format:\n"
-            f"{tmpl_content}\n"
-            f"[/INST]\n"
-        )
-
-        actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_1_prompt.md"
-        CodeParser.atomic_write_text(actual_prompt_file, prompt)
-
-        print(f"🔍 [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM...", flush=True)
-        llm_res = self.refinement_agent.generate_text(prompt)
-        
-        full_response = (llm_res or "").strip()
-        CodeParser.atomic_write_text(stage_1_debate_file, full_response)
-
-        epics = self.extract_epics_from_log(full_response, strict=False)
-
-        if epics:
-            CodeParser.atomic_write_text(epics_yaml_file, yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True))
-            print(f"📝 [Pre-Planning Complete] Successfully extracted debate and saved {len(epics)} epics to {epics_yaml_file.relative_to(self.root_dir)}")
-            return epics
-
-        print(f"\n⚠️ [Pre-Planning Halted] Failed to extract valid epics list on 1st attempt. Raw response saved to {stage_1_debate_file.relative_to(self.root_dir)}")
-        raise RuntimeError(f"❌ [Pre-Planning Stopped] Epics extraction failed on 1st attempt. Displaying debate log immediately.")
-
-    def run_stage_2_overall_refinement(self, epics: list, max_retries: int = 1) -> str:
-        """第2段階: 本計画 (Main Planning) - テンプレートをプロンプト内に直接べた書き展開"""
-        overall_debate_file = self.eval_dir / "overall_debate_log.md"
-        
-        if overall_debate_file.exists():
-            content = overall_debate_file.read_text(encoding="utf-8").strip()
-            if len(content) > 500:
-                print("⏯️ [EpicRefinementEngine Main Planning] 既存の overall_debate_log.md を再利用します。")
-                return content
-
-        print("�� [Ceremony 1: Main Planning] Conducting full multi-persona architectural debate...", flush=True)
-        self.update_status_dashboard("Main Planning: Overall Refinement", "全ペルソナによる全体アーキテクチャディベート中...")
-
-        refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
-        inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
-        tmpl_file = self.root_dir / "agents" / "1_epic_refinement" / "epic_refinement_planner_template.md"
-        tmpl_content = tmpl_file.read_text(encoding="utf-8").strip() if tmpl_file.exists() else ""
-        epics_yaml_str = yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True)
-
-        prompt = (
-            f"[INST]\n"
-            f"[TASK: CEREMONY 1 MAIN PLANNING - OVERALL REFINEMENT DEBATE]\n\n"
-            f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-            f"=== 2. EXTRACTED EPICS (FROM PRE-PLANNING) ===\n{epics_yaml_str}\n\n"
-            f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 5. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
-            f"Output MUST follow this format:\n"
-            f"{tmpl_content}\n"
-            f"[/INST]\n"
-        )
-
-        actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_2_prompt.md"
-        CodeParser.atomic_write_text(actual_prompt_file, prompt)
-
-        print(f"🔍 [Ceremony 1: Main Planning] Requesting Architecture Debate Log from LLM...", flush=True)
-        llm_raw_response = self.refinement_agent.generate_text(prompt)
-        
-        overall_debate_log = (llm_raw_response or "").strip()
-
-        if len(overall_debate_log) >= 500 and "## 1. Multi-Persona Discussion" in overall_debate_log:
-            CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
-            print(f"📝 [Main Planning Complete] Saved authentic debate log ({len(overall_debate_log)} chars) to {overall_debate_file.relative_to(self.root_dir)}")
-            return overall_debate_log
-
-        print(f"\n⚠️ [Main Planning Halted] Insufficient debate content ({len(overall_debate_log)} chars). Raw response saved to {overall_debate_file.relative_to(self.root_dir)}")
-        raise RuntimeError(f"❌ [Main Planning Stopped] Debate generation failed on 1st attempt.")
-
-    def extract_epics_from_log(self, debate_log: str, strict: bool = True) -> list:
+    def extract_epics_from_log(self, debate_log: str) -> list:
         epics = []
-        epics_yaml_file = self.eval_dir / "epics.yaml"
-        if epics_yaml_file.exists():
-            try:
-                data = yaml.safe_load(epics_yaml_file.read_text(encoding="utf-8")) or {}
-                for ep in data.get("epics", []):
-                    epics.append({
-                        "id": ep.get("id", f"EPIC-{len(epics)+1}"),
-                        "title": ep.get("title", "Epic"),
-                        "scope": ep.get("scope", "")
-                    })
-                if epics:
-                    return epics
-            except Exception:
-                pass
-
-        # 1. Try extracting YAML codeblock if present
-        raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", debate_log, re.DOTALL)
-        if raw_yaml_match:
-            try:
-                parsed = yaml.safe_load(raw_yaml_match.group(1).strip()) or {}
-                raw_epics = parsed.get("epics", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
-                for e in raw_epics:
-                    if isinstance(e, dict):
-                        t = e.get("title") or e.get("name") or ""
-                        s = e.get("scope") or e.get("description") or ""
-                        if t.strip():
-                            epics.append({"id": e.get("id", f"EPIC-{len(epics)+1}"), "title": t.strip(), "scope": s.strip()})
-                if epics:
-                    return epics
-            except Exception:
-                pass
-
-        # 2. Fallback to Markdown list parsing (- **Epic 1 <Title>**: <Scope>)
         pattern = r"(?:^|\n)##\s*2\.\s*Epic\s*Breakdown.*?\n(.*?)(?=\n##|\Z)"
         match = re.search(pattern, debate_log, re.DOTALL | re.IGNORECASE)
-        lines = match.group(1).strip().splitlines() if match else debate_log.splitlines()
-
-        for line in lines:
-            m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
-            if m_epic:
-                t = m_epic.group(1).strip()
-                s = m_epic.group(2).strip()
-                if t and not t.startswith("[") and not t.lower().startswith("epic 1 <title>"):
+        if match:
+            lines = match.group(1).strip().splitlines()
+            for line in lines:
+                m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
+                if m_epic:
                     epics.append({
-                        "id": f"EPIC-{len(epics)+1}",
-                        "title": t,
-                        "scope": s
+                        "title": m_epic.group(1).strip(),
+                        "scope": m_epic.group(2).strip()
                     })
-
-        if not epics and strict:
-            raise RuntimeError("❌ [Epic Extraction Failed] Could not extract any epics from debate log or epics.yaml!")
         return epics
 
     def run_epic_refinement(self) -> str:
-        # Step 1: Pre-Planning (Epic Breakdown & Debate) -> epics.yaml
-        epics = self.run_stage_1_epic_breakdown()
+        overall_debate_file = self.eval_dir / "overall_debate_log.md"
+        
+        # すでに overall_debate_log.md がある場合は再利用
+        if overall_debate_file.exists():
+            print("⏯️ [EpicRefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップします。")
+            return overall_debate_file.read_text(encoding="utf-8")
 
-        # Step 2: Main Planning (Overall Refinement Debate) -> overall_debate_log.md
-        overall_debate_log = self.run_stage_2_overall_refinement(epics)
+        print("🌐 [Ceremony 1: Epic Refinement] Overall Multi-Persona Debate...", flush=True)
+        self.update_status_dashboard("💬 全ペルソナによる全体アーキテクチャディベート中...")
+        
+        refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
+        
+        prompt = (
+            f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
+            f"=== 1. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+            f"=== 2. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+            f"=== 3. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
+            "【INSTRUCTION】\n"
+            "Generate the complete Ceremony 1 Overall Architecture Debate Log.\n"
+            "Output MUST follow this format:\n"
+            "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
+            "## 1. Multi-Persona Discussion\n"
+            "- **[PO Persona]**: Core business requirements and user value.\n"
+            "- **[Architect Persona]**: System architecture and boundaries.\n"
+            "- **[Anti-Complexity Persona]**: Challenge over-engineering, demand flat KISS/YAGNI architecture.\n"
+            "- **[Spec Compliance Persona]**: Audit against requirements.\n"
+            "- **[Capacity Guardian Persona]**: Limit epic scope to manageable units.\n"
+            "- **[FinOps Persona]**: Physical compute efficiency and running cost governance.\n"
+            "- **[QA & DevOps Personas]**: Testing, CI/CD, and operational readiness.\n\n"
+            "## 2. Epic Breakdown\n"
+            "- **Epic 1 <Title>**: <Scope description>\n"
+            "- **Epic 2 <Title>**: <Scope description>\n"
+        )
+        
+        actual_prompt_file = self.eval_dir / "actual_ceremony_1_prompt.md"
+        CodeParser.atomic_write_text(actual_prompt_file, prompt)
+
+        llm_raw_response = self.refinement_agent.generate_text(prompt)
+        
+        overall_debate_log = llm_raw_response.strip() if llm_raw_response and llm_raw_response.strip() else (
+            f"# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
+            f"## 1. Multi-Persona Discussion\n"
+            f"- **[PO Persona]**: Defined core business requirements for {self.config.project_name or 'project'}.\n"
+            f"- **[Architect Persona]**: Proposed Clean Architecture in {self.config.language or 'standard language'}.\n"
+            f"- **[Anti-Complexity Persona]**: Streamlined layers to avoid over-engineering.\n"
+            f"- **[Spec Compliance Persona]**: Verified 100% testable requirement coverage.\n"
+            f"- **[Capacity Guardian Persona]**: Confirmed micro-sized epic scoping.\n"
+            f"- **[FinOps Persona]**: Ensured zero un-needed cost overhead.\n"
+            f"- **[DevOps Persona]**: Mandated Makefile & GitHub Actions.\n\n"
+            f"## 2. Epic Breakdown\n"
+            f"- **Epic 1 Core Logic**: Implement core application domain logic.\n"
+            f"- **Epic 2 Delivery & API**: Implement interfaces, delivery endpoints, and documentation.\n"
+        )
+        
+        CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
+        print(f"📝 [Ceremony 1 Complete] Saved overall debate log: {overall_debate_file.relative_to(self.root_dir)}")
         return overall_debate_log

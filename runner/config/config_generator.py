@@ -25,7 +25,7 @@ class ConfigGenerator:
                 "workspace": "workspace/identicon-generator",
                 "project_file": "go.mod",
                 "file_extension": ".go",
-                "module_name": "github.com/yourusername/identicon-generator",
+                "module_name": "identicon-generator",
                 "default_test_cmd": "go test ./...",
                 "lint_cmd": "golint ./...",
                 "format_cmd": "gofmt -w .",
@@ -33,7 +33,7 @@ class ConfigGenerator:
                 "run_user": "nonroot",
                 "container_base": "gcr.io/distroless/static-debian12",
                 "container_image_name": "gcr.io/your-project-id/identicon-generator",
-                "init_commands": ["go mod init github.com/yourusername/identicon-generator"]
+                "init_commands": ["go mod init identicon-generator"]
             }
         }
 
