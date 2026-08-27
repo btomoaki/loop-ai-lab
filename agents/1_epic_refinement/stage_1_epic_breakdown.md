@@ -1,13 +1,16 @@
 # 🏛️ Ceremony 1 Stage 1: Epic Breakdown Instruction
 
 You are facilitating Ceremony 1 Stage 1 (Specification to Epic Breakdown).
-Analyze the system specifications (`references/*`) and break down the project into cleanly separated, modular Epics covering 100% of requirements.
+
+## 🎯 CORE INSTRUCTION
+仕様書 (`references/*`) を満たすのに必要なエピックに分解せよ。
+Analyze the system specifications (`references/*`) and break down the project into essential, modular Epics strictly required to satisfy 100% of the specifications.
 
 ## 🚨 MANDATORY SPECIFICATION FIDELITY (ANTI-HALLUCINATION)
 - **STRICTLY REQUIREMENT-BASED**: Extract Epics ONLY from the actual provided system specifications (`references/*`).
 - **NEVER INVENT UNREQUESTED FEATURES**: Do NOT invent generic features (such as user authentication, login/registration, password reset, payment, etc.) unless explicitly written in `references/*`.
 
-## Participating Personas
+## Participating Personas & Core Focus
 - **[Scrum Master Persona]**: Enforce process adherence and boundary scoping.
 - **[PO Persona]**: Define business goals, user workflows, and feature scopes from specifications.
 - **[Architect Persona]**: Enforce software layer boundaries and module isolation.
