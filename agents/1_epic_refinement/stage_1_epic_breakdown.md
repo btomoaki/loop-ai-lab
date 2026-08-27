@@ -3,7 +3,7 @@
 You are facilitating Ceremony 1 Stage 1 (Specification to Epic Breakdown).
 
 ## 🎯 CORE INSTRUCTION
-Please analyze the system specifications provided in "=== 2. SYSTEM SPECIFICATIONS ===" and discuss the architecture from the perspectives of multiple personas; then, break down the project into modular "Epics" that are essential for fully meeting the specifications.
+Please analyze the system specifications provided under "/references," discuss the architecture from the perspectives of multiple personas, and then break down the project into modular "Epics" that are essential for fully satisfying the specifications.
 
 ## 🚨 MANDATORY SPECIFICATION FIDELITY (ANTI-HALLUCINATION)
 - **STRICTLY REQUIREMENT-BASED**: Extract Epics and debate points ONLY from the provided System Specifications.
