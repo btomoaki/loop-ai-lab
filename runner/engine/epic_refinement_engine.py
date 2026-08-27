@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】2段階エピックリファインメントエンジン (完全ファイル委譲 & Fail-Fast 設計)"""
+    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -54,8 +54,9 @@ class EpicRefinementEngine:
         print(f"📊 [Status Dashboard] Updated state/status.md ({stage_name}: {status_message})", flush=True)
 
     def run_stage_1_epic_breakdown(self, max_retries: int = 3) -> list:
-        """第1段階: 仕様からエピックへの分解 (Stage 1: Epic Breakdown)"""
+        """第1段階: 仕様からディベートおよびエピック一覧の分解・抽出"""
         epics_yaml_file = self.eval_dir / "epics.yaml"
+        stage_1_debate_file = self.eval_dir / "stage_1_debate_log.md"
         
         if epics_yaml_file.exists():
             try:
@@ -67,30 +68,32 @@ class EpicRefinementEngine:
             except Exception:
                 pass
 
-        print("🏛️ [Ceremony 1: Stage 1] Decomposing specifications into structured Epics...", flush=True)
-        self.update_status_dashboard("Stage 1: Epic Breakdown", "仕様書からエピック一覧を分解・抽出中...")
+        print("🏛️ [Ceremony 1: Stage 1] Conducting Multi-Persona Debate & Decomposing Specifications into Epics...", flush=True)
+        self.update_status_dashboard("Stage 1: Epic Breakdown & Debate", "仕様書からディベート実行およびエピック一覧を抽出中...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
         inst_file_rel = "agents/1_epic_refinement/stage_1_epic_breakdown.md"
 
         prompt = (
-            f"[TASK: CEREMONY 1 STAGE 1 - EPIC BREAKDOWN]\n"
-            f"Recursively read and analyze all referenced files and directories listed below to execute this task.\n\n"
+            f"[TASK: CEREMONY 1 STAGE 1 - ARCHITECTURAL DEBATE & EPIC BREAKDOWN]\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
             f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
-            "【MANDATORY OUTPUT FORMAT】\n"
-            "Respond ONLY with valid YAML wrapped inside ```yaml codeblock containing the 'epics' list."
+            "【OUTPUT MANDATE】\n"
+            "Output the multi-persona architectural debate, followed by the valid YAML codeblock containing the 'epics' list."
         )
 
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
         for attempt in range(1, max_retries + 1):
-            print(f"🔍 [Ceremony 1: Stage 1] Requesting Epics YAML from LLM (Attempt {attempt}/{max_retries})...", flush=True)
+            print(f"🔍 [Ceremony 1: Stage 1] Requesting Debate & Epics YAML from LLM (Attempt {attempt}/{max_retries})...", flush=True)
             llm_res = self.refinement_agent.generate_text(prompt)
             
+            if llm_res:
+                CodeParser.atomic_write_text(stage_1_debate_file, llm_res.strip())
+
             raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", llm_res or "", re.DOTALL)
             yaml_content = raw_yaml_match.group(1).strip() if raw_yaml_match else (llm_res or "").strip()
 
@@ -98,15 +101,15 @@ class EpicRefinementEngine:
             try:
                 parsed = yaml.safe_load(yaml_content) or {}
                 if isinstance(parsed, dict) and "epics" in parsed and isinstance(parsed["epics"], list):
-                    epics = [e for e in parsed["epics"] if isinstance(e, dict) and "title" in e]
+                    epics = [e for e in parsed["epics"] if isinstance(e, dict) and "title" in e and e.get("title", "").strip()]
                 elif isinstance(parsed, list):
-                    epics = [e for e in parsed if isinstance(e, dict) and "title" in e]
+                    epics = [e for e in parsed if isinstance(e, dict) and "title" in e and e.get("title", "").strip()]
             except Exception as e:
                 print(f"⚠️ [Stage 1 YAML Parse Error] {e}")
 
             if epics:
                 CodeParser.atomic_write_text(epics_yaml_file, yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True))
-                print(f"📝 [Stage 1 Complete] Successfully extracted and saved {len(epics)} epics to {epics_yaml_file.relative_to(self.root_dir)}")
+                print(f"📝 [Stage 1 Complete] Successfully extracted debate and saved {len(epics)} epics to {epics_yaml_file.relative_to(self.root_dir)}")
                 return epics
             
             print(f"⚠️ [Stage 1 Warning] Attempt {attempt} failed to parse valid epics list from LLM response (Response length: {len(llm_res or '')} chars). Retrying...")
@@ -131,8 +134,7 @@ class EpicRefinementEngine:
         epics_yaml_str = yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True)
 
         prompt = (
-            f"[TASK: CEREMONY 1 STAGE 2 - OVERALL REFINEMENT DEBATE]\n"
-            f"Recursively read and analyze all referenced files and directories listed below to execute this task.\n\n"
+            f"[TASK: CEREMONY 1 STAGE 2 - OVERALL REFINEMENT DEBATE]\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. EXTRACTED EPICS (FROM STAGE 1) ===\n{epics_yaml_str}\n\n"
             f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
