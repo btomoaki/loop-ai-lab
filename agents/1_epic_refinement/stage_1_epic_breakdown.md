@@ -3,12 +3,13 @@
 You are facilitating Ceremony 1 Stage 1 (Specification to Epic Breakdown).
 
 ## 🎯 CORE INSTRUCTION
-仕様書 (`references/`) を満たすのに必要なエピックに分解せよ。
-Analyze the system specifications (`references/`) and break down the project into essential, modular Epics strictly required to satisfy 100% of the specifications.
+Decompose the project into essential, modular Epics strictly required to satisfy 100% of the provided System Specifications.
 
 ## 🚨 MANDATORY SPECIFICATION FIDELITY (ANTI-HALLUCINATION)
-- **STRICTLY REQUIREMENT-BASED**: Extract Epics ONLY from the actual provided system specifications (`references/`).
-- **NEVER INVENT UNREQUESTED FEATURES**: Do NOT invent generic features (such as user authentication, login/registration, password reset, payment, product catalog, etc.) unless explicitly written in `references/`.
+- **STRICTLY REQUIREMENT-BASED**: Extract Epics ONLY from the provided System Specifications.
+- **NEVER INVENT UNREQUESTED FEATURES**: Do NOT invent generic features (such as user authentication, login/registration, password reset, payment, product catalog, etc.) unless explicitly written in the System Specifications.
+- **MANDATORY ESCALATION ON MISSING SPECS**: If the provided System Specifications are missing, empty, or inaccessible, you must IMMEDIATELY HALT and output:
+  `🛑 [ESCALATION] System Specifications cannot be found. Cannot judge requirement compliance.`
 
 ## Participating Personas & Core Focus
 - **[Scrum Master Persona]**: Enforce process adherence and boundary scoping.
@@ -25,5 +26,5 @@ epics:
   - id: EPIC-1
     title: <Title derived directly from specifications>
     scope: <Detailed scope and core functional responsibilities>
-    requirements: [<Direct requirement sections from references/>]
+    requirements: [<Direct requirement sections>]
 ```
