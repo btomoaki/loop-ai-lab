@@ -54,7 +54,7 @@ class EpicRefinementEngine:
         print(f"�� [Status Dashboard] Updated state/status.md ({stage_name}: {status_message})", flush=True)
 
     def run_stage_1_epic_breakdown(self, max_retries: int = 1) -> list:
-        """第1段階: 事前計画 (Pre-Planning) - 仕様からディベートおよびエピック一覧の抽出"""
+        """第1段階: 事前計画 (Pre-Planning) - テンプレートをプロンプト内に直接べた書き展開"""
         epics_yaml_file = self.eval_dir / "epics.yaml"
         stage_1_debate_file = self.eval_dir / "stage_1_debate_log.md"
         
@@ -73,23 +73,25 @@ class EpicRefinementEngine:
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
         inst_file_rel = "agents/1_epic_refinement/epic_refinement_pre_planner.md"
-        tmpl_file_rel = "agents/1_epic_refinement/epic_refinement_pre_planner_template.md"
+        tmpl_file = self.root_dir / "agents" / "1_epic_refinement" / "epic_refinement_pre_planner_template.md"
+        tmpl_content = tmpl_file.read_text(encoding="utf-8").strip() if tmpl_file.exists() else ""
 
         prompt = (
             f"[INST]\n"
             f"[TASK: CEREMONY 1 PRE-PLANNING - ARCHITECTURAL DEBATE & EPIC BREAKDOWN]\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-            f"=== 2. OUTPUT FORMAT TEMPLATE ===\n- {tmpl_file_rel}\n\n"
-            f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 5. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
+            f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+            f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+            f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
+            f"Output MUST follow this format:\n"
+            f"{tmpl_content}\n"
             f"[/INST]\n"
         )
 
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
-        print(f"�� [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM...", flush=True)
+        print(f"🔍 [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM...", flush=True)
         llm_res = self.refinement_agent.generate_text(prompt)
         
         full_response = (llm_res or "").strip()
@@ -106,7 +108,7 @@ class EpicRefinementEngine:
         raise RuntimeError(f"❌ [Pre-Planning Stopped] Epics extraction failed on 1st attempt. Displaying debate log immediately.")
 
     def run_stage_2_overall_refinement(self, epics: list, max_retries: int = 1) -> str:
-        """第2段階: 本計画 (Main Planning) - 全体アーキテクチャ・ディベート & 合意形成"""
+        """第2段階: 本計画 (Main Planning) - テンプレートをプロンプト内に直接べた書き展開"""
         overall_debate_file = self.eval_dir / "overall_debate_log.md"
         
         if overall_debate_file.exists():
@@ -115,23 +117,25 @@ class EpicRefinementEngine:
                 print("⏯️ [EpicRefinementEngine Main Planning] 既存の overall_debate_log.md を再利用します。")
                 return content
 
-        print("🌐 [Ceremony 1: Main Planning] Conducting full multi-persona architectural debate...", flush=True)
+        print("�� [Ceremony 1: Main Planning] Conducting full multi-persona architectural debate...", flush=True)
         self.update_status_dashboard("Main Planning: Overall Refinement", "全ペルソナによる全体アーキテクチャディベート中...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
         inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
-        tmpl_file_rel = "agents/1_epic_refinement/epic_refinement_planner_template.md"
+        tmpl_file = self.root_dir / "agents" / "1_epic_refinement" / "epic_refinement_planner_template.md"
+        tmpl_content = tmpl_file.read_text(encoding="utf-8").strip() if tmpl_file.exists() else ""
         epics_yaml_str = yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True)
 
         prompt = (
             f"[INST]\n"
             f"[TASK: CEREMONY 1 MAIN PLANNING - OVERALL REFINEMENT DEBATE]\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-            f"=== 2. OUTPUT FORMAT TEMPLATE ===\n- {tmpl_file_rel}\n\n"
-            f"=== 3. EXTRACTED EPICS (FROM PRE-PLANNING) ===\n{epics_yaml_str}\n\n"
-            f"=== 4. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 5. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 6. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
+            f"=== 2. EXTRACTED EPICS (FROM PRE-PLANNING) ===\n{epics_yaml_str}\n\n"
+            f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+            f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+            f"=== 5. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
+            f"Output MUST follow this format:\n"
+            f"{tmpl_content}\n"
             f"[/INST]\n"
         )
 
@@ -195,7 +199,7 @@ class EpicRefinementEngine:
             if m_epic:
                 t = m_epic.group(1).strip()
                 s = m_epic.group(2).strip()
-                if t and not t.startswith("["):
+                if t and not t.startswith("[") and not t.lower().startswith("epic 1 <title>"):
                     epics.append({
                         "id": f"EPIC-{len(epics)+1}",
                         "title": t,
