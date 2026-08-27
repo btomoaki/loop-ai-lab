@@ -19,7 +19,9 @@ Analyze the provided System Specifications and conduct a multi-persona architect
 - **[Spec Compliance Persona]**: **VETO GUARD**. Verify 100% specification traceability and reject dropped/invented requirements.
 - **[FinOps Cost Auditor Persona]**: **VETO GUARD**. Prevent resource and time waste; reject unneeded out-of-scope epics.
 
-## Output Format Mandate
+## 【OUTPUT MANDATE】
+Output the multi-persona architectural debate, followed by the valid YAML codeblock containing the 'epics' list.
+
 Structure your response starting with the multi-persona architectural debate, followed by the valid YAML codeblock of Epics:
 
 # 🌐 Ceremony 1: System Architecture & Epic Breakdown Debate
