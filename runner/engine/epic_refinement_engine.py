@@ -54,7 +54,7 @@ class EpicRefinementEngine:
         print(f"�� [Status Dashboard] Updated state/status.md ({stage_name}: {status_message})", flush=True)
 
     def run_stage_1_epic_breakdown(self, max_retries: int = 1) -> list:
-        """第1段階: 事前計画 (Pre-Planning) - 1回で即停止 & 生ログ保存"""
+        """第1段階: 事前計画 (Pre-Planning) - 仕様からディベートおよびエピック一覧の抽出"""
         epics_yaml_file = self.eval_dir / "epics.yaml"
         stage_1_debate_file = self.eval_dir / "stage_1_debate_log.md"
         
@@ -79,7 +79,10 @@ class EpicRefinementEngine:
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
+            f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
+            "Output MUST follow this format:\n"
+            "# 🌐 Ceremony 1: System Architecture & Epic Breakdown Debate\n\n"
+            "## 1. Multi-Persona Discussion\n"
         )
 
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_1_prompt.md"
@@ -88,11 +91,12 @@ class EpicRefinementEngine:
         print(f"🔍 [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM...", flush=True)
         llm_res = self.refinement_agent.generate_text(prompt)
         
-        if llm_res:
-            CodeParser.atomic_write_text(stage_1_debate_file, llm_res.strip())
+        prefix = "# 🌐 Ceremony 1: System Architecture & Epic Breakdown Debate\n\n## 1. Multi-Persona Discussion\n"
+        full_response = prefix + llm_res.strip() if llm_res and not llm_res.strip().startswith("#") else (llm_res or "").strip()
+        CodeParser.atomic_write_text(stage_1_debate_file, full_response)
 
-        raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", llm_res or "", re.DOTALL)
-        yaml_content = raw_yaml_match.group(1).strip() if raw_yaml_match else (llm_res or "").strip()
+        raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", full_response, re.DOTALL)
+        yaml_content = raw_yaml_match.group(1).strip() if raw_yaml_match else full_response
 
         epics = []
         try:
@@ -138,7 +142,10 @@ class EpicRefinementEngine:
             f"=== 2. EXTRACTED EPICS (FROM PRE-PLANNING) ===\n{epics_yaml_str}\n\n"
             f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 5. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
+            f"=== 5. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n\n"
+            "Output MUST follow this format:\n"
+            "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
+            "## 1. Multi-Persona Discussion\n"
         )
 
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_2_prompt.md"
@@ -147,7 +154,7 @@ class EpicRefinementEngine:
         print(f"🔍 [Ceremony 1: Main Planning] Requesting Architecture Debate Log from LLM...", flush=True)
         llm_raw_response = self.refinement_agent.generate_text(prompt)
         
-        prefix = "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
+        prefix = "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n## 1. Multi-Persona Discussion\n"
         if llm_raw_response and not llm_raw_response.strip().startswith("#"):
             overall_debate_log = prefix + llm_raw_response.strip()
         else:
