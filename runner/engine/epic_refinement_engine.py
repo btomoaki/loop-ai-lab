@@ -75,6 +75,7 @@ class EpicRefinementEngine:
 
         prompt = (
             f"[TASK: CEREMONY 1 STAGE 1 - EPIC BREAKDOWN]\n"
+            f"Recursively read and analyze all referenced files and directories listed below to execute this task.\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
@@ -122,7 +123,7 @@ class EpicRefinementEngine:
                 print("⏯️ [EpicRefinementEngine Stage 2] 既存の overall_debate_log.md を再利用します。")
                 return content
 
-        print("�� [Ceremony 1: Stage 2] Conducting full multi-persona architectural debate...", flush=True)
+        print("🌐 [Ceremony 1: Stage 2] Conducting full multi-persona architectural debate...", flush=True)
         self.update_status_dashboard("Stage 2: Overall Refinement", "全ペルソナによる全体アーキテクチャディベート中...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
@@ -131,6 +132,7 @@ class EpicRefinementEngine:
 
         prompt = (
             f"[TASK: CEREMONY 1 STAGE 2 - OVERALL REFINEMENT DEBATE]\n"
+            f"Recursively read and analyze all referenced files and directories listed below to execute this task.\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. EXTRACTED EPICS (FROM STAGE 1) ===\n{epics_yaml_str}\n\n"
             f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"

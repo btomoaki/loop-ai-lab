@@ -78,6 +78,7 @@ class SprintRefinementEngine:
             
             prompt1 = (
                 f"[TASK: CEREMONY 2 SPRINT REFINEMENT DEBATE - {title}]\n"
+                f"Recursively read and analyze all referenced files and directories listed below to execute this task.\n\n"
                 f"Target Epic Title: {title}\n"
                 f"Target Epic Scope: {scope}\n\n"
                 f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
@@ -115,6 +116,7 @@ class SprintRefinementEngine:
 
             prompt2 = (
                 f"[TASK: CEREMONY 2 SPRINT BACKLOG YAML - {title}]\n"
+                f"Recursively read and analyze all referenced files and directories listed below to execute this task.\n\n"
                 f"Target Epic Title: {title}\n"
                 f"Target Epic Scope: {scope}\n"
                 f"Target Workspace: {target_ws_rel}\n"
