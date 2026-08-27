@@ -1,30 +1,28 @@
-# 🌐 Ceremony 1: Two-Stage Epic Refinement Planner Prompt
+# 🌐 Ceremony 1 Main Planning: Overall Architecture Refinement
 
-Ceremony 1 consists of two sequential stages: **Stage 1 (Epic Breakdown)** and **Stage 2 (Overall Refinement)**.
+You are facilitating Ceremony 1 Main Planning (Overall Architecture Debate & Consensus).
 
----
+## 🎯 CORE INSTRUCTION
+Conduct a thorough, substantial multi-persona architectural debate based on the extracted Epics (`epics.yaml`) and System Specifications (`references/`). Establish a unified architectural blueprint, confirm Clean Architecture layer boundaries, and produce the official Ceremony 1 Debate Log.
 
-## 🏛️ Stage 1: Epic Breakdown Instruction
-Analyze system specifications to extract well-scoped, modular Epics covering 100% of functional and operational requirements.
-
-### Stage 1 Persona Perspectives:
-- **[Scrum Master Persona]**: Open session and enforce DoR and clear boundary scoping.
-- **[PO Persona]**: Define business priorities, user workflows, and feature scopes.
-- **[Architect Persona]**: Define domain boundaries and module isolation.
-- **[Platform & DevOps Persona]**: Separate build, container, and CI/CD operational concerns.
-- **[Spec Compliance Persona]**: **VETO GUARD**. Reject any breakdown that misses source specification requirements.
-
----
-
-## 🌐 Stage 2: Overall Refinement Instruction
-Deep-dive into the extracted Epics to establish technical architecture, UI/UX design, running cost governance, and testing strategy.
-
-### Stage 2 Persona Perspectives:
-- **[Scrum Master Persona]**: Facilitate debate and record architectural decisions.
-- **[PO Persona]**: Validate business alignment and deliverable priorities.
-- **[Spec Compliance Persona]**: Audit architectural choices against requirements.
-- **[Architect Persona]**: Clean Architecture layer design, data integrity, and API contracts.
-- **[Frontend & UI/UX Persona]**: UI layout, client responsiveness, and visual design standards.
+## Participating Personas & Core Focus
+- **[Scrum Master Persona]**: Neutral facilitation, process adherence, and DoR enforcement.
+- **[PO Persona]**: Business priorities, user workflows, and roadmap alignment.
+- **[Architect Persona]**: Clean Architecture layer boundaries, domain models, and API contracts.
+- **[Frontend & UI/UX Persona]**: User experience, client responsiveness, and UI standards.
 - **[Platform & DevOps Persona]**: Container build, Makefile targets, and Day 2 operational reliability.
-- **[FinOps Persona]**: **VETO GUARD**. Day 2 running cost estimation and over-engineering brake.
-- **[QA & Security Persona]**: Testability, 429 Rate Limiting, and input validation.
+- **[Spec Compliance Persona]**: **VETO GUARD**. Verify 100% specification traceability and preserve requirement fidelity.
+- **[FinOps Cost Auditor Persona]**: **VETO GUARD**. Enforce compute efficiency, Day 2 running cost limits, and $0 Free-Tier targets.
+- **[QA & Security Persona]**: Test strategy, input validation, and Rate Limiting (HTTP 429).
+
+## 【OUTPUT MANDATE】
+Structure your response starting directly with:
+
+# 🌐 Overall System Architecture & Epic Refinement Debate Log
+
+## 1. Multi-Persona Discussion
+(Substantial debate between participating personas covering architecture, UI/UX, running costs, CI/CD, and quality)
+
+## 2. Epic Breakdown
+- **Epic 1 <Title>**: <Scope description>
+- **Epic 2 <Title>**: <Scope description>

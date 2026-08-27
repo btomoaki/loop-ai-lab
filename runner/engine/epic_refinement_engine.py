@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (完全ファイル委譲)"""
+    """【セレモニー 1】2段階エピックリファインメントエンジン (Pre-Planning ➔ Main Planning)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -54,7 +54,7 @@ class EpicRefinementEngine:
         print(f"📊 [Status Dashboard] Updated state/status.md ({stage_name}: {status_message})", flush=True)
 
     def run_stage_1_epic_breakdown(self, max_retries: int = 3) -> list:
-        """第1段階: 仕様からディベートおよびエピック一覧の分解・抽出"""
+        """第1段階: 事前計画 (Pre-Planning) - 仕様からディベートおよびエピック一覧の抽出"""
         epics_yaml_file = self.eval_dir / "epics.yaml"
         stage_1_debate_file = self.eval_dir / "stage_1_debate_log.md"
         
@@ -68,14 +68,14 @@ class EpicRefinementEngine:
             except Exception:
                 pass
 
-        print("🏛️ [Ceremony 1: Stage 1] Conducting Multi-Persona Debate & Decomposing Specifications into Epics...", flush=True)
-        self.update_status_dashboard("Stage 1: Epic Breakdown & Debate", "仕様書からディベート実行およびエピック一覧を抽出中...")
+        print("🏛️ [Ceremony 1: Pre-Planning] Conducting Multi-Persona Debate & Decomposing Specifications into Epics...", flush=True)
+        self.update_status_dashboard("Pre-Planning: Epic Breakdown & Debate", "仕様書からディベート実行およびエピック一覧を抽出中...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
-        inst_file_rel = "agents/1_epic_refinement/stage_1_epic_breakdown.md"
+        inst_file_rel = "agents/1_epic_refinement/epic_refinement_pre_planner.md"
 
         prompt = (
-            f"[TASK: CEREMONY 1 STAGE 1 - ARCHITECTURAL DEBATE & EPIC BREAKDOWN]\n\n"
+            f"[TASK: CEREMONY 1 PRE-PLANNING - ARCHITECTURAL DEBATE & EPIC BREAKDOWN]\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
@@ -86,7 +86,7 @@ class EpicRefinementEngine:
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
         for attempt in range(1, max_retries + 1):
-            print(f"🔍 [Ceremony 1: Stage 1] Requesting Debate & Epics YAML from LLM (Attempt {attempt}/{max_retries})...", flush=True)
+            print(f"🔍 [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM (Attempt {attempt}/{max_retries})...", flush=True)
             llm_res = self.refinement_agent.generate_text(prompt)
             
             if llm_res:
@@ -106,38 +106,38 @@ class EpicRefinementEngine:
                         if t.strip():
                             epics.append({"id": e.get("id", f"EPIC-{len(epics)+1}"), "title": t.strip(), "scope": s.strip()})
             except Exception as e:
-                print(f"⚠️ [Stage 1 YAML Parse Error] {e}")
+                print(f"⚠️ [Pre-Planning YAML Parse Error] {e}")
 
             if epics:
                 CodeParser.atomic_write_text(epics_yaml_file, yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True))
-                print(f"📝 [Stage 1 Complete] Successfully extracted debate and saved {len(epics)} epics to {epics_yaml_file.relative_to(self.root_dir)}")
+                print(f"📝 [Pre-Planning Complete] Successfully extracted debate and saved {len(epics)} epics to {epics_yaml_file.relative_to(self.root_dir)}")
                 return epics
             
-            print(f"⚠️ [Stage 1 Warning] Attempt {attempt} failed to parse valid epics list from LLM response (Response length: {len(llm_res or '')} chars). Retrying...")
+            print(f"⚠️ [Pre-Planning Warning] Attempt {attempt} failed to parse valid epics list from LLM response (Response length: {len(llm_res or '')} chars). Retrying...")
 
-        raise RuntimeError(f"❌ [Stage 1 Failed] Failed to extract valid epics list from LLM after {max_retries} attempts! Pipeline safely halted.")
+        raise RuntimeError(f"❌ [Pre-Planning Failed] Failed to extract valid epics list from LLM after {max_retries} attempts! Pipeline safely halted.")
 
     def run_stage_2_overall_refinement(self, epics: list, max_retries: int = 3) -> str:
-        """第2段階: 全体アーキテクチャ・エピックリファインメント (Stage 2: Overall Refinement)"""
+        """第2段階: 本計画 (Main Planning) - 全体アーキテクチャ・ディベート & 合意形成"""
         overall_debate_file = self.eval_dir / "overall_debate_log.md"
         
         if overall_debate_file.exists():
             content = overall_debate_file.read_text(encoding="utf-8").strip()
             if len(content) > 500:
-                print("⏯️ [EpicRefinementEngine Stage 2] 既存の overall_debate_log.md を再利用します。")
+                print("⏯️ [EpicRefinementEngine Main Planning] 既存の overall_debate_log.md を再利用します。")
                 return content
 
-        print("🌐 [Ceremony 1: Stage 2] Conducting full multi-persona architectural debate...", flush=True)
-        self.update_status_dashboard("Stage 2: Overall Refinement", "全ペルソナによる全体アーキテクチャディベート中...")
+        print("🌐 [Ceremony 1: Main Planning] Conducting full multi-persona architectural debate...", flush=True)
+        self.update_status_dashboard("Main Planning: Overall Refinement", "全ペルソナによる全体アーキテクチャディベート中...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
-        inst_file_rel = "agents/1_epic_refinement/stage_2_overall_refinement.md"
+        inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
         epics_yaml_str = yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True)
 
         prompt = (
-            f"[TASK: CEREMONY 1 STAGE 2 - OVERALL REFINEMENT DEBATE]\n\n"
+            f"[TASK: CEREMONY 1 MAIN PLANNING - OVERALL REFINEMENT DEBATE]\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-            f"=== 2. EXTRACTED EPICS (FROM STAGE 1) ===\n{epics_yaml_str}\n\n"
+            f"=== 2. EXTRACTED EPICS (FROM PRE-PLANNING) ===\n{epics_yaml_str}\n\n"
             f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
             f"=== 5. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
@@ -147,7 +147,7 @@ class EpicRefinementEngine:
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
         for attempt in range(1, max_retries + 1):
-            print(f"�� [Ceremony 1: Stage 2] Requesting Architecture Debate Log from LLM (Attempt {attempt}/{max_retries})...", flush=True)
+            print(f"🔍 [Ceremony 1: Main Planning] Requesting Architecture Debate Log from LLM (Attempt {attempt}/{max_retries})...", flush=True)
             llm_raw_response = self.refinement_agent.generate_text(prompt)
             
             prefix = "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
@@ -158,12 +158,12 @@ class EpicRefinementEngine:
 
             if len(overall_debate_log) >= 500 and "## 1. Multi-Persona Discussion" in overall_debate_log:
                 CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
-                print(f"📝 [Stage 2 Complete] Saved authentic debate log ({len(overall_debate_log)} chars) to {overall_debate_file.relative_to(self.root_dir)}")
+                print(f"📝 [Main Planning Complete] Saved authentic debate log ({len(overall_debate_log)} chars) to {overall_debate_file.relative_to(self.root_dir)}")
                 return overall_debate_log
             
-            print(f"⚠️ [Stage 2 Warning] Attempt {attempt} returned insufficient debate content ({len(overall_debate_log)} chars). Retrying...")
+            print(f"⚠️ [Main Planning Warning] Attempt {attempt} returned insufficient debate content ({len(overall_debate_log)} chars). Retrying...")
 
-        raise RuntimeError(f"❌ [Stage 2 Failed] Failed to generate valid architecture debate log from LLM after {max_retries} attempts! Pipeline safely halted.")
+        raise RuntimeError(f"❌ [Main Planning Failed] Failed to generate valid architecture debate log from LLM after {max_retries} attempts! Pipeline safely halted.")
 
     def extract_epics_from_log(self, debate_log: str) -> list:
         epics = []
@@ -199,9 +199,9 @@ class EpicRefinementEngine:
         return epics
 
     def run_epic_refinement(self) -> str:
-        # Step 1: Epic Breakdown (SM, PO, Architect, Platform/DevOps, Spec Compliance) -> epics.yaml
+        # Step 1: Pre-Planning (Epic Breakdown & Debate) -> epics.yaml
         epics = self.run_stage_1_epic_breakdown()
 
-        # Step 2: Overall Refinement Debate -> overall_debate_log.md
+        # Step 2: Main Planning (Overall Refinement Debate) -> overall_debate_log.md
         overall_debate_log = self.run_stage_2_overall_refinement(epics)
         return overall_debate_log
