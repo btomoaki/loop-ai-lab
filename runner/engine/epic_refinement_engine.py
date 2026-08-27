@@ -51,10 +51,10 @@ class EpicRefinementEngine:
 - 🌐 {status_message}
 """
         CodeParser.atomic_write_text(self.status_file, dashboard_content)
-        print(f"📊 [Status Dashboard] Updated state/status.md ({stage_name}: {status_message})", flush=True)
+        print(f"�� [Status Dashboard] Updated state/status.md ({stage_name}: {status_message})", flush=True)
 
-    def run_stage_1_epic_breakdown(self, max_retries: int = 3) -> list:
-        """第1段階: 事前計画 (Pre-Planning) - 仕様からディベートおよびエピック一覧の抽出"""
+    def run_stage_1_epic_breakdown(self, max_retries: int = 1) -> list:
+        """第1段階: 事前計画 (Pre-Planning) - 1回で即停止 & 生ログ保存"""
         epics_yaml_file = self.eval_dir / "epics.yaml"
         stage_1_debate_file = self.eval_dir / "stage_1_debate_log.md"
         
@@ -85,39 +85,37 @@ class EpicRefinementEngine:
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
-        for attempt in range(1, max_retries + 1):
-            print(f"🔍 [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM (Attempt {attempt}/{max_retries})...", flush=True)
-            llm_res = self.refinement_agent.generate_text(prompt)
-            
-            if llm_res:
-                CodeParser.atomic_write_text(stage_1_debate_file, llm_res.strip())
+        print(f"🔍 [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM...", flush=True)
+        llm_res = self.refinement_agent.generate_text(prompt)
+        
+        if llm_res:
+            CodeParser.atomic_write_text(stage_1_debate_file, llm_res.strip())
 
-            raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", llm_res or "", re.DOTALL)
-            yaml_content = raw_yaml_match.group(1).strip() if raw_yaml_match else (llm_res or "").strip()
+        raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", llm_res or "", re.DOTALL)
+        yaml_content = raw_yaml_match.group(1).strip() if raw_yaml_match else (llm_res or "").strip()
 
-            epics = []
-            try:
-                parsed = yaml.safe_load(yaml_content) or {}
-                raw_epics = parsed.get("epics", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
-                for e in raw_epics:
-                    if isinstance(e, dict):
-                        t = e.get("title") or e.get("name") or ""
-                        s = e.get("scope") or e.get("description") or ""
-                        if t.strip():
-                            epics.append({"id": e.get("id", f"EPIC-{len(epics)+1}"), "title": t.strip(), "scope": s.strip()})
-            except Exception as e:
-                print(f"⚠️ [Pre-Planning YAML Parse Error] {e}")
+        epics = []
+        try:
+            parsed = yaml.safe_load(yaml_content) or {}
+            raw_epics = parsed.get("epics", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
+            for e in raw_epics:
+                if isinstance(e, dict):
+                    t = e.get("title") or e.get("name") or ""
+                    s = e.get("scope") or e.get("description") or ""
+                    if t.strip():
+                        epics.append({"id": e.get("id", f"EPIC-{len(epics)+1}"), "title": t.strip(), "scope": s.strip()})
+        except Exception as e:
+            print(f"⚠️ [Pre-Planning YAML Parse Error] {e}")
 
-            if epics:
-                CodeParser.atomic_write_text(epics_yaml_file, yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True))
-                print(f"📝 [Pre-Planning Complete] Successfully extracted debate and saved {len(epics)} epics to {epics_yaml_file.relative_to(self.root_dir)}")
-                return epics
-            
-            print(f"⚠️ [Pre-Planning Warning] Attempt {attempt} failed to parse valid epics list from LLM response (Response length: {len(llm_res or '')} chars). Retrying...")
+        if epics:
+            CodeParser.atomic_write_text(epics_yaml_file, yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True))
+            print(f"📝 [Pre-Planning Complete] Successfully extracted debate and saved {len(epics)} epics to {epics_yaml_file.relative_to(self.root_dir)}")
+            return epics
 
-        raise RuntimeError(f"❌ [Pre-Planning Failed] Failed to extract valid epics list from LLM after {max_retries} attempts! Pipeline safely halted.")
+        print(f"\n⚠️ [Pre-Planning Halted] Failed to extract valid epics list on 1st attempt. Raw response saved to {stage_1_debate_file.relative_to(self.root_dir)}")
+        raise RuntimeError(f"❌ [Pre-Planning Stopped] Epics extraction failed on 1st attempt. Displaying debate log immediately.")
 
-    def run_stage_2_overall_refinement(self, epics: list, max_retries: int = 3) -> str:
+    def run_stage_2_overall_refinement(self, epics: list, max_retries: int = 1) -> str:
         """第2段階: 本計画 (Main Planning) - 全体アーキテクチャ・ディベート & 合意形成"""
         overall_debate_file = self.eval_dir / "overall_debate_log.md"
         
@@ -146,24 +144,22 @@ class EpicRefinementEngine:
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_2_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
-        for attempt in range(1, max_retries + 1):
-            print(f"🔍 [Ceremony 1: Main Planning] Requesting Architecture Debate Log from LLM (Attempt {attempt}/{max_retries})...", flush=True)
-            llm_raw_response = self.refinement_agent.generate_text(prompt)
-            
-            prefix = "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
-            if llm_raw_response and not llm_raw_response.strip().startswith("#"):
-                overall_debate_log = prefix + llm_raw_response.strip()
-            else:
-                overall_debate_log = (llm_raw_response or "").strip()
+        print(f"🔍 [Ceremony 1: Main Planning] Requesting Architecture Debate Log from LLM...", flush=True)
+        llm_raw_response = self.refinement_agent.generate_text(prompt)
+        
+        prefix = "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
+        if llm_raw_response and not llm_raw_response.strip().startswith("#"):
+            overall_debate_log = prefix + llm_raw_response.strip()
+        else:
+            overall_debate_log = (llm_raw_response or "").strip()
 
-            if len(overall_debate_log) >= 500 and "## 1. Multi-Persona Discussion" in overall_debate_log:
-                CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
-                print(f"📝 [Main Planning Complete] Saved authentic debate log ({len(overall_debate_log)} chars) to {overall_debate_file.relative_to(self.root_dir)}")
-                return overall_debate_log
-            
-            print(f"⚠️ [Main Planning Warning] Attempt {attempt} returned insufficient debate content ({len(overall_debate_log)} chars). Retrying...")
+        if len(overall_debate_log) >= 500 and "## 1. Multi-Persona Discussion" in overall_debate_log:
+            CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
+            print(f"📝 [Main Planning Complete] Saved authentic debate log ({len(overall_debate_log)} chars) to {overall_debate_file.relative_to(self.root_dir)}")
+            return overall_debate_log
 
-        raise RuntimeError(f"❌ [Main Planning Failed] Failed to generate valid architecture debate log from LLM after {max_retries} attempts! Pipeline safely halted.")
+        print(f"\n⚠️ [Main Planning Halted] Insufficient debate content ({len(overall_debate_log)} chars). Raw response saved to {overall_debate_file.relative_to(self.root_dir)}")
+        raise RuntimeError(f"❌ [Main Planning Stopped] Debate generation failed on 1st attempt.")
 
     def extract_epics_from_log(self, debate_log: str) -> list:
         epics = []
