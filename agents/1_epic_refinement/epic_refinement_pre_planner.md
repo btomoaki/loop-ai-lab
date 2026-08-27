@@ -9,7 +9,8 @@ Analyze system specifications to extract well-scoped, modular Epics covering 100
 - **[Platform & DevOps Persona]**: Separate build, container, and CI/CD operational concerns.
 - **[Spec Compliance Persona]**: **VETO GUARD**. Reject any breakdown that misses source specification requirements.
 
-## Output MUST follow this format:
+## The output must strictly follow the format of the template below:
+
 # 🌐 Ceremony 1: System Architecture & Epic Breakdown Debate
 
 ## 1. Multi-Persona Discussion

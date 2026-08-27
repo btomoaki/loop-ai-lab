@@ -12,7 +12,8 @@ Deep-dive into the extracted Epics to establish technical architecture, UI/UX de
 - **[FinOps Persona]**: **VETO GUARD**. Day 2 running cost estimation and over-engineering brake.
 - **[QA & Security Persona]**: Testability, 429 Rate Limiting, and input validation.
 
-## Output MUST follow this format:
+## The output must strictly follow the format of the template below:
+
 # 🌐 Overall System Architecture & Epic Refinement Debate Log
 
 ## 1. Multi-Persona Discussion
