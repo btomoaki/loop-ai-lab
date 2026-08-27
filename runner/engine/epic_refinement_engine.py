@@ -73,41 +73,29 @@ class EpicRefinementEngine:
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
         inst_file_rel = "agents/1_epic_refinement/epic_refinement_pre_planner.md"
+        tmpl_file_rel = "agents/1_epic_refinement/epic_refinement_pre_planner_template.md"
 
         prompt = (
             f"[INST]\n"
             f"[TASK: CEREMONY 1 PRE-PLANNING - ARCHITECTURAL DEBATE & EPIC BREAKDOWN]\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-            f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 4. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
+            f"=== 2. OUTPUT FORMAT TEMPLATE ===\n- {tmpl_file_rel}\n\n"
+            f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+            f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+            f"=== 5. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
             f"[/INST]\n"
         )
 
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_stage_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
-        print(f"🔍 [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM...", flush=True)
+        print(f"�� [Ceremony 1: Pre-Planning] Requesting Debate & Epics YAML from LLM...", flush=True)
         llm_res = self.refinement_agent.generate_text(prompt)
         
         full_response = (llm_res or "").strip()
         CodeParser.atomic_write_text(stage_1_debate_file, full_response)
 
-        raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", full_response, re.DOTALL)
-        yaml_content = raw_yaml_match.group(1).strip() if raw_yaml_match else full_response
-
-        epics = []
-        try:
-            parsed = yaml.safe_load(yaml_content) or {}
-            raw_epics = parsed.get("epics", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
-            for e in raw_epics:
-                if isinstance(e, dict):
-                    t = e.get("title") or e.get("name") or ""
-                    s = e.get("scope") or e.get("description") or ""
-                    if t.strip():
-                        epics.append({"id": e.get("id", f"EPIC-{len(epics)+1}"), "title": t.strip(), "scope": s.strip()})
-        except Exception as e:
-            print(f"⚠️ [Pre-Planning YAML Parse Error] {e}")
+        epics = self.extract_epics_from_log(full_response, strict=False)
 
         if epics:
             CodeParser.atomic_write_text(epics_yaml_file, yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True))
@@ -132,16 +120,18 @@ class EpicRefinementEngine:
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
         inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
+        tmpl_file_rel = "agents/1_epic_refinement/epic_refinement_planner_template.md"
         epics_yaml_str = yaml.dump({"epics": epics}, default_flow_style=False, allow_unicode=True)
 
         prompt = (
             f"[INST]\n"
             f"[TASK: CEREMONY 1 MAIN PLANNING - OVERALL REFINEMENT DEBATE]\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-            f"=== 2. EXTRACTED EPICS (FROM PRE-PLANNING) ===\n{epics_yaml_str}\n\n"
-            f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 5. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
+            f"=== 2. OUTPUT FORMAT TEMPLATE ===\n- {tmpl_file_rel}\n\n"
+            f"=== 3. EXTRACTED EPICS (FROM PRE-PLANNING) ===\n{epics_yaml_str}\n\n"
+            f"=== 4. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+            f"=== 5. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+            f"=== 6. MULTI-PERSONA DEFINITIONS ===\n{refs['personas']}\n"
             f"[/INST]\n"
         )
 
@@ -161,7 +151,7 @@ class EpicRefinementEngine:
         print(f"\n⚠️ [Main Planning Halted] Insufficient debate content ({len(overall_debate_log)} chars). Raw response saved to {overall_debate_file.relative_to(self.root_dir)}")
         raise RuntimeError(f"❌ [Main Planning Stopped] Debate generation failed on 1st attempt.")
 
-    def extract_epics_from_log(self, debate_log: str) -> list:
+    def extract_epics_from_log(self, debate_log: str, strict: bool = True) -> list:
         epics = []
         epics_yaml_file = self.eval_dir / "epics.yaml"
         if epics_yaml_file.exists():
@@ -169,6 +159,7 @@ class EpicRefinementEngine:
                 data = yaml.safe_load(epics_yaml_file.read_text(encoding="utf-8")) or {}
                 for ep in data.get("epics", []):
                     epics.append({
+                        "id": ep.get("id", f"EPIC-{len(epics)+1}"),
                         "title": ep.get("title", "Epic"),
                         "scope": ep.get("scope", "")
                     })
@@ -177,7 +168,24 @@ class EpicRefinementEngine:
             except Exception:
                 pass
 
-        # Fallback to regex parsing from log text
+        # 1. Try extracting YAML codeblock if present
+        raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", debate_log, re.DOTALL)
+        if raw_yaml_match:
+            try:
+                parsed = yaml.safe_load(raw_yaml_match.group(1).strip()) or {}
+                raw_epics = parsed.get("epics", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
+                for e in raw_epics:
+                    if isinstance(e, dict):
+                        t = e.get("title") or e.get("name") or ""
+                        s = e.get("scope") or e.get("description") or ""
+                        if t.strip():
+                            epics.append({"id": e.get("id", f"EPIC-{len(epics)+1}"), "title": t.strip(), "scope": s.strip()})
+                if epics:
+                    return epics
+            except Exception:
+                pass
+
+        # 2. Fallback to Markdown list parsing (- **Epic 1 <Title>**: <Scope>)
         pattern = r"(?:^|\n)##\s*2\.\s*Epic\s*Breakdown.*?\n(.*?)(?=\n##|\Z)"
         match = re.search(pattern, debate_log, re.DOTALL | re.IGNORECASE)
         lines = match.group(1).strip().splitlines() if match else debate_log.splitlines()
@@ -185,12 +193,16 @@ class EpicRefinementEngine:
         for line in lines:
             m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
             if m_epic:
-                epics.append({
-                    "title": m_epic.group(1).strip(),
-                    "scope": m_epic.group(2).strip()
-                })
+                t = m_epic.group(1).strip()
+                s = m_epic.group(2).strip()
+                if t and not t.startswith("["):
+                    epics.append({
+                        "id": f"EPIC-{len(epics)+1}",
+                        "title": t,
+                        "scope": s
+                    })
 
-        if not epics:
+        if not epics and strict:
             raise RuntimeError("❌ [Epic Extraction Failed] Could not extract any epics from debate log or epics.yaml!")
         return epics
 
