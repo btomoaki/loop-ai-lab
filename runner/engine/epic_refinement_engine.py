@@ -81,10 +81,9 @@ class EpicRefinementEngine:
             "## 1. Multi-Persona Discussion\n"
             "(Substantial debate between participating personas analyzing specifications, boundaries, and coder adaptation)\n\n"
             "## 2. Epic Breakdown\n"
-            "(List all modular Epics [Epic 1, Epic 2, Epic 3, Epic 4, Epic 5...] strictly required to cover 100% of the specifications with explicit I/O contracts)\n"
+            "(Decompose all functional requirements from specifications into modular Epics: Epic 1, Epic 2, ... with explicit I/O contracts)\n"
             "- **Epic 1 <Title>**: <Scope description with explicit I/O contracts>\n"
             "- **Epic 2 <Title>**: <Scope description with explicit I/O contracts>\n"
-            "- **Epic 3 <Title>**: <Scope description with explicit I/O contracts>\n"
             "[/INST]\n"
         )
 
