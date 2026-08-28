@@ -85,8 +85,16 @@ class EpicRefinementEngine:
             "- **[Platform & DevOps Persona]**: Discusses Docker containerization, Makefile targets, and GitHub Actions CI/CD.\n\n"
             "## 2. Epic Breakdown\n"
             "(Decompose the application into modular, self-contained Epics: Epic 1, Epic 2, ... covering core logic, image rendering, HTTP API, Web UI, and CI/CD/Docker delivery)\n"
-            "- **Epic 1 <Title>**: <Scope description and acceptance criteria>\n"
-            "- **Epic 2 <Title>**: <Scope description and acceptance criteria>\n"
+            "- **Epic 1 <Title>**:\n"
+            "  - **Background & Motivation**: <Why this epic is needed and its value>\n"
+            "  - **Scope**: <Functional and technical scope>\n"
+            "  - **Acceptance Criteria (AC)**: <Testable requirements>\n"
+            "  - **Definition of Done (DoD)**: <Unit tests, code coverage, zero lint errors, buildable artifact>\n"
+            "- **Epic 2 <Title>**:\n"
+            "  - **Background & Motivation**: <Why this epic is needed and its value>\n"
+            "  - **Scope**: <Functional and technical scope>\n"
+            "  - **Acceptance Criteria (AC)**: <Testable requirements>\n"
+            "  - **Definition of Done (DoD)**: <Unit tests, code coverage, zero lint errors, buildable artifact>\n"
             "[/INST]\n"
         )
 
@@ -146,7 +154,22 @@ class EpicRefinementEngine:
             if epics:
                 return epics
 
-        # 4. Match Markdown list items (- **Epic 1 <Title>**: <Scope>)
+        # 4. Match Multiline Markdown list items (- **Epic 1 <Title>**:\n  - Background: ...\n  - Scope: ...)
+        list_matches = list(re.finditer(r"(?:^|\n)\s*-\s*\*\*(Epic\s*\d+[^:\n*]*[:\s\-]+[^\n*]+)\*\*:\s*\n?(.*?)(?=(?:\n\s*-\s*\*\*Epic\s*\d+)|\Z)", section_text, re.DOTALL | re.IGNORECASE))
+        if list_matches:
+            for m in list_matches:
+                t = m.group(1).strip()
+                s = m.group(2).strip()
+                if t and not t.startswith("[") and not t.lower().startswith("epic 1 <title>"):
+                    epics.append({
+                        "id": f"EPIC-{len(epics)+1}",
+                        "title": t,
+                        "scope": s
+                    })
+            if epics:
+                return epics
+
+        # 5. Fallback single-line match
         lines = section_text.splitlines()
         for line in lines:
             m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
