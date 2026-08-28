@@ -22,6 +22,11 @@ class ProjectConfig:
     def workspace_rel(self) -> str:
         return f"workspace/{self.project_name}"
 
+
+    @property
+    def container_image_name(self) -> str:
+        return self.project_name
+
     @classmethod
     def load(cls, root_dir: Path) -> 'ProjectConfig':
         config_file = root_dir / "config.yaml"
