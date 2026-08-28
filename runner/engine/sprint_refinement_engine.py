@@ -13,7 +13,7 @@ from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントリファインメントエンジン (スプリントバックログ & 自動ハーネス生成 & タスク依存関係)"""
+    """【セレモニー 2】スプリントリファインメントエンジン (スプリントバックログ & 自動ハーネス生成 & タスク依存関係 & 完全ペルソナ体制)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -65,7 +65,7 @@ class SprintRefinementEngine:
 
         # 1. debate_log.md 生成
         if not debate_file.exists():
-            print(f"💬 [Ceremony 2] Step 1: Generating debate_log.md for: {title}...", flush=True)
+            print(f"�� [Ceremony 2] Step 1: Generating debate_log.md for: {title}...", flush=True)
             self.update_status_dashboard(title)
             
             prompt_debate = (
@@ -78,12 +78,16 @@ class SprintRefinementEngine:
                 f"=== 5. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
                 f"=== 6. TARGET DEVELOPER AGENT PROFILE ===\n{refs['target_agent']}\n\n"
                 "Output MUST follow this format:\n"
-                f"# �� Sprint Refinement Debate Log: {title}\n\n"
+                f"# 📋 Sprint Refinement Debate Log: {title}\n\n"
                 "## 1. Multi-Persona Discussion\n"
-                "- **[PO Persona]**: Breakdown of user stories and acceptance criteria.\n"
-                "- **[Architect Persona]**: Micro-task boundaries and TDD test design.\n"
-                "- **[Spec Compliance Persona]**: Traceability check against specifications.\n"
-                "- **[QA & DevOps Persona]**: Automated test harness and verification commands.\n"
+                "- **[PO Persona]**: Breakdown of user stories, functional priorities, and expected behavior.\n"
+                "- **[Architect Persona]**: Micro-task package structure, interface signatures, and layer boundaries.\n"
+                "- **[Capacity Guardian Persona]**: Enforcing micro-task sizing, single-responsibility, and coder model context limits.\n"
+                "- **[Spec Compliance Persona]**: Cross-checking 100% traceability against source specifications.\n"
+                "- **[QA & DevOps Persona]**: Defining TDD unit tests, assertion criteria, and automated verify commands.\n\n"
+                "## 2. Sprint Backlog Plan\n"
+                "- **TASK-1.1**: <Description and AC>\n"
+                "- **TASK-1.2**: <Description and AC>\n"
                 "[/INST]\n"
             )
             res = self.refinement_agent.generate_text(prompt_debate)
@@ -159,7 +163,7 @@ class SprintRefinementEngine:
         if not epics:
             epics = [{"title": "Epic 1 Core Foundation", "scope": "Core application logic and interface endpoints"}]
 
-        print(f"📋 [Ceremony 2] Found {len(epics)} Epics to refine in Ceremony 2!", flush=True)
+        print(f"�� [Ceremony 2] Found {len(epics)} Epics to refine in Ceremony 2!", flush=True)
 
         for idx, ep in enumerate(epics, 1):
             title = ep["title"]
