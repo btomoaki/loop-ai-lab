@@ -7,10 +7,10 @@ Deep-dive into the target Epic and conduct a technical refinement debate facilit
 Decompose the Epic into a sequence of micro-scoped, dependency-ordered, and TDD-verifiable Backlog Tasks (`TASK-X.1`, `TASK-X.2`, ...) tailored specifically to the downstream **Target Developer Agent Profile (Coder Model)**.
 
 ### 🚨 Mandatory Task Decomposition Rules:
-1. **AI Model Capacity & Micro-Sizing (Capacity Guardian)**:
-   - Downstream executor is a code-specialized model with strict context limit (8,192 tokens).
+1. **AI Model Capacity & Story Point Sizing (Capacity Guardian)**:
+   - Estimate tasks using Story Points (1, 2, 3, 5).
+   - **Strict Splitting Rule**: Any task estimated at **8 SP or greater MUST be decomposed into smaller sub-tasks** to prevent context exhaustion and failure in the downstream Coder model.
    - Strictly forbid heavy frameworks (NO React/Vue/Redux/Cypress). Enforce Go standard library + Go `embed` single-binary delivery.
-   - Estimate each task with Story Points (1, 2, or 3 SP). Strictly forbid oversized tasks (>3 SP).
 2. **Anti-Complexity & YAGNI (Pragmatic Engineer)**:
    - Eliminate unnecessary abstractions, dead code, and premature optimizations. Stick strictly to Decisions (PNG only, 250x250 fixed size).
 3. **Cost & Resource Governance (FinOps)**:
@@ -30,6 +30,6 @@ Decompose the Epic into a sequence of micro-scoped, dependency-ordered, and TDD-
 - **[QA Engineer Persona]**: Defines TDD unit test suites, assertion criteria, and automated verify commands (`go test ./...`).
 
 ### 🛡️ Independent Constraint Guards:
-- **[Capacity Guardian Persona]**: **AI Model Expert**. Enforces strict context budget for the downstream Coder model, prohibits bloated frameworks, and enforces micro-task sizing (1-3 SP).
+- **[Capacity Guardian Persona]**: **AI Model Expert**. Enforces strict context budget for the downstream Coder model (8,192 tokens), strictly bans bloated frameworks, and mandates that any task with **8 SP or greater must be decomposed into smaller tasks**.
 - **[Pragmatic Anti-Complexity Engineer Persona]**: **YAGNI Sarcastic Guard**. Challenges over-engineering and eliminates unrequested features (SVG, color sliders).
 - **[FinOps & Cost Governance Persona]**: **Cost & Resource Guard**. Ensures resource efficiency and cost-effective Cloud Run architecture.

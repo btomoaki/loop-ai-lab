@@ -13,7 +13,7 @@ from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントリファインメントエンジン (Capacity Guardian AI Expert & loop_N 履歴追跡版)"""
+    """【セレモニー 2】スプリントリファインメントエンジン (Capacity Guardian >=8 SP 分解ルール & loop_N 履歴追跡版)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -90,8 +90,8 @@ class SprintRefinementEngine:
                 "- **[DB / Data Engineer Persona]**: Data structures and persistence constraints (stateless).\n"
                 "- **[Platform & DevOps Persona]**: Dockerfile (non-root UID 65532), Makefile, and Cloud Run runtime execution.\n"
                 "- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.\n\n"
-                "### ��️ Independent Constraint Guards:\n"
-                "- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict context budget for the downstream Coder model (8,192 tokens), strictly bans bloated frameworks, and enforces micro-task sizing (1-3 SP).\n"
+                "### 🛡️ Independent Constraint Guards:\n"
+                "- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict context budget for the downstream Coder model (8,192 tokens), bans bloated frameworks, estimates Story Points, and mandates that any task with **8 SP or greater must be decomposed into smaller tasks**.\n"
                 "- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering, banning SVG/color sliders, and enforcing Decision #1 & #2.\n"
                 "- **[FinOps & Cost Governance Persona]**: Resource, time, and cloud cost efficiency guard.\n\n"
                 "## 2. Sprint Backlog Plan\n"
