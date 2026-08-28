@@ -13,7 +13,7 @@ from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントリファインメントエンジン (loop_N ディレクトリ構造によるループ履歴追跡版)"""
+    """【セレモニー 2】スプリントリファインメントエンジン (Capacity Guardian AI Expert & loop_N 履歴追跡版)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -79,20 +79,20 @@ class SprintRefinementEngine:
                 f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
                 f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
                 f"=== 5. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
-                f"=== 6. TARGET DEVELOPER AGENT PROFILE ===\n{refs['target_agent']}\n\n"
+                f"=== 6. TARGET DEVELOPER AGENT PROFILE (CODER MODEL) ===\n{refs['target_agent']}\n\n"
                 "Output MUST follow this format:\n"
                 f"# 📋 Sprint Refinement Debate Log: {title}\n\n"
                 "## 1. Multi-Persona Discussion\n"
                 "### 🔨 Sprint Builders:\n"
                 "- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD.\n"
-                "- **[Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries.\n"
-                "- **[Frontend UI/UX Engineer Persona]**: Web UI components, interactive preview, and user flows.\n"
-                "- **[DB / Data Engineer Persona]**: Data structures and persistence constraints.\n"
-                "- **[Platform & DevOps Persona]**: Dockerfile, Makefile, and Cloud Run runtime execution.\n"
+                "- **[Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries using Go standard library.\n"
+                "- **[Frontend UI/UX Engineer Persona]**: Web UI components using Vanilla JS & CDN Tailwind CSS via Go `embed` (strictly NO React/Vue/Redux/Cypress).\n"
+                "- **[DB / Data Engineer Persona]**: Data structures and persistence constraints (stateless).\n"
+                "- **[Platform & DevOps Persona]**: Dockerfile (non-root UID 65532), Makefile, and Cloud Run runtime execution.\n"
                 "- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.\n\n"
-                "### 🛡️ Independent Constraint Guards:\n"
-                "- **[Capacity Guardian Persona]**: Story Point estimation (1-3 SP), enforcing atomic task sizing.\n"
-                "- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering.\n"
+                "### ��️ Independent Constraint Guards:\n"
+                "- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict context budget for the downstream Coder model (8,192 tokens), strictly bans bloated frameworks, and enforces micro-task sizing (1-3 SP).\n"
+                "- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering, banning SVG/color sliders, and enforcing Decision #1 & #2.\n"
                 "- **[FinOps & Cost Governance Persona]**: Resource, time, and cloud cost efficiency guard.\n\n"
                 "## 2. Sprint Backlog Plan\n"
                 "- **TASK-1.1**: <Description, Story Points, Dependencies, and AC>\n"
@@ -210,8 +210,6 @@ class SprintRefinementEngine:
         spec_res = self.gemini_audit_agent.generate_text(prompt_spec)
         spec_text = (spec_res or "").strip()
         CodeParser.atomic_write_text(spec_audit_file, spec_text)
-        
-        # ルートの最新参照としても保存
         CodeParser.atomic_write_text(self.eval_dir / "audit_spec_compliance.md", spec_text)
 
         spec_passed = "Verdict: **APPROVED**" in spec_text or "Verdict: APPROVED" in spec_text or "**APPROVED**" in spec_text
@@ -243,8 +241,6 @@ class SprintRefinementEngine:
         sec_res = self.gemini_audit_agent.generate_text(prompt_sec)
         sec_text = (sec_res or "").strip()
         CodeParser.atomic_write_text(sec_audit_file, sec_text)
-        
-        # ルートの最新参照としても保存
         CodeParser.atomic_write_text(self.eval_dir / "audit_security_ethics.md", sec_text)
 
         sec_passed = "Verdict: **APPROVED**" in sec_text or "Verdict: APPROVED" in sec_text or "**APPROVED**" in sec_text
