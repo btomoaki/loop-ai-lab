@@ -25,3 +25,12 @@ Every developer and AI agent MUST naturally and instinctively enforce the follow
 
 ## 4. 🧩 Interface Segregation & Test Mockability
 - **Accept Interfaces, Return Structs**: Design minimal, focused interfaces at delivery and infrastructure boundaries to allow straightforward mocking during automated tests.
+
+---
+
+## 5. 📖 Comprehensive Project Documentation (Mandatory README)
+Every repository/workspace MUST include a comprehensive and standard `README.md` at the root directory documenting:
+- **Build & Test Executions**: Step-by-step instructions (e.g. commands like `make build`, `make test`).
+- **Development Environment Setup**: Prerequisites and setup commands.
+- **Directory Structure Map**: A text-based tree view demonstrating Clean Architecture layer mapping.
+- **API Reference & OpenAPI (Swagger)**: Explicit endpoints overview and instructions on how to locate and view the OpenAPI contract (`docs/openapi.yaml`).
