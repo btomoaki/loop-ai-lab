@@ -13,7 +13,7 @@ from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントリファインメントエンジン (Capacity Guardian >=8 SP 分解ルール & loop_N 履歴追跡版)"""
+    """【セレモニー 2】スプリントリファインメントエンジン (Zero Spec Tampering & Capacity Guardian >=8 SP 分解ルール & loop_N 履歴追跡版)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -86,13 +86,13 @@ class SprintRefinementEngine:
                 "### 🔨 Sprint Builders:\n"
                 "- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD.\n"
                 "- **[Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries using Go standard library.\n"
-                "- **[Frontend UI/UX Engineer Persona]**: Web UI components using Vanilla JS & CDN Tailwind CSS via Go `embed` (strictly NO React/Vue/Redux/Cypress).\n"
+                "- **[Frontend UI/UX Engineer Persona]**: Web UI components using Vanilla JS & CDN Tailwind CSS via Go `embed` (strictly NO heavy frameworks).\n"
                 "- **[DB / Data Engineer Persona]**: Data structures and persistence constraints (stateless).\n"
                 "- **[Platform & DevOps Persona]**: Dockerfile (non-root UID 65532), Makefile, and Cloud Run runtime execution.\n"
                 "- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.\n\n"
                 "### 🛡️ Independent Constraint Guards:\n"
                 "- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict context budget for the downstream Coder model (8,192 tokens), bans bloated frameworks, estimates Story Points, and mandates that any task with **8 SP or greater must be decomposed into smaller tasks**.\n"
-                "- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering, banning SVG/color sliders, and enforcing Decision #1 & #2.\n"
+                "- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering, banning unrequested features, and enforcing Decision records.\n"
                 "- **[FinOps & Cost Governance Persona]**: Resource, time, and cloud cost efficiency guard.\n\n"
                 "## 2. Sprint Backlog Plan\n"
                 "- **TASK-1.1**: <Description, Story Points, Dependencies, and AC>\n"
@@ -114,6 +114,9 @@ class SprintRefinementEngine:
                 f"Target workspace directory is: {self.config.workspace_rel}\n"
                 f"Container image name is: {self.config.container_image_name}\n\n"
                 f"=== SCOPE & SPECIFICATION ===\n{scope}\n\n"
+                "IMPORTANT RULES:\n"
+                "1. references/* is READ-ONLY. NEVER create tasks modifying references/!\n"
+                "2. Any task estimated >=8 SP must be decomposed into smaller sub-tasks.\n\n"
                 "Output MUST be a valid YAML block enclosed in ```yaml ... ```:\n"
                 "```yaml\n"
                 f"epic_id: EPIC-{epic_idx}\n"
@@ -166,7 +169,7 @@ class SprintRefinementEngine:
                 CodeParser.atomic_write_text(backlog_file, yaml.dump(mock_data, default_flow_style=False, allow_unicode=True))
 
     def run_individual_final_audits(self, attempt: int = 1) -> dict:
-        """【各自独立監査ゲート】loop_N ディレクトリ構造で各回の監査結果・履歴を保存"""
+        """【各自独立監査ゲート】loop_N ディレクトリ構造で各回の監査結果・履歴を保存 (仕様書改ざん厳禁チェック付き)"""
         loop_dir = self.eval_dir / f"loop_{attempt}"
         loop_dir.mkdir(parents=True, exist_ok=True)
 
@@ -187,7 +190,7 @@ class SprintRefinementEngine:
         all_backlogs_str = "\n\n".join(backlog_summaries)
 
         # ----------------------------------------------------
-        # 1. Spec Compliance Auditor による単独チェック
+        # 1. Spec Compliance Auditor による単独チェック (仕様改ざん即時VETO)
         # ----------------------------------------------------
         print(f"🔍 [Audit 1/2 (Loop #{attempt})] Spec Compliance Auditor inspecting backlog...", flush=True)
         spec_audit_file = loop_dir / "audit_spec_compliance.md"
@@ -196,12 +199,15 @@ class SprintRefinementEngine:
             f"[TASK: INDEPENDENT SPECIFICATION COMPLIANCE AUDIT (LOOP #{attempt})]\n"
             f"You are the Specification Compliance Auditor (.agents/personas/spec_compliance_auditor.md).\n"
             f"Cross-reference ALL generated sprint backlogs against the source specifications in references/ line-by-line.\n\n"
-            f"=== 1. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+            f"CRITICAL AUDIT RULES:\n"
+            f"1. ZERO SPEC TAMPERING: If ANY task attempts to edit, modify, or update files in references/, you MUST ISSUE AN IMMEDIATE VETO.\n"
+            f"2. Check for 100% adherence to specifications in references/* and decisions in references/decisions.md.\n\n"
+            f"=== 1. SYSTEM SPECIFICATIONS & DECISIONS ===\n{refs['specs']}\n\n"
             f"=== 2. GENERATED SPRINT BACKLOGS ACROSS ALL EPICS ===\n{all_backlogs_str}\n\n"
             f"Output format:\n"
             f"# 🕵️ Specification Compliance Audit Report (Loop #{attempt})\n\n"
             f"## 1. Traceability Checklist\n"
-            f"- [Requirement]: [Mapped Task ID] -> Status (COVERED / MISSING)\n\n"
+            f"- [Requirement / Decision]: [Mapped Task ID] -> Status (COVERED / MISSING / VIOLATION / TAMPERING)\n\n"
             f"## 2. Verdict\n"
             f"- Verdict: **APPROVED** or **VETO**\n"
             f"- Summary: <Details>\n"
@@ -304,7 +310,7 @@ class SprintRefinementEngine:
         print("\n" + "=" * 50)
         print(f"🏁 [Ceremony 2 Final Gate Summary - Directory: {audit_result['loop_dir'].relative_to(self.root_dir)}]")
         print(f"  - Loop Attempt Count: #{audit_result['attempt']}")
-        print(f"  - Spec Compliance Audit: {'✅ PASS' if audit_result['spec_passed'] else '🛑 REJECTED/VETO'}")
+        print(f"  - Spec Compliance Audit: {'✅ PASS' if audit_result['spec_passed'] else '�� REJECTED/VETO'}")
         print(f"  - Security & Ethics Audit: {'✅ PASS' if audit_result['sec_passed'] else '🛑 REJECTED/VETO'}")
         print(f"  - Final Verdict: {'🎉 ALL APPROVED' if audit_result['overall_passed'] else '⚠️ VETO DETECTED (Requires Review)'}")
         print("=" * 50 + "\n")
