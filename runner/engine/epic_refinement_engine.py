@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (AI-to-AI 適応型)"""
+    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (スリム化 4-Persona 体制)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -23,7 +23,7 @@ class EpicRefinementEngine:
         self.eval_dir.mkdir(parents=True, exist_ok=True)
 
         refinement_provider = self._get_refinement_provider()
-        print(f"🧠 [EpicRefinementEngine] Using Provider '{refinement_provider}' for Ceremony 1.", flush=True)
+        print(f"�� [EpicRefinementEngine] Using Provider '{refinement_provider}' for Ceremony 1.", flush=True)
         self.refinement_agent = LLMAdapterFactory.get_adapter(provider=refinement_provider)
 
     def _get_refinement_provider(self) -> str:
@@ -61,7 +61,7 @@ class EpicRefinementEngine:
                 print("⏯️ [EpicRefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップします。")
                 return content
 
-        print("🌐 [Ceremony 1: Epic Refinement] Conducting AI-to-AI Architecture Debate & Epic Breakdown...", flush=True)
+        print("🌐 [Ceremony 1: Epic Refinement] Conducting Architecture Debate & Epic Breakdown...", flush=True)
         self.update_status_dashboard("💬 全ペルソナによる全体アーキテクチャディベート中...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True, config=self.config)
@@ -70,7 +70,7 @@ class EpicRefinementEngine:
         prompt = (
             f"[INST]\n"
             f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
-            f"Recursively read and analyze all referenced files and specifications listed below.\n\n"
+            f"Analyze all referenced specification files and generate the complete Ceremony 1 Debate Log.\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
@@ -79,13 +79,10 @@ class EpicRefinementEngine:
             "Output MUST follow this format:\n"
             "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
             "## 1. Multi-Persona Discussion\n"
-            "- **[PO Persona]**: Core business requirements and user value.\n"
-            "- **[Architect Persona]**: System architecture and boundaries.\n"
-            "- **[Anti-Complexity Persona]**: Challenge over-engineering, demand flat KISS/YAGNI architecture.\n"
-            "- **[Spec Compliance Persona]**: Audit against requirements.\n"
-            "- **[Capacity Guardian Persona]**: Limit epic scope to manageable units for downstream coder.\n"
-            "- **[FinOps Persona]**: Physical compute efficiency and running cost governance.\n"
-            "- **[QA & DevOps Personas]**: Testing, CI/CD, and operational readiness.\n\n"
+            "- **[PO Persona]**: Business requirements, user workflows, and feature scopes from specifications.\n"
+            "- **[Architect Persona]**: Clean Architecture layer boundaries, pure functions, and API contracts.\n"
+            "- **[Spec Compliance Persona]**: Audit against requirements in references/icon_generator.md.\n"
+            "- **[Platform & DevOps Persona]**: Container build, Makefile targets, and CI/CD testing boundaries.\n\n"
             "## 2. Epic Breakdown\n"
             "- **Epic 1 <Title>**: <Scope description with explicit I/O contracts>\n"
             "- **Epic 2 <Title>**: <Scope description with explicit I/O contracts>\n"
@@ -133,7 +130,7 @@ class EpicRefinementEngine:
         match = re.search(pattern, debate_log, re.DOTALL | re.IGNORECASE)
         section_text = match.group(1) if match else debate_log
 
-        # 3. Match H3/H4 headers (e.g. ### **Epic 1: Prometheus Data Ingestor** or ### Epic 1 ...)
+        # 3. Match H3/H4 headers (e.g. ### **Epic 1: ...** or ### Epic 1 ...)
         h3_matches = list(re.finditer(r"(?:^|\n)###+\s*\*{0,2}(Epic\s*\d+[^:\n*]*[:\s\-]+[^\n*]+)\*{0,2}(.*?)(?=\n###|\Z)", section_text, re.DOTALL | re.IGNORECASE))
         if h3_matches:
             for m in h3_matches:
