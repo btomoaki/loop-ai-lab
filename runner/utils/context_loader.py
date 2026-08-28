@@ -13,7 +13,7 @@ class ContextLoader:
         """
         cfg = config or ProjectConfig.load(root_dir)
         
-        # 1. References files (What to build)
+        # 1. References files (What to build - system specifications)
         ref_dir = root_dir / "references"
         if ref_dir.exists() and ref_dir.is_dir():
             spec_files = sorted([f"- {f.relative_to(root_dir)}" for f in ref_dir.glob("**/*") if f.is_file()])
@@ -21,10 +21,9 @@ class ContextLoader:
         else:
             specs_ref = "- references/"
 
-        # 2. Rule files (Governance & Quality constraints - NOT features to build)
+        # 2. Rule files (Universal governance & quality constraints across all ceremonies)
         rule_files = [
-            "- .agents/rules/scrum_ceremonies_and_governance.md",
-            f"- .agents/rules/{ceremony}/"
+            "- .agents/rules/scrum_ceremonies_and_governance.md"
         ]
         if include_dev_rules:
             rule_files.append("- .agents/rules/development/")
