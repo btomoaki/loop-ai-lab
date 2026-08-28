@@ -13,9 +13,12 @@ class ProjectConfig:
     run_command: str = "go run ."
     verify_command: str = "go test ./..."
     dev_rules_path: str = ".agents/rules/development/"
-    provider: str = "local"
-    executor_model: str = "Devstral-Small-2-24B-Instruct"
-    llama_max_tokens: int = 4096
+    provider: str = "gemini"
+    refinement_provider: str = "gemini"
+    evaluator_provider: str = "gemini"
+    executor_provider: str = "llama_cpp"
+    executor_model: str = "mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf"
+    llama_max_tokens: int = 8192
     workspace_rel: str = "workspace/identicon-generator"
     container_image_name: str = "identicon-generator"
     extra_env: Dict[str, str] = field(default_factory=dict)
@@ -52,9 +55,12 @@ class ProjectConfig:
             run_command=os.getenv("RUN_COMMAND", data.get("RUN_COMMAND", "go run .")),
             verify_command=os.getenv("VERIFY_COMMAND", data.get("VERIFY_COMMAND", "go test ./...")),
             dev_rules_path=os.getenv("DEV_RULES_PATH", data.get("DEV_RULES_PATH", ".agents/rules/development/")),
-            provider=os.getenv("DEFAULT_LLM_PROVIDER", data.get("DEFAULT_LLM_PROVIDER", "local")),
-            executor_model=os.getenv("EXECUTOR_MODEL", data.get("EXECUTOR_MODEL", "Devstral-Small-2-24B-Instruct")),
-            llama_max_tokens=int(os.getenv("LLAMA_MAX_TOKENS", data.get("LLAMA_MAX_TOKENS", "4096"))),
+            provider=os.getenv("DEFAULT_LLM_PROVIDER", os.getenv("REFINEMENT_PROVIDER", data.get("DEFAULT_LLM_PROVIDER", "gemini"))),
+            refinement_provider=os.getenv("REFINEMENT_PROVIDER", "gemini"),
+            evaluator_provider=os.getenv("EVALUATOR_PROVIDER", "gemini"),
+            executor_provider=os.getenv("EXECUTOR_PROVIDER", "llama_cpp"),
+            executor_model=os.getenv("EXECUTOR_MODEL", data.get("EXECUTOR_MODEL", "mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf")),
+            llama_max_tokens=int(os.getenv("LLAMA_MAX_TOKENS", data.get("LLAMA_MAX_TOKENS", "8192"))),
             workspace_rel=os.getenv("WORKSPACE_REL", os.getenv("TARGET_DIR", f"workspace/{proj_name}")),
             container_image_name=os.getenv("CONTAINER_IMAGE_NAME", proj_name),
         )
