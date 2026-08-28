@@ -13,7 +13,7 @@ class ContextLoader:
         """
         cfg = config or ProjectConfig.load(root_dir)
         
-        # 1. References files
+        # 1. References files (What to build)
         ref_dir = root_dir / "references"
         if ref_dir.exists() and ref_dir.is_dir():
             spec_files = sorted([f"- {f.relative_to(root_dir)}" for f in ref_dir.glob("**/*") if f.is_file()])
@@ -21,7 +21,7 @@ class ContextLoader:
         else:
             specs_ref = "- references/"
 
-        # 2. Rule files
+        # 2. Rule files (Governance & Quality constraints - NOT features to build)
         rule_files = [
             "- .agents/rules/scrum_ceremonies_and_governance.md",
             f"- .agents/rules/{ceremony}/"
@@ -36,7 +36,14 @@ class ContextLoader:
                 rule_files.append("- .agents/rules/languages/")
 
         rules_ref = "\n".join(rule_files)
-        personas_ref = "- .agents/personas/"
+
+        # 3. Personas files (Explicit participants)
+        persona_dir = root_dir / ".agents" / "personas"
+        if persona_dir.exists() and persona_dir.is_dir():
+            persona_files = sorted([f"- {f.relative_to(root_dir)}" for f in persona_dir.glob("*.md") if f.is_file()])
+            personas_ref = "\n".join(persona_files) if persona_files else "- .agents/personas/"
+        else:
+            personas_ref = "- .agents/personas/"
 
         target_agent_profile = (
             f"- Target Executor Model: {cfg.executor_model}\n"
