@@ -17,6 +17,11 @@ class ProjectConfig:
     llama_max_tokens: int = 4096
     extra_env: Dict[str, str] = field(default_factory=dict)
 
+
+    @property
+    def workspace_rel(self) -> str:
+        return f"workspace/{self.project_name}"
+
     @classmethod
     def load(cls, root_dir: Path) -> 'ProjectConfig':
         config_file = root_dir / "config.yaml"
