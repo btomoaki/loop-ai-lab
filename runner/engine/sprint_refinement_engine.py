@@ -13,7 +13,7 @@ from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントリファインメントエンジン (スプリントバックログ & 自動ハーネス生成)"""
+    """【セレモニー 2】スプリントリファインメントエンジン (スプリントバックログ & 自動ハーネス生成 & タスク依存関係)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -34,10 +34,10 @@ class SprintRefinementEngine:
         if config_file.exists():
             try:
                 data = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
-                return data.get("DEFAULT_LLM_PROVIDER", "local")
+                return data.get("DEFAULT_LLM_PROVIDER", "gemini")
             except Exception:
                 pass
-        return "local"
+        return "gemini"
 
     def update_status_dashboard(self, epic_name: str):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -56,7 +56,7 @@ class SprintRefinementEngine:
         CodeParser.atomic_write_text(self.status_file, dashboard_content)
         print(f"📊 [Status Dashboard] Updated state/status.md (Refinement: {epic_name})", flush=True)
 
-    def run_sprint_refinement_for_epic(self, epic_dir: Path, title: str, scope: str):
+    def run_sprint_refinement_for_epic(self, epic_dir: Path, title: str, scope: str, epic_idx: int):
         debate_file = epic_dir / "debate_log.md"
         backlog_file = epic_dir / "epic_backlog.yaml"
 
@@ -78,7 +78,7 @@ class SprintRefinementEngine:
                 f"=== 5. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
                 f"=== 6. TARGET DEVELOPER AGENT PROFILE ===\n{refs['target_agent']}\n\n"
                 "Output MUST follow this format:\n"
-                f"# 📋 Sprint Refinement Debate Log: {title}\n\n"
+                f"# �� Sprint Refinement Debate Log: {title}\n\n"
                 "## 1. Multi-Persona Discussion\n"
                 "- **[PO Persona]**: Breakdown of user stories and acceptance criteria.\n"
                 "- **[Architect Persona]**: Micro-task boundaries and TDD test design.\n"
@@ -97,22 +97,29 @@ class SprintRefinementEngine:
             prompt_yaml = (
                 f"[INST]\n"
                 f"[TASK: GENERATE EPIC BACKLOG YAML FOR {title}]\n"
-                f"Generate a valid YAML block containing micro-scoped tasks for {title}.\n"
+                f"Generate a valid YAML block containing micro-scoped, dependency-ordered tasks for {title}.\n"
                 f"Target workspace directory is: {self.config.workspace_rel}\n"
                 f"Container image name is: {self.config.container_image_name}\n\n"
-                f"=== SCOPE ===\n{scope}\n\n"
+                f"=== SCOPE & SPECIFICATION ===\n{scope}\n\n"
                 "Output MUST be a valid YAML block enclosed in ```yaml ... ```:\n"
                 "```yaml\n"
-                "epic_id: EPIC-X\n"
+                f"epic_id: EPIC-{epic_idx}\n"
                 f"title: \"{title}\"\n"
                 f"workspace_rel: \"{self.config.workspace_rel}\"\n"
                 "tasks:\n"
-                "  - id: TASK-1.1\n"
-                "    title: \"Implement core functionality\"\n"
-                "    description: \"Detailed description\"\n"
+                f"  - id: TASK-{epic_idx}.1\n"
+                "    title: \"Setup domain foundation and interfaces\"\n"
+                "    description: \"Detailed task scope\"\n"
+                "    depends_on: []\n"
                 "    acceptance_criteria:\n"
                 "      - \"Criterion 1\"\n"
-                "      - \"Criterion 2\"\n"
+                "    verify_command: \"go test ./...\"\n"
+                f"  - id: TASK-{epic_idx}.2\n"
+                "    title: \"Implement core functionality\"\n"
+                "    description: \"Detailed task scope\"\n"
+                f"    depends_on: [\"TASK-{epic_idx}.1\"]\n"
+                "    acceptance_criteria:\n"
+                "      - \"Criterion 1\"\n"
                 "    verify_command: \"go test ./...\"\n"
                 "```\n"
                 "[/INST]\n"
@@ -125,15 +132,16 @@ class SprintRefinementEngine:
                 print(f"📝 [Ceremony 2] Saved direct epic_backlog.yaml for: {epic_dir.name}")
             else:
                 mock_data = {
-                    "epic_id": epic_dir.name.upper(),
+                    "epic_id": f"EPIC-{epic_idx}",
                     "title": title,
                     "workspace_rel": self.config.workspace_rel,
                     "container_image_name": self.config.container_image_name,
                     "tasks": [
                         {
-                            "id": "TASK-1.1",
+                            "id": f"TASK-{epic_idx}.1",
                             "title": f"Setup {title}",
                             "description": scope,
+                            "depends_on": [],
                             "acceptance_criteria": ["Core components implemented", "All tests pass"],
                             "verify_command": self.config.test_command
                         }
@@ -163,7 +171,7 @@ class SprintRefinementEngine:
             epic_dir.mkdir(parents=True, exist_ok=True)
             
             print(f"\n⚙️ [Ceremony 2: Refining Epic {idx}/{len(epics)}] {title} (Dir: {epic_dir_name})", flush=True)
-            self.run_sprint_refinement_for_epic(epic_dir, title, scope)
+            self.run_sprint_refinement_for_epic(epic_dir, title, scope, idx)
 
         # Backlog 分割 & テストハーネス生成
         print("\n🚀 [Ceremony 2] Generating automated test harness scripts for all refined Epics...", flush=True)
