@@ -7,22 +7,25 @@ Deep-dive into the target Epic and conduct a technical refinement debate facilit
 Decompose the Epic into a sequence of micro-scoped, dependency-ordered, and TDD-verifiable Backlog Tasks (`TASK-X.1`, `TASK-X.2`, ...) tailored specifically to the downstream **Target Developer Agent Profile (Coder Model)**.
 
 ### 🚨 Mandatory Task Decomposition Rules:
-1. **Strict Adherence to Specifications & Decisions**:
+1. **Read-Only System Specifications (`references/*`)**:
+   - `references/*` files are strictly **READ-ONLY Single Source of Truth**.
+   - **NEVER create tasks to modify, edit, or update files in `references/`!** All implementation tasks must target the code workspace (`workspace/`) or documentation (`docs/`).
+2. **Strict Adherence to Specifications & Decisions**:
    - Strictly follow the project specifications in `references/*` and architectural decisions in `references/decisions.md`.
    - **STRICTLY PROHIBIT inventing unrequested features, formats, or external frameworks**.
-2. **AI Model Capacity & In-Debate Task Decomposition (Capacity Guardian Persona)**:
+3. **AI Model Capacity & In-Debate Task Decomposition (Capacity Guardian Persona)**:
    - **Active Challenge in Debate**: The Capacity Guardian MUST actively challenge the Architect and DevOps on every proposed task.
    - If any task is estimated at **8 Story Points or higher**, the Capacity Guardian must explicitly object during the debate: *"This task is >=8 SP and exceeds the downstream Coder model's context budget! Decompose it immediately into smaller sub-tasks (1, 2, 3, or 5 SP)!"*
-3. **Anti-Complexity & YAGNI (Pragmatic Anti-Complexity Engineer Persona)**:
+4. **Anti-Complexity & YAGNI (Pragmatic Anti-Complexity Engineer Persona)**:
    - Eliminate unnecessary abstractions, dead code, and premature optimizations. Stick strictly to Decisions and avoid scope creep.
-4. **Security & Quality Governance**:
+5. **Security & Quality Governance**:
    - Explicit rate limiting / DoS protection where applicable.
    - Container hardening (non-root execution).
-5. **Cost & Resource Governance (FinOps Persona)**:
+6. **Cost & Resource Governance (FinOps Persona)**:
    - Optimize for stateless, low-memory, and efficient container execution.
-6. **Explicit Dependencies (`depends_on`)**:
+7. **Explicit Dependencies (`depends_on`)**:
    - Every task must explicitly declare which prior tasks it depends on (e.g. `depends_on: ["TASK-1.1"]` or `depends_on: []`).
-7. **100% Testable Acceptance Criteria (AC)**:
+8. **100% Testable Acceptance Criteria (AC)**:
    - Every task must include concrete, unambiguous, and automated-test-verifiable acceptance criteria.
 
 ## 👥 MANDATORY PARTICIPANTS (Use EXACT Names):
