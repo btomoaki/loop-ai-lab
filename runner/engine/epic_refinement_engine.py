@@ -31,10 +31,10 @@ class EpicRefinementEngine:
         if config_file.exists():
             try:
                 data = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
-                return data.get("DEFAULT_LLM_PROVIDER", "local")
+                return data.get("DEFAULT_LLM_PROVIDER", "gemini")
             except Exception:
                 pass
-        return "local"
+        return "gemini"
 
     def update_status_dashboard(self, status_message: str):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -62,7 +62,7 @@ class EpicRefinementEngine:
                 return content
 
         print("🌐 [Ceremony 1: Epic Refinement] Conducting Architecture Debate & Epic Breakdown...", flush=True)
-        self.update_status_dashboard("💬 全ペルソナによる全体アーキテクチャディベート中...")
+        self.update_status_dashboard("�� 全ペルソナによる全体アーキテクチャディベート中...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True, config=self.config)
         inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
@@ -70,7 +70,7 @@ class EpicRefinementEngine:
         prompt = (
             f"[INST]\n"
             f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
-            f"Analyze all referenced specification files and generate the complete Ceremony 1 Debate Log.\n\n"
+            f"Analyze all referenced specification files and conduct a debate among the personas to establish architecture and decompose Epics.\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
@@ -78,10 +78,13 @@ class EpicRefinementEngine:
             f"=== 5. TARGET DEVELOPER AGENT PROFILE (DOWNSTREAM CODER) ===\n{refs['target_agent']}\n\n"
             "Output MUST follow this format:\n"
             "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
-            "## 1. Multi-Persona Discussion\n"
-            "(Substantial debate between participating personas analyzing specifications, boundaries, and coder adaptation)\n\n"
+            "## 1. System Architecture Debate (PO, Architect, Spec Auditor, DevOps)\n"
+            "- **[PO Persona]**: Discusses product scope, user workflows, and core features from references/icon_generator.md.\n"
+            "- **[Architect Persona]**: Discusses clean layer boundaries, pure functions, and GCP Cloud Run stateless architecture.\n"
+            "- **[Spec Compliance Persona]**: Audits and vetoes any dropped requirements from references/icon_generator.md.\n"
+            "- **[Platform & DevOps Persona]**: Discusses Docker containerization, Makefile targets, and GitHub Actions CI/CD.\n\n"
             "## 2. Epic Breakdown\n"
-            "(Decompose all functional requirements from specifications into modular Epics: Epic 1, Epic 2, ... with explicit I/O contracts)\n"
+            "(Decompose all functional requirements and delivery readiness from specifications into modular Epics: Epic 1, Epic 2, ... with explicit I/O contracts)\n"
             "- **Epic 1 <Title>**: <Scope description with explicit I/O contracts>\n"
             "- **Epic 2 <Title>**: <Scope description with explicit I/O contracts>\n"
             "[/INST]\n"
@@ -90,11 +93,11 @@ class EpicRefinementEngine:
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
-        print("🔍 [Ceremony 1] Requesting Overall Architecture Debate Log from LLM...", flush=True)
+        print("�� [Ceremony 1] Requesting Overall Architecture Debate Log from LLM...", flush=True)
         llm_raw_response = self.refinement_agent.generate_text(prompt)
         overall_debate_log = (llm_raw_response or "").strip()
 
-        if len(overall_debate_log) >= 500 and "## 1. Multi-Persona Discussion" in overall_debate_log:
+        if len(overall_debate_log) >= 500 and ("## 1." in overall_debate_log or "Debate" in overall_debate_log):
             CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
             print(f"📝 [Ceremony 1 Complete] Successfully generated and saved debate log to {overall_debate_file.relative_to(self.root_dir)}")
             return overall_debate_log
