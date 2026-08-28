@@ -31,9 +31,10 @@ class ContextLoader:
         personas_ref = "- .agents/personas/"
 
         target_agent_profile = (
-            f"- Target Developer Agent Type: {cfg.developer_model_type.upper()}\n"
-            f"- Max Context Limit: {cfg.developer_model_context_limit} tokens\n"
-            f"- Persona Constraint: {cfg.developer_model_description}"
+            f"- Target Executor Model: {cfg.executor_model}\n"
+            f"- Max Context Limit: {cfg.llama_max_tokens} tokens\n"
+            f"- Persona Constraint: Downstream executor is a code-specialized model with strict context limit. "
+            f"Requires micro-scoped, self-contained Epics with explicit Input/Output data structures, pure functions, and testable boundary specifications."
         )
 
         return {

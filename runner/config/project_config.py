@@ -13,9 +13,8 @@ class ProjectConfig:
     run_command: str = "go run ."
     dev_rules_path: str = ".agents/rules/development/"
     provider: str = "local"
-    developer_model_type: str = "coder"
-    developer_model_context_limit: int = 4096
-    developer_model_description: str = "Coder-specialized local LLM with limited context window. Requires self-contained, micro-scoped Epics with explicit Input/Output data structures, pure functions, and testable boundary specifications."
+    executor_model: str = "local-coder"
+    llama_max_tokens: int = 4096
     extra_env: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -48,7 +47,6 @@ class ProjectConfig:
             run_command=os.getenv("RUN_COMMAND", data.get("RUN_COMMAND", "go run .")),
             dev_rules_path=os.getenv("DEV_RULES_PATH", data.get("DEV_RULES_PATH", ".agents/rules/development/")),
             provider=os.getenv("DEFAULT_LLM_PROVIDER", data.get("DEFAULT_LLM_PROVIDER", "local")),
-            developer_model_type=os.getenv("DEVELOPER_MODEL_TYPE", "coder"),
-            developer_model_context_limit=int(os.getenv("DEVELOPER_MODEL_CONTEXT_LIMIT", "4096")),
-            developer_model_description=os.getenv("DEVELOPER_MODEL_DESCRIPTION", "Coder-specialized local LLM with limited context window. Requires self-contained, micro-scoped Epics with explicit Input/Output data structures, pure functions, and testable boundary specifications."),
+            executor_model=os.getenv("EXECUTOR_MODEL", data.get("EXECUTOR_MODEL", "Devstral-Small-2-24B-Instruct")),
+            llama_max_tokens=int(os.getenv("LLAMA_MAX_TOKENS", data.get("LLAMA_MAX_TOKENS", "4096"))),
         )
