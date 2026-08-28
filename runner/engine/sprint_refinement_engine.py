@@ -13,7 +13,7 @@ from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントリファインメントエンジン (スプリントバックログ & 自動ハーネス生成 & Gemini最終仕様監査ゲート)"""
+    """【セレモニー 2】スプリントリファインメントエンジン (Scrum Master ファシリテーション & Gemini最終仕様監査ゲート)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -29,7 +29,6 @@ class SprintRefinementEngine:
         print(f"🧠 [SprintRefinementEngine] Using Provider '{refinement_provider}' for Ceremony 2.", flush=True)
         self.refinement_agent = LLMAdapterFactory.get_adapter(provider=refinement_provider)
 
-        # 最終監査用には明示的に高推論な Gemini を使用
         print("🧠 [SprintRefinementEngine] Using Provider 'gemini' for Final Specification Compliance Audit.", flush=True)
         self.gemini_audit_agent = LLMAdapterFactory.get_adapter(provider="gemini")
 
@@ -84,8 +83,8 @@ class SprintRefinementEngine:
                 "Output MUST follow this format:\n"
                 f"# 📋 Sprint Refinement Debate Log: {title}\n\n"
                 "## 1. Multi-Persona Discussion\n"
-                "- **[PO Persona]**: Breakdown of user stories, functional priorities, and expected behavior.\n"
-                "- **[Architect Persona]**: Micro-task package structure, interface signatures, and layer boundaries.\n"
+                "- **[Scrum Master Persona]**: Facilitates the breakdown session, validates task dependency ordering, and ensures sprint clarity.\n"
+                "- **[Architect Persona]**: Micro-task package structure, domain interfaces, and layer boundaries.\n"
                 "- **[Capacity Guardian Persona]**: Story Point estimation (1-3 SP), enforcing atomic task sizing and sprint capacity limits.\n"
                 "- **[Spec Compliance Persona]**: Audits task breakdown against source specifications line-by-line, calling out any missing requirements to be added to task ACs.\n"
                 "- **[QA & DevOps Persona]**: Defining TDD unit tests, assertion criteria, and automated verify commands.\n\n"
