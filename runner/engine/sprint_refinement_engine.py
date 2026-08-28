@@ -82,12 +82,12 @@ class SprintRefinementEngine:
                 "## 1. Multi-Persona Discussion\n"
                 "- **[PO Persona]**: Breakdown of user stories, functional priorities, and expected behavior.\n"
                 "- **[Architect Persona]**: Micro-task package structure, interface signatures, and layer boundaries.\n"
-                "- **[Capacity Guardian Persona]**: Enforcing micro-task sizing, single-responsibility, and coder model context limits.\n"
+                "- **[Capacity Guardian Persona]**: Story Point estimation (1-3 SP), enforcing atomic task sizing and sprint capacity limits.\n"
                 "- **[Spec Compliance Persona]**: Cross-checking 100% traceability against source specifications.\n"
                 "- **[QA & DevOps Persona]**: Defining TDD unit tests, assertion criteria, and automated verify commands.\n\n"
                 "## 2. Sprint Backlog Plan\n"
-                "- **TASK-1.1**: <Description and AC>\n"
-                "- **TASK-1.2**: <Description and AC>\n"
+                "- **TASK-1.1**: <Description and AC, SP>\n"
+                "- **TASK-1.2**: <Description and AC, SP>\n"
                 "[/INST]\n"
             )
             res = self.refinement_agent.generate_text(prompt_debate)
@@ -114,6 +114,7 @@ class SprintRefinementEngine:
                 f"  - id: TASK-{epic_idx}.1\n"
                 "    title: \"Setup domain foundation and interfaces\"\n"
                 "    description: \"Detailed task scope\"\n"
+                "    story_points: 1\n"
                 "    depends_on: []\n"
                 "    acceptance_criteria:\n"
                 "      - \"Criterion 1\"\n"
@@ -121,6 +122,7 @@ class SprintRefinementEngine:
                 f"  - id: TASK-{epic_idx}.2\n"
                 "    title: \"Implement core functionality\"\n"
                 "    description: \"Detailed task scope\"\n"
+                "    story_points: 2\n"
                 f"    depends_on: [\"TASK-{epic_idx}.1\"]\n"
                 "    acceptance_criteria:\n"
                 "      - \"Criterion 1\"\n"
@@ -145,6 +147,7 @@ class SprintRefinementEngine:
                             "id": f"TASK-{epic_idx}.1",
                             "title": f"Setup {title}",
                             "description": scope,
+                            "story_points": 1,
                             "depends_on": [],
                             "acceptance_criteria": ["Core components implemented", "All tests pass"],
                             "verify_command": self.config.test_command
@@ -166,7 +169,7 @@ class SprintRefinementEngine:
         for b_file in sorted(self.init_dir.glob("*/epic_backlog.yaml")):
             try:
                 data = yaml.safe_load(b_file.read_text(encoding="utf-8")) or {}
-                t_list = [f"  - [{t.get('id')}] {t.get('title')} (AC: {', '.join(t.get('acceptance_criteria', []))})" for t in data.get("tasks", [])]
+                t_list = [f"  - [{t.get('id')}] {t.get('title')} (SP: {t.get('story_points', 1)}, AC: {', '.join(t.get('acceptance_criteria', []))})" for t in data.get("tasks", [])]
                 backlog_summaries.append(f"### {data.get('title', b_file.parent.name)}\n" + "\n".join(t_list))
             except Exception:
                 pass
@@ -238,5 +241,5 @@ class SprintRefinementEngine:
         self.run_final_specification_audit()
 
         self.update_status_dashboard("All Epics", "リファインメント完了・全仕様監査完了")
-        print("🎉 [Ceremony 2 Complete] Sprint Refinement & Final Audit pipeline completed successfully for all Epics!", flush=True)
+        print("�� [Ceremony 2 Complete] Sprint Refinement & Final Audit pipeline completed successfully for all Epics!", flush=True)
         return True
