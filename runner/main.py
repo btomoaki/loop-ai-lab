@@ -1,108 +1,39 @@
-"""Autonomous Scrum Runner CLI — メインエントリーポイント。
-
-サブコマンド:
-  init  - references/ の仕様書から config.yaml を自動生成
-  run   - Refinement / Sprint パイプラインを実行
-"""
-
-import argparse
 import sys
+import argparse
 from pathlib import Path
-
-
-def cmd_init(args, root_dir: Path):
-    """init サブコマンド: 仕様書から config.yaml を自動生成する。"""
-    from runner.config.config_generator import ConfigGenerator
-
-    generator = ConfigGenerator(root_dir)
-    success = generator.run()
-    sys.exit(0 if success else 1)
-
-
-def cmd_run(args, root_dir: Path):
-    """run サブコマンド: パイプライン（refinement / sprint）を実行する。"""
-    from runner.engine.scrum_runner import ScrumRunner
-
-    runner = ScrumRunner(root_dir)
-
-    print("==================================================")
-    print(" 🚀 [Scrum Pipeline] Starting Autonomous Runner")
-    print(f" 📌 Phase: {args.phase} | Sprint: {args.sprint}")
-    print("==================================================")
-
-    if args.phase in ["all", "epic", "refinement"]:
-        dynamic_epics = runner.refinement_engine.run_epic_refinement_phase()
-        if args.phase == "epic":
-            print("==================================================")
-            print(" 🏁 [Phase Complete] Ceremony 1 Epic Refinement Complete!")
-            print(" ⏸️  Epics are ready for user review.")
-            print("==================================================")
-            sys.exit(0)
-
-    if args.phase in ["all", "refinement"]:
-        runner.refinement_engine.sprint_refinement_engine.run_sprint_refinement(dynamic_epics)
-
-    if args.phase in ["all", "sprint"]:
-        runner.run_sprint_phase(sprint_num=args.sprint)
-
-
-    print("==================================================")
-    print(" ✨ [Task Complete] Process finished successfully!")
-    print("==================================================")
-    sys.exit(0)
+from runner.config.project_config import ProjectConfig
+from runner.engine.scrum_runner import ScrumRunner
+from runner.engine.sprint_refinement_engine import SprintRefinementEngine
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Autonomous Scrum Runner CLI",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            "使用例:\n"
-            "  python3 runner/main.py init                  # config.yaml 自動生成\n"
-            "  python3 runner/main.py run --phase all        # 全フェーズ実行\n"
-            "  python3 runner/main.py run --phase refinement # Refinementのみ\n"
-            "  python3 runner/main.py run --phase sprint --sprint 1\n"
-        ),
-    )
-    subparsers = parser.add_subparsers(dest="command")
-
-    # --- init サブコマンド ---
-    subparsers.add_parser("init", help="references/ の仕様書から config.yaml を自動生成")
-
-    # --- run サブコマンド ---
-    run_parser = subparsers.add_parser("run", help="パイプライン実行")
-    run_parser.add_argument(
-        "--phase", type=str, default="all",
-        choices=["all", "epic", "refinement", "sprint"],
-        help="実行フェーズ (default: all)",
-    )
-    run_parser.add_argument(
-        "--sprint", type=int, default=1,
-        help="Sprint番号 (default: 1)",
-    )
-
-    # --- 後方互換: サブコマンド無しで --phase を指定した場合 ---
-    parser.add_argument("--phase", type=str, default=None, dest="legacy_phase",
-                        choices=["all", "epic", "refinement", "sprint"], help=argparse.SUPPRESS)
-
-    parser.add_argument("--sprint", type=int, default=1, dest="legacy_sprint", help=argparse.SUPPRESS)
-
+    parser = argparse.ArgumentParser(description="Loop AI Lab Autonomous Scrum Runner")
+    parser.add_argument("command", choices=["run", "audit"], default="run", nargs="?", help="Command to execute: 'run' (full pipeline) or 'audit' (fast independent audits only)")
+    parser.add_argument("--phase", choices=["refinement", "execution", "all"], default="all", help="Target ceremony phase")
+    parser.add_argument("--sprint", type=int, default=1, help="Sprint index for execution")
     args = parser.parse_args()
-    root_dir = Path(__file__).resolve().parents[1]
 
-    if args.command == "init":
-        cmd_init(args, root_dir)
-    elif args.command == "run":
-        cmd_run(args, root_dir)
-    elif args.legacy_phase:
-        # 後方互換: python3 runner/main.py --phase refinement
-        print("⚠️ [互換モード] 'run' サブコマンドの使用を推奨します: python3 runner/main.py run --phase ...", flush=True)
-        args.phase = args.legacy_phase
-        args.sprint = args.legacy_sprint
-        cmd_run(args, root_dir)
-    else:
-        parser.print_help()
-        sys.exit(1)
+    root_dir = Path(__file__).resolve().parent.parent
+    config = ProjectConfig.load(root_dir)
+
+    if args.command == "audit":
+        print("⚡ [Fast Audit Mode] Running Gemini Independent Audits directly on existing backlogs...", flush=True)
+        refinement_engine = SprintRefinementEngine(root_dir, config)
+        existing_loops = list((root_dir / "state" / ".evaluator").glob("loop_*"))
+        current_attempt = len(existing_loops) + 1
+        result = refinement_engine.run_individual_final_audits(attempt=current_attempt)
+        
+        print("\n" + "=" * 50)
+        print(f"🏁 [Fast Audit Summary - Directory: {result['loop_dir'].relative_to(root_dir)}]")
+        print(f"  - Loop Attempt Count: #{result['attempt']}")
+        print(f"  - Spec Compliance Audit: {'✅ PASS' if result['spec_passed'] else '🛑 REJECTED/VETO'}")
+        print(f"  - Security & Ethics Audit: {'✅ PASS' if result['sec_passed'] else '🛑 REJECTED/VETO'}")
+        print(f"  - Final Verdict: {'🎉 ALL APPROVED' if result['overall_passed'] else '⚠️ VETO DETECTED (Requires Review)'}")
+        print("=" * 50 + "\n")
+        return
+
+    runner = ScrumRunner(root_dir=root_dir, config=config)
+    runner.run(phase=args.phase, sprint_index=args.sprint)
 
 
 if __name__ == "__main__":
