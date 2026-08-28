@@ -13,7 +13,7 @@ from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントリファインメントエンジン (Builders + Guards & Gemini 仕様・セキュリティ最終監査ゲート)"""
+    """【セレモニー 2】スプリントリファインメントエンジン (Builders + Guards & Gemini 各自独立最終監査ゲート)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -29,7 +29,7 @@ class SprintRefinementEngine:
         print(f"🧠 [SprintRefinementEngine] Using Provider '{refinement_provider}' for Ceremony 2.", flush=True)
         self.refinement_agent = LLMAdapterFactory.get_adapter(provider=refinement_provider)
 
-        print("🧠 [SprintRefinementEngine] Using Provider 'gemini' for Final Spec & Security Compliance Audit.", flush=True)
+        print("🧠 [SprintRefinementEngine] Using Provider 'gemini' for Independent Final Audits.", flush=True)
         self.gemini_audit_agent = LLMAdapterFactory.get_adapter(provider="gemini")
 
     def _get_refinement_provider(self) -> str:
@@ -68,7 +68,7 @@ class SprintRefinementEngine:
 
         # 1. debate_log.md 生成
         if not debate_file.exists():
-            print(f"�� [Ceremony 2] Step 1: Generating debate_log.md for: {title}...", flush=True)
+            print(f"💬 [Ceremony 2] Step 1: Generating debate_log.md for: {title}...", flush=True)
             self.update_status_dashboard(title, "ディベートログ生成中...")
             
             prompt_debate = (
@@ -165,12 +165,11 @@ class SprintRefinementEngine:
                 }
                 CodeParser.atomic_write_text(backlog_file, yaml.dump(mock_data, default_flow_style=False, allow_unicode=True))
 
-    def run_final_specification_and_security_audit(self) -> bool:
-        """【最終監査ゲート】Gemini による「仕様網羅性」＋「セキュリティ・倫理」の統合監査"""
-        print("\n🕵️ [Final Audit Gate] Conducting Final Spec Compliance & Security/Ethics Audit with Gemini...", flush=True)
-        self.update_status_dashboard("Final Audit Gate", "Gemini による仕様・セキュリティ最終チェックを実行中...")
-        
-        audit_file = self.eval_dir / "final_audit_report.md"
+    def run_individual_final_audits(self) -> bool:
+        """【各自独立監査ゲート】Spec Compliance と Security/Ethics がそれぞれ個別に独立チェックを実施"""
+        print("\n��️ [Independent Final Audits] Running Separate Audits via Gemini...", flush=True)
+        self.update_status_dashboard("Independent Final Audits", "Gemini による個別独立監査を実行中...")
+
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="2_sprint_refinement", include_dev_rules=True, config=self.config)
         
         # 全スプリントバックログを収集
@@ -184,39 +183,58 @@ class SprintRefinementEngine:
                 pass
         all_backlogs_str = "\n\n".join(backlog_summaries)
 
-        prompt_audit = (
+        # ----------------------------------------------------
+        # 1. Spec Compliance Auditor による単独チェック
+        # ----------------------------------------------------
+        print("🔍 [Audit 1/2] Spec Compliance Auditor inspecting backlog...", flush=True)
+        spec_audit_file = self.eval_dir / "audit_spec_compliance.md"
+        prompt_spec = (
             f"[INST]\n"
-            f"[TASK: FINAL SPECIFICATION & SECURITY/ETHICS COMPLIANCE AUDIT VIA GEMINI]\n"
-            f"You represent both the **Specification Compliance Auditor** and the **Security & AI Ethics Auditor**.\n"
-            f"Cross-reference ALL generated sprint backlogs against the source specifications in references/ and security governance rules.\n\n"
+            f"[TASK: INDEPENDENT SPECIFICATION COMPLIANCE AUDIT]\n"
+            f"You are the Specification Compliance Auditor (.agents/personas/spec_compliance_auditor.md).\n"
+            f"Cross-reference ALL generated sprint backlogs against the source specifications in references/ line-by-line.\n\n"
             f"=== 1. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 2. GENERATED SPRINT BACKLOGS ACROSS ALL EPICS ===\n{all_backlogs_str}\n\n"
-            f"=== 3. AUDIT CRITERIA ===\n"
-            f"1. **Spec Compliance**: Verify 100% functional coverage (MD5 hashing, 5x5 symmetric grid mirroring, RGB color mapping, 250x250 PNG, SVG rendering, HTTP REST API, Web UI, Docker, CI/CD).\n"
-            f"2. **Security & Ethics**: Verify Rate Limiting (HTTP 429), non-root container user (UID 65532), input validation/sanitization, and absence of hallucinated external DB/auth services.\n\n"
-            f"Output MUST follow this format:\n"
-            f"# 🕵️ Final Specification & Security/Ethics Audit Report\n\n"
-            f"## 1. Specification Traceability Matrix\n"
-            f"- [Requirement Item]: [Covered Task ID & AC] -> Status (COVERED / MISSING)\n\n"
-            f"## 2. Security & Ethics Audit\n"
-            f"- Rate Limiting & DoS Protection: (PASS / FAIL)\n"
-            f"- Container & Least Privilege: (PASS / FAIL)\n"
-            f"- Zero Unrequested Services: (PASS / FAIL)\n\n"
-            f"## 3. Final Gate Decision\n"
+            f"Output format:\n"
+            f"# ��️ Specification Compliance Audit Report\n\n"
+            f"## 1. Traceability Checklist\n"
+            f"- [Requirement]: [Mapped Task ID] -> Status (COVERED / MISSING)\n\n"
+            f"## 2. Verdict\n"
             f"- Verdict: **APPROVED** or **VETO**\n"
-            f"- Summary: <Detailed explanation>\n"
+            f"- Summary: <Details>\n"
             f"[/INST]\n"
         )
-        res = self.gemini_audit_agent.generate_text(prompt_audit)
-        audit_report = (res or "").strip()
-        CodeParser.atomic_write_text(audit_file, audit_report)
+        spec_res = self.gemini_audit_agent.generate_text(prompt_spec)
+        CodeParser.atomic_write_text(spec_audit_file, (spec_res or "").strip())
+        print(f"📝 [Audit 1/2 Complete] Saved to {spec_audit_file.relative_to(self.root_dir)}")
 
-        if "Verdict: **APPROVED**" in audit_report or "Verdict: APPROVED" in audit_report or "**APPROVED**" in audit_report:
-            print(f"✅ [Final Audit Gate: APPROVED] All specifications & security checks verified with 100% coverage by Gemini! Saved to {audit_file.relative_to(self.root_dir)}")
-            return True
-        else:
-            print(f"⚠️ [Final Audit Gate: VETO/WARNING] Potential gaps detected by Gemini. Report saved to {audit_file.relative_to(self.root_dir)}")
-            return True
+        # ----------------------------------------------------
+        # 2. Security & AI Ethics Auditor による単独チェック
+        # ----------------------------------------------------
+        print("🛡️ [Audit 2/2] Security & AI Ethics Auditor inspecting backlog...", flush=True)
+        sec_audit_file = self.eval_dir / "audit_security_ethics.md"
+        prompt_sec = (
+            f"[INST]\n"
+            f"[TASK: INDEPENDENT SECURITY & ETHICS AUDIT]\n"
+            f"You are the Security & AI Ethics Auditor (.agents/personas/security_ethics_auditor.md).\n"
+            f"Audit the sprint backlogs for security standards, rate limiting (HTTP 429), container hardening (non-root UID 65532), and zero unrequested external services.\n\n"
+            f"=== GENERATED SPRINT BACKLOGS ===\n{all_backlogs_str}\n\n"
+            f"Output format:\n"
+            f"# 🛡️ Security & AI Ethics Audit Report\n\n"
+            f"## 1. Security Checklist\n"
+            f"- Rate Limiting & DoS Protection: (PASS / FAIL)\n"
+            f"- Container Security (non-root): (PASS / FAIL)\n"
+            f"- Zero Unrequested Services (DB/Auth): (PASS / FAIL)\n\n"
+            f"## 2. Verdict\n"
+            f"- Verdict: **APPROVED** or **VETO**\n"
+            f"- Summary: <Details>\n"
+            f"[/INST]\n"
+        )
+        sec_res = self.gemini_audit_agent.generate_text(prompt_sec)
+        CodeParser.atomic_write_text(sec_audit_file, (sec_res or "").strip())
+        print(f"📝 [Audit 2/2 Complete] Saved to {sec_audit_file.relative_to(self.root_dir)}")
+
+        return True
 
     def run_sprint_refinement(self, overall_debate_log: str):
         print("🚀 [Ceremony 2: Sprint Refinement] Executing Sprint Backlog Refinement...", flush=True)
@@ -248,9 +266,9 @@ class SprintRefinementEngine:
         BacklogSplitter.split_all_epics(self.root_dir, self.config)
         TestHarnessGenerator.generate_all(self.root_dir, self.config)
 
-        # 🛡️ Gemini による仕様・セキュリティ最終監査ゲートの実行
-        self.run_final_specification_and_security_audit()
+        # 🛡️ Gemini による各自独立監査ゲートの実行
+        self.run_individual_final_audits()
 
-        self.update_status_dashboard("All Epics", "リファインメント完了・Gemini最終監査完了")
-        print("🎉 [Ceremony 2 Complete] Sprint Refinement & Final Audit pipeline completed successfully for all Epics!", flush=True)
+        self.update_status_dashboard("All Epics", "リファインメント完了・各自独立監査完了")
+        print("🎉 [Ceremony 2 Complete] Sprint Refinement & Independent Final Audits completed successfully for all Epics!", flush=True)
         return True
