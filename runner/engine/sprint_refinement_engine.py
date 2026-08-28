@@ -13,7 +13,7 @@ from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
 class SprintRefinementEngine:
-    """【セレモニー 2】スプリントリファインメントエンジン (Builders + Guards & Gemini 各自独立最終監査ゲート & リジェクト回数可視化)"""
+    """【セレモニー 2】スプリントリファインメントエンジン (loop_N ディレクトリ構造によるループ履歴追跡版)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -166,9 +166,12 @@ class SprintRefinementEngine:
                 CodeParser.atomic_write_text(backlog_file, yaml.dump(mock_data, default_flow_style=False, allow_unicode=True))
 
     def run_individual_final_audits(self, attempt: int = 1) -> dict:
-        """【各自独立監査ゲート】Spec Compliance と Security/Ethics がそれぞれ個別に独立チェックを実施 (リジェクト回数表示)"""
-        print(f"\n🕵️ [Independent Final Audits - Attempt #{attempt}] Running Separate Audits via Gemini...", flush=True)
-        self.update_status_dashboard("Independent Final Audits", f"Gemini による個別独立監査を実行中 (Attempt #{attempt})...")
+        """【各自独立監査ゲート】loop_N ディレクトリ構造で各回の監査結果・履歴を保存"""
+        loop_dir = self.eval_dir / f"loop_{attempt}"
+        loop_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"\n🕵️ [Independent Final Audits - Loop #{attempt}] Running Separate Audits via Gemini...", flush=True)
+        self.update_status_dashboard("Independent Final Audits", f"Gemini による個別独立監査を実行中 (Loop #{attempt})...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="2_sprint_refinement", include_dev_rules=True, config=self.config)
         
@@ -186,17 +189,17 @@ class SprintRefinementEngine:
         # ----------------------------------------------------
         # 1. Spec Compliance Auditor による単独チェック
         # ----------------------------------------------------
-        print(f"🔍 [Audit 1/2 (Attempt #{attempt})] Spec Compliance Auditor inspecting backlog...", flush=True)
-        spec_audit_file = self.eval_dir / "audit_spec_compliance.md"
+        print(f"🔍 [Audit 1/2 (Loop #{attempt})] Spec Compliance Auditor inspecting backlog...", flush=True)
+        spec_audit_file = loop_dir / "audit_spec_compliance.md"
         prompt_spec = (
             f"[INST]\n"
-            f"[TASK: INDEPENDENT SPECIFICATION COMPLIANCE AUDIT (ATTEMPT #{attempt})]\n"
+            f"[TASK: INDEPENDENT SPECIFICATION COMPLIANCE AUDIT (LOOP #{attempt})]\n"
             f"You are the Specification Compliance Auditor (.agents/personas/spec_compliance_auditor.md).\n"
             f"Cross-reference ALL generated sprint backlogs against the source specifications in references/ line-by-line.\n\n"
             f"=== 1. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 2. GENERATED SPRINT BACKLOGS ACROSS ALL EPICS ===\n{all_backlogs_str}\n\n"
             f"Output format:\n"
-            f"# 🕵️ Specification Compliance Audit Report (Attempt #{attempt})\n\n"
+            f"# 🕵️ Specification Compliance Audit Report (Loop #{attempt})\n\n"
             f"## 1. Traceability Checklist\n"
             f"- [Requirement]: [Mapped Task ID] -> Status (COVERED / MISSING)\n\n"
             f"## 2. Verdict\n"
@@ -208,23 +211,26 @@ class SprintRefinementEngine:
         spec_text = (spec_res or "").strip()
         CodeParser.atomic_write_text(spec_audit_file, spec_text)
         
+        # ルートの最新参照としても保存
+        CodeParser.atomic_write_text(self.eval_dir / "audit_spec_compliance.md", spec_text)
+
         spec_passed = "Verdict: **APPROVED**" in spec_text or "Verdict: APPROVED" in spec_text or "**APPROVED**" in spec_text
         spec_status_icon = "✅ APPROVED" if spec_passed else "🛑 VETO/REJECTED"
-        print(f"📝 [Audit 1/2 Complete - Attempt #{attempt}] Spec Compliance Result: {spec_status_icon} (Saved to {spec_audit_file.relative_to(self.root_dir)})")
+        print(f"📝 [Audit 1/2 Complete - Loop #{attempt}] Spec Compliance: {spec_status_icon} (Saved to {spec_audit_file.relative_to(self.root_dir)})")
 
         # ----------------------------------------------------
         # 2. Security & AI Ethics Auditor による単独チェック
         # ----------------------------------------------------
-        print(f"🛡️ [Audit 2/2 (Attempt #{attempt})] Security & AI Ethics Auditor inspecting backlog...", flush=True)
-        sec_audit_file = self.eval_dir / "audit_security_ethics.md"
+        print(f"🛡️ [Audit 2/2 (Loop #{attempt})] Security & AI Ethics Auditor inspecting backlog...", flush=True)
+        sec_audit_file = loop_dir / "audit_security_ethics.md"
         prompt_sec = (
             f"[INST]\n"
-            f"[TASK: INDEPENDENT SECURITY & ETHICS AUDIT (ATTEMPT #{attempt})]\n"
+            f"[TASK: INDEPENDENT SECURITY & ETHICS AUDIT (LOOP #{attempt})]\n"
             f"You are the Security & AI Ethics Auditor (.agents/personas/security_ethics_auditor.md).\n"
             f"Audit the sprint backlogs for security standards, rate limiting (HTTP 429), container hardening (non-root UID 65532), and zero unrequested external services.\n\n"
             f"=== GENERATED SPRINT BACKLOGS ===\n{all_backlogs_str}\n\n"
             f"Output format:\n"
-            f"# 🛡️ Security & AI Ethics Audit Report (Attempt #{attempt})\n\n"
+            f"# 🛡️ Security & AI Ethics Audit Report (Loop #{attempt})\n\n"
             f"## 1. Security Checklist\n"
             f"- Rate Limiting & DoS Protection: (PASS / FAIL)\n"
             f"- Container Security (non-root): (PASS / FAIL)\n"
@@ -238,20 +244,37 @@ class SprintRefinementEngine:
         sec_text = (sec_res or "").strip()
         CodeParser.atomic_write_text(sec_audit_file, sec_text)
         
+        # ルートの最新参照としても保存
+        CodeParser.atomic_write_text(self.eval_dir / "audit_security_ethics.md", sec_text)
+
         sec_passed = "Verdict: **APPROVED**" in sec_text or "Verdict: APPROVED" in sec_text or "**APPROVED**" in sec_text
         sec_status_icon = "✅ APPROVED" if sec_passed else "🛑 VETO/REJECTED"
-        print(f"📝 [Audit 2/2 Complete - Attempt #{attempt}] Security & Ethics Result: {sec_status_icon} (Saved to {sec_audit_file.relative_to(self.root_dir)})")
+        print(f"📝 [Audit 2/2 Complete - Loop #{attempt}] Security & Ethics: {sec_status_icon} (Saved to {sec_audit_file.relative_to(self.root_dir)})")
+
+        summary_data = {
+            "loop_attempt": attempt,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "spec_compliance_passed": spec_passed,
+            "security_ethics_passed": sec_passed,
+            "overall_approved": spec_passed and sec_passed
+        }
+        CodeParser.atomic_write_text(loop_dir / "audit_summary.yaml", yaml.dump(summary_data, default_flow_style=False))
 
         return {
             "attempt": attempt,
             "spec_passed": spec_passed,
             "sec_passed": sec_passed,
-            "overall_passed": spec_passed and sec_passed
+            "overall_passed": spec_passed and sec_passed,
+            "loop_dir": loop_dir
         }
 
     def run_sprint_refinement(self, overall_debate_log: str):
         print("🚀 [Ceremony 2: Sprint Refinement] Executing Sprint Backlog Refinement...", flush=True)
         
+        # 既存の loop ディレクトリ数をカウントして attempt を算出
+        existing_loops = list(self.eval_dir.glob("loop_*"))
+        current_attempt = len(existing_loops) + 1
+
         # EpicRefinementEngine の堅牢なパーサーを利用して全エピックを抽出
         epic_engine = EpicRefinementEngine(self.root_dir, self.config)
         epics = epic_engine.extract_epics_from_log(overall_debate_log)
@@ -259,7 +282,7 @@ class SprintRefinementEngine:
         if not epics:
             epics = [{"title": "Epic 1 Core Foundation", "scope": "Core application logic and interface endpoints"}]
 
-        print(f"📋 [Ceremony 2] Found {len(epics)} Epics to refine in Ceremony 2!", flush=True)
+        print(f"📋 [Ceremony 2] Found {len(epics)} Epics to refine in Ceremony 2 (Loop Attempt #{current_attempt})!", flush=True)
 
         for idx, ep in enumerate(epics, 1):
             title = ep["title"]
@@ -279,16 +302,17 @@ class SprintRefinementEngine:
         BacklogSplitter.split_all_epics(self.root_dir, self.config)
         TestHarnessGenerator.generate_all(self.root_dir, self.config)
 
-        # 🛡️ Gemini による各自独立監査ゲートの実行 (リジェクト回数カウント付き)
-        audit_result = self.run_individual_final_audits(attempt=1)
+        # 🛡️ Gemini による各自独立監査ゲートの実行 (loop_N ディレクトリ構造で履歴管理)
+        audit_result = self.run_individual_final_audits(attempt=current_attempt)
 
         print("\n" + "=" * 50)
-        print(f"🏁 [Ceremony 2 Final Gate Summary - Attempt #{audit_result['attempt']}]")
+        print(f"🏁 [Ceremony 2 Final Gate Summary - Directory: {audit_result['loop_dir'].relative_to(self.root_dir)}]")
+        print(f"  - Loop Attempt Count: #{audit_result['attempt']}")
         print(f"  - Spec Compliance Audit: {'✅ PASS' if audit_result['spec_passed'] else '🛑 REJECTED/VETO'}")
         print(f"  - Security & Ethics Audit: {'✅ PASS' if audit_result['sec_passed'] else '🛑 REJECTED/VETO'}")
         print(f"  - Final Verdict: {'🎉 ALL APPROVED' if audit_result['overall_passed'] else '⚠️ VETO DETECTED (Requires Review)'}")
         print("=" * 50 + "\n")
 
-        self.update_status_dashboard("All Epics", f"リファインメント完了 (監査 Attempt #{audit_result['attempt']})")
-        print("🎉 [Ceremony 2 Complete] Sprint Refinement & Independent Final Audits completed successfully for all Epics!", flush=True)
+        self.update_status_dashboard("All Epics", f"リファインメント完了 (監査 Loop #{audit_result['attempt']})")
+        print(f"🎉 [Ceremony 2 Complete] Sprint Refinement & Independent Final Audits saved in {audit_result['loop_dir'].relative_to(self.root_dir)}!", flush=True)
         return True
