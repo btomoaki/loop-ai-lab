@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (完全ファイル委譲型)"""
+    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (AI Model 専門ペルソナ導入版)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -62,7 +62,7 @@ class EpicRefinementEngine:
                 return content
 
         print("🌐 [Ceremony 1: Epic Refinement] Conducting Architecture Debate & Epic Breakdown...", flush=True)
-        self.update_status_dashboard("�� 全ペルソナによる全体アーキテクチャディベート中...")
+        self.update_status_dashboard("💬 全ペルソナによる全体アーキテクチャディベート中...")
 
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True, config=self.config)
         inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
@@ -78,9 +78,10 @@ class EpicRefinementEngine:
             f"=== 5. TARGET DEVELOPER AGENT PROFILE (DOWNSTREAM CODER) ===\n{refs['target_agent']}\n\n"
             "Output MUST follow this format:\n"
             "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
-            "## 1. System Architecture Debate (PO, Architect, Spec Auditor, DevOps)\n"
+            "## 1. System Architecture Debate (PO, Architect, Capacity Guardian, Spec Auditor, DevOps)\n"
             "- **[PO Persona]**: Discusses product scope, user workflows, and core features from references/icon_generator.md.\n"
             "- **[Architect Persona]**: Discusses clean layer boundaries, domain logic, and GCP Cloud Run stateless architecture.\n"
+            "- **[Capacity Guardian Persona]**: Analyzes the downstream Coder model profile and enforces modular Epic sizing that prevents context overflow.\n"
             "- **[Spec Compliance Persona]**: Audits and vetoes any dropped requirements from references/icon_generator.md.\n"
             "- **[Platform & DevOps Persona]**: Discusses Docker containerization, Makefile targets, and GitHub Actions CI/CD.\n\n"
             "## 2. Epic Breakdown\n"
