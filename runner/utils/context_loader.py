@@ -1,15 +1,17 @@
 import os
 from pathlib import Path
+from runner.config.project_config import ProjectConfig
 
 
 class ContextLoader:
-    """Utility for clean, folder-level ceremony-specific context loading for LLM prompts."""
+    """Utility for clean, ceremony-specific context loading with dynamic agent adaptation."""
 
     @staticmethod
-    def get_ceremony_context(root_dir: Path, ceremony: str = "1_epic_refinement", include_dev_rules: bool = False, language: str = None) -> dict:
+    def get_ceremony_context(root_dir: Path, ceremony: str = "1_epic_refinement", include_dev_rules: bool = False, config: ProjectConfig = None) -> dict:
         """
-        指定されたセレモニーに必要な参照フォルダをシンプルにディレクトリ形式 (/) で返却。
+        指定されたセレモニーに必要な参照フォルダおよび開発者モデルプロファイルを返却。
         """
+        cfg = config or ProjectConfig.load(root_dir)
         specs_ref = "- references/"
 
         rule_files = [
@@ -18,8 +20,8 @@ class ContextLoader:
         ]
         if include_dev_rules:
             rule_files.append("- .agents/rules/development/")
-            if language:
-                lang_file = f".agents/rules/languages/{language.lower()}.md"
+            if cfg.language:
+                lang_file = f".agents/rules/languages/{cfg.language.lower()}.md"
                 if (root_dir / lang_file).exists():
                     rule_files.append(f"- {lang_file}")
             else:
@@ -28,13 +30,20 @@ class ContextLoader:
         rules_ref = "\n".join(rule_files)
         personas_ref = "- .agents/personas/"
 
+        target_agent_profile = (
+            f"- Target Developer Agent Type: {cfg.developer_model_type.upper()}\n"
+            f"- Max Context Limit: {cfg.developer_model_context_limit} tokens\n"
+            f"- Persona Constraint: {cfg.developer_model_description}"
+        )
+
         return {
             "specs": specs_ref,
             "rules": rules_ref,
-            "personas": personas_ref
+            "personas": personas_ref,
+            "target_agent": target_agent_profile
         }
 
     @staticmethod
     def get_refinement_file_references(root_dir: Path) -> dict:
-        """互換性のための既存ショートカット"""
+        """互換性のためのショートカット"""
         return ContextLoader.get_ceremony_context(root_dir, ceremony="1_epic_refinement", include_dev_rules=False)

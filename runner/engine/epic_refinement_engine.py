@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】全体アーキテクチャ・エピックリファインメントエンジン (status.md 自動更新)"""
+    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (AI-to-AI 適応型)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -47,46 +47,34 @@ class EpicRefinementEngine:
 ---
 
 ## 📊 全エピック進捗ステータス
-- 🌐 全体仕様解釈 & 多ペルソナディベート実行中...
+- 🌐 {status_message}
 """
         CodeParser.atomic_write_text(self.status_file, dashboard_content)
-        print(f"📊 [Status Dashboard] Updated state/status.md (Ceremony 1: {status_message})", flush=True)
-
-    def extract_epics_from_log(self, debate_log: str) -> list:
-        epics = []
-        pattern = r"(?:^|\n)##\s*2\.\s*Epic\s*Breakdown.*?\n(.*?)(?=\n##|\Z)"
-        match = re.search(pattern, debate_log, re.DOTALL | re.IGNORECASE)
-        if match:
-            lines = match.group(1).strip().splitlines()
-            for line in lines:
-                m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
-                if m_epic:
-                    epics.append({
-                        "title": m_epic.group(1).strip(),
-                        "scope": m_epic.group(2).strip()
-                    })
-        return epics
+        print(f"📊 [Status Dashboard] Updated state/status.md ({status_message})", flush=True)
 
     def run_epic_refinement(self) -> str:
         overall_debate_file = self.eval_dir / "overall_debate_log.md"
         
-        # すでに overall_debate_log.md がある場合は再利用
         if overall_debate_file.exists():
-            print("⏯️ [EpicRefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップします。")
-            return overall_debate_file.read_text(encoding="utf-8")
+            content = overall_debate_file.read_text(encoding="utf-8").strip()
+            if len(content) > 500:
+                print("⏯️ [EpicRefinementEngine 中断再開] 全体ディベートログ (overall_debate_log.md) が存在するためスキップします。")
+                return content
 
-        print("🌐 [Ceremony 1: Epic Refinement] Overall Multi-Persona Debate...", flush=True)
+        print("🌐 [Ceremony 1: Epic Refinement] Conducting AI-to-AI Architecture Debate & Epic Breakdown...", flush=True)
         self.update_status_dashboard("💬 全ペルソナによる全体アーキテクチャディベート中...")
-        
-        refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True)
-        
+
+        refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True, config=self.config)
+        inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
+
         prompt = (
-            f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
-            f"=== 1. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 2. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 3. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
-            "【INSTRUCTION】\n"
-            "Generate the complete Ceremony 1 Overall Architecture Debate Log.\n"
+            f"[INST]\n"
+            f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n\n"
+            f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
+            f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+            f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+            f"=== 4. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
+            f"=== 5. TARGET DEVELOPER AGENT PROFILE (DOWNSTREAM CODER) ===\n{refs['target_agent']}\n\n"
             "Output MUST follow this format:\n"
             "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
             "## 1. Multi-Persona Discussion\n"
@@ -94,34 +82,49 @@ class EpicRefinementEngine:
             "- **[Architect Persona]**: System architecture and boundaries.\n"
             "- **[Anti-Complexity Persona]**: Challenge over-engineering, demand flat KISS/YAGNI architecture.\n"
             "- **[Spec Compliance Persona]**: Audit against requirements.\n"
-            "- **[Capacity Guardian Persona]**: Limit epic scope to manageable units.\n"
+            "- **[Capacity Guardian Persona]**: Limit epic scope to manageable units for downstream coder.\n"
             "- **[FinOps Persona]**: Physical compute efficiency and running cost governance.\n"
             "- **[QA & DevOps Personas]**: Testing, CI/CD, and operational readiness.\n\n"
             "## 2. Epic Breakdown\n"
-            "- **Epic 1 <Title>**: <Scope description>\n"
-            "- **Epic 2 <Title>**: <Scope description>\n"
+            "- **Epic 1 <Title>**: <Scope description with explicit I/O contracts>\n"
+            "- **Epic 2 <Title>**: <Scope description with explicit I/O contracts>\n"
+            "[/INST]\n"
         )
-        
+
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
+        print("🔍 [Ceremony 1] Requesting Overall Architecture Debate Log from LLM...", flush=True)
         llm_raw_response = self.refinement_agent.generate_text(prompt)
-        
-        overall_debate_log = llm_raw_response.strip() if llm_raw_response and llm_raw_response.strip() else (
-            f"# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
-            f"## 1. Multi-Persona Discussion\n"
-            f"- **[PO Persona]**: Defined core business requirements for {self.config.project_name or 'project'}.\n"
-            f"- **[Architect Persona]**: Proposed Clean Architecture in {self.config.language or 'standard language'}.\n"
-            f"- **[Anti-Complexity Persona]**: Streamlined layers to avoid over-engineering.\n"
-            f"- **[Spec Compliance Persona]**: Verified 100% testable requirement coverage.\n"
-            f"- **[Capacity Guardian Persona]**: Confirmed micro-sized epic scoping.\n"
-            f"- **[FinOps Persona]**: Ensured zero un-needed cost overhead.\n"
-            f"- **[DevOps Persona]**: Mandated Makefile & GitHub Actions.\n\n"
-            f"## 2. Epic Breakdown\n"
-            f"- **Epic 1 Core Logic**: Implement core application domain logic.\n"
-            f"- **Epic 2 Delivery & API**: Implement interfaces, delivery endpoints, and documentation.\n"
-        )
-        
+        overall_debate_log = (llm_raw_response or "").strip()
+
+        if len(overall_debate_log) >= 500 and "## 1. Multi-Persona Discussion" in overall_debate_log:
+            CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
+            print(f"📝 [Ceremony 1 Complete] Successfully generated and saved debate log to {overall_debate_file.relative_to(self.root_dir)}")
+            return overall_debate_log
+
         CodeParser.atomic_write_text(overall_debate_file, overall_debate_log)
-        print(f"📝 [Ceremony 1 Complete] Saved overall debate log: {overall_debate_file.relative_to(self.root_dir)}")
-        return overall_debate_log
+        print(f"\n⚠️ [Ceremony 1 Halted] Insufficient debate content ({len(overall_debate_log)} chars). Saved raw output to {overall_debate_file.relative_to(self.root_dir)}")
+        raise RuntimeError("❌ [Ceremony 1 Failed] Failed to generate valid overall architecture debate log on 1st attempt.")
+
+    def extract_epics_from_log(self, debate_log: str) -> list:
+        epics = []
+        pattern = r"(?:^|\n)##\s*2\.\s*Epic\s*Breakdown.*?\n(.*?)(?=\n##|\Z)"
+        match = re.search(pattern, debate_log, re.DOTALL | re.IGNORECASE)
+        lines = match.group(1).strip().splitlines() if match else debate_log.splitlines()
+
+        for line in lines:
+            m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
+            if m_epic:
+                t = m_epic.group(1).strip()
+                s = m_epic.group(2).strip()
+                if t and not t.startswith("[") and not t.lower().startswith("epic 1 <title>"):
+                    epics.append({
+                        "id": f"EPIC-{len(epics)+1}",
+                        "title": t,
+                        "scope": s
+                    })
+
+        if not epics:
+            raise RuntimeError("❌ [Epic Extraction Failed] Could not extract any epics from debate log!")
+        return epics
