@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (AI Model 専門ペルソナ導入版)"""
+    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (Dependencies 完備版)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -89,11 +89,13 @@ class EpicRefinementEngine:
             "- **Epic 1 <Title>**:\n"
             "  - **Background & Motivation**: <Why this epic is needed and its value>\n"
             "  - **Scope**: <Functional and technical scope>\n"
+            "  - **Dependencies**: <List of prerequisite Epics or 'None (Root Foundation)'>\n"
             "  - **Acceptance Criteria (AC)**: <Testable requirements>\n"
             "  - **Definition of Done (DoD)**: <Unit tests, code coverage, zero lint errors, buildable artifact>\n"
             "- **Epic 2 <Title>**:\n"
             "  - **Background & Motivation**: <Why this epic is needed and its value>\n"
             "  - **Scope**: <Functional and technical scope>\n"
+            "  - **Dependencies**: <Prerequisite Epics (e.g. Epic 1)>\n"
             "  - **Acceptance Criteria (AC)**: <Testable requirements>\n"
             "  - **Definition of Done (DoD)**: <Unit tests, code coverage, zero lint errors, buildable artifact>\n"
             "[/INST]\n"
