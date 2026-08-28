@@ -10,7 +10,7 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
 class EpicRefinementEngine:
-    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (スリム化 4-Persona 体制)"""
+    """【セレモニー 1】全体アーキテクチャ・ディベート & エピックリファインメントエンジン (完全ファイル委譲型)"""
 
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
@@ -23,7 +23,7 @@ class EpicRefinementEngine:
         self.eval_dir.mkdir(parents=True, exist_ok=True)
 
         refinement_provider = self._get_refinement_provider()
-        print(f"�� [EpicRefinementEngine] Using Provider '{refinement_provider}' for Ceremony 1.", flush=True)
+        print(f"🧠 [EpicRefinementEngine] Using Provider '{refinement_provider}' for Ceremony 1.", flush=True)
         self.refinement_agent = LLMAdapterFactory.get_adapter(provider=refinement_provider)
 
     def _get_refinement_provider(self) -> str:
@@ -79,10 +79,7 @@ class EpicRefinementEngine:
             "Output MUST follow this format:\n"
             "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
             "## 1. Multi-Persona Discussion\n"
-            "- **[PO Persona]**: Business requirements, user workflows, and feature scopes from specifications.\n"
-            "- **[Architect Persona]**: Clean Architecture layer boundaries, pure functions, and API contracts.\n"
-            "- **[Spec Compliance Persona]**: Audit against requirements in references/icon_generator.md.\n"
-            "- **[Platform & DevOps Persona]**: Container build, Makefile targets, and CI/CD testing boundaries.\n\n"
+            "(Substantial debate between participating personas analyzing specifications, boundaries, and coder adaptation)\n\n"
             "## 2. Epic Breakdown\n"
             "- **Epic 1 <Title>**: <Scope description with explicit I/O contracts>\n"
             "- **Epic 2 <Title>**: <Scope description with explicit I/O contracts>\n"
