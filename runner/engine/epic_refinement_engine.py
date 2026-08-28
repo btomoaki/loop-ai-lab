@@ -69,7 +69,8 @@ class EpicRefinementEngine:
 
         prompt = (
             f"[INST]\n"
-            f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n\n"
+            f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
+            f"Recursively read and analyze all referenced files and specifications listed below.\n\n"
             f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
             f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
             f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
@@ -109,10 +110,46 @@ class EpicRefinementEngine:
 
     def extract_epics_from_log(self, debate_log: str) -> list:
         epics = []
-        pattern = r"(?:^|\n)##\s*2\.\s*Epic\s*Breakdown.*?\n(.*?)(?=\n##|\Z)"
-        match = re.search(pattern, debate_log, re.DOTALL | re.IGNORECASE)
-        lines = match.group(1).strip().splitlines() if match else debate_log.splitlines()
+        
+        # 1. Try extracting YAML codeblock if present
+        raw_yaml_match = re.search(r"```(?:yaml)?\n(.*?)```", debate_log, re.DOTALL)
+        if raw_yaml_match:
+            try:
+                parsed = yaml.safe_load(raw_yaml_match.group(1).strip()) or {}
+                raw_epics = parsed.get("epics", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
+                for e in raw_epics:
+                    if isinstance(e, dict):
+                        t = e.get("title") or e.get("name") or ""
+                        s = e.get("scope") or e.get("description") or ""
+                        if t.strip():
+                            epics.append({"id": e.get("id", f"EPIC-{len(epics)+1}"), "title": t.strip(), "scope": s.strip()})
+                if epics:
+                    return epics
+            except Exception:
+                pass
 
+        # 2. Extract Section 2 content
+        pattern = r"(?:^|\n)##\s*2\.\s*Epic\s*Breakdown.*?\n(.*)"
+        match = re.search(pattern, debate_log, re.DOTALL | re.IGNORECASE)
+        section_text = match.group(1) if match else debate_log
+
+        # 3. Match H3/H4 headers (e.g. ### **Epic 1: Prometheus Data Ingestor** or ### Epic 1 ...)
+        h3_matches = list(re.finditer(r"(?:^|\n)###+\s*\*{0,2}(Epic\s*\d+[^:\n*]*[:\s\-]+[^\n*]+)\*{0,2}(.*?)(?=\n###|\Z)", section_text, re.DOTALL | re.IGNORECASE))
+        if h3_matches:
+            for m in h3_matches:
+                t = m.group(1).strip().strip("*").strip()
+                s = m.group(2).strip()
+                if t and not t.lower().startswith("epic 1 <title>"):
+                    epics.append({
+                        "id": f"EPIC-{len(epics)+1}",
+                        "title": t,
+                        "scope": s
+                    })
+            if epics:
+                return epics
+
+        # 4. Match Markdown list items (- **Epic 1 <Title>**: <Scope>)
+        lines = section_text.splitlines()
         for line in lines:
             m_epic = re.search(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.*)", line)
             if m_epic:

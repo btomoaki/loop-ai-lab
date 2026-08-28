@@ -9,11 +9,19 @@ class ContextLoader:
     @staticmethod
     def get_ceremony_context(root_dir: Path, ceremony: str = "1_epic_refinement", include_dev_rules: bool = False, config: ProjectConfig = None) -> dict:
         """
-        指定されたセレモニーに必要な参照フォルダおよび開発者モデルプロファイルを返却。
+        指定されたセレモニーに必要な参照ファイル一覧および開発者モデルプロファイルを返却。
         """
         cfg = config or ProjectConfig.load(root_dir)
-        specs_ref = "- references/"
+        
+        # 1. References files
+        ref_dir = root_dir / "references"
+        if ref_dir.exists() and ref_dir.is_dir():
+            spec_files = sorted([f"- {f.relative_to(root_dir)}" for f in ref_dir.glob("**/*") if f.is_file()])
+            specs_ref = "\n".join(spec_files) if spec_files else "- references/"
+        else:
+            specs_ref = "- references/"
 
+        # 2. Rule files
         rule_files = [
             "- .agents/rules/scrum_ceremonies_and_governance.md",
             f"- .agents/rules/{ceremony}/"
