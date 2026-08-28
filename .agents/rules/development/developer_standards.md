@@ -30,7 +30,11 @@ Every developer and AI agent MUST naturally and instinctively enforce the follow
 
 ## 5. 📖 Comprehensive Project Documentation (Mandatory README)
 Every repository/workspace MUST include a comprehensive and standard `README.md` at the root directory documenting:
-- **Build & Test Executions**: Step-by-step instructions (e.g. commands like `make build`, `make test`).
-- **Development Environment Setup**: Prerequisites and setup commands.
+- **Build & Test Executions**: Step-by-step instructions for local validation (e.g. `make build`, `make test`, `make lint`).
+- **Development Environment Setup**: Prerequisites, toolchains, and initial workspace bootstrap procedures.
 - **Directory Structure Map**: A text-based tree view demonstrating Clean Architecture layer mapping.
-- **API Reference & OpenAPI (Swagger)**: Explicit endpoints overview and instructions on how to locate and view the OpenAPI contract (`docs/openapi.yaml`).
+- **API Reference & OpenAPI (Swagger)**: High-level overview of endpoints and instructions on how to locate and view the OpenAPI contract (`docs/openapi.yaml`).
+- **Configuration & Environment Variables**: Namespace-grouped environment variables table (names, types, default values, descriptions).
+- **Container Verification Guide**: Steps to build the Docker image, run it locally, and verify non-root UID execution (`docker run --user 65532 ...`).
+- **CI/CD pipeline Status**: GitHub Actions status verification and workflow overview.
+- **Architectural Reference Links**: Clear pointers to project ADRs (`references/decisions.md`) for architectural alignment.
