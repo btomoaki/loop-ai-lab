@@ -80,20 +80,20 @@ class EpicRefinementEngine:
             "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
             "## 1. System Architecture Debate (PO, Architect, Spec Auditor, DevOps)\n"
             "- **[PO Persona]**: Discusses product scope, user workflows, and core features from references/icon_generator.md.\n"
-            "- **[Architect Persona]**: Discusses clean layer boundaries, pure functions, and GCP Cloud Run stateless architecture.\n"
+            "- **[Architect Persona]**: Discusses clean layer boundaries, domain logic, and GCP Cloud Run stateless architecture.\n"
             "- **[Spec Compliance Persona]**: Audits and vetoes any dropped requirements from references/icon_generator.md.\n"
             "- **[Platform & DevOps Persona]**: Discusses Docker containerization, Makefile targets, and GitHub Actions CI/CD.\n\n"
             "## 2. Epic Breakdown\n"
-            "(Decompose all functional requirements and delivery readiness from specifications into modular Epics: Epic 1, Epic 2, ... with explicit I/O contracts)\n"
-            "- **Epic 1 <Title>**: <Scope description with explicit I/O contracts>\n"
-            "- **Epic 2 <Title>**: <Scope description with explicit I/O contracts>\n"
+            "(Decompose the application into modular, self-contained Epics: Epic 1, Epic 2, ... covering core logic, image rendering, HTTP API, Web UI, and CI/CD/Docker delivery)\n"
+            "- **Epic 1 <Title>**: <Scope description and acceptance criteria>\n"
+            "- **Epic 2 <Title>**: <Scope description and acceptance criteria>\n"
             "[/INST]\n"
         )
 
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)
 
-        print("�� [Ceremony 1] Requesting Overall Architecture Debate Log from LLM...", flush=True)
+        print("🔍 [Ceremony 1] Requesting Overall Architecture Debate Log from LLM...", flush=True)
         llm_raw_response = self.refinement_agent.generate_text(prompt)
         overall_debate_log = (llm_raw_response or "").strip()
 
