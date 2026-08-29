@@ -125,7 +125,12 @@ class SprintExecutionEngine:
             f"【STRICT FOCUS MANDATE】\n"
             f"Generate ONLY the source and configuration files for the {layer_name} layer ({layer_target}).\n"
             f"Do NOT generate files for other layers in this request to avoid token truncation.\n"
-            f"Use `# FILE: <relative_path>` format."
+            f"Use "[FILE: <relative_path>]" format. For example:
+[FILE: path/to/file.go]
+```go
+package main
+...
+```"
         )
 
         actual_prompt_file = self.eval_dir / f"actual_dev_prompt_{layer_name.lower()}.md"
