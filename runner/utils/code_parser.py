@@ -69,8 +69,18 @@ class CodeParser:
                         # 先頭の改行などを削除
                         final_code = final_code.lstrip()
 
-                        if not CodeParser.is_invalid_path(current_path):
-                            full_path = target_dir / current_path
+                        # 重複するプレフィックス (workspace/ や workspace/identicon-generator/ 等) を除外
+                        clean_path = current_path
+                        if clean_path.startswith("workspace/"):
+                            parts = clean_path.split("/")
+                            if len(parts) > 2 and parts[1] == "identicon-generator":
+                                clean_path = "/".join(parts[2:])
+                            elif len(parts) > 1:
+                                clean_path = "/".join(parts[1:])
+
+                        if not CodeParser.is_invalid_path(clean_path):
+                            full_path = target_dir / clean_path
+                            current_path = clean_path
                             CodeParser.atomic_write_text(full_path, final_code)
                             written_files.append(current_path)
 
