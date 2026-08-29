@@ -94,6 +94,8 @@ class EpicRefinementEngine:
             "  - **Dependencies**: <List of prerequisite Epics or 'None (Root Foundation)'>\n"
             "  - **Acceptance Criteria (AC)**: <Testable requirements>\n"
             "  - **Definition of Done (DoD)**: <Unit tests, code coverage, zero lint errors, buildable artifact>\n"
+            "  - **Target Personas for Detailed Design**: <List of personas (from Architect, Frontend, DB, Platform, QA) interested or experienced in this Epic>\n"
+            "  - **Isolated Epic Specification**: <Detailed requirement details, parameters, rules, color logics extracted specifically for this Epic from target spec files>\n"
             "- **Epic 2 <Title>**:\n"
             "  - **Description**: <Technical explanation of what to build>\n"
             "  - **Objective**: <Business/functional value of what we want to achieve>\n"
