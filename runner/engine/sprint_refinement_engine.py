@@ -59,28 +59,13 @@ class SprintRefinementEngine:
         CodeParser.atomic_write_text(self.status_file, dashboard_content)
         print(f"📊 [Status Dashboard] Updated state/status.md ({epic_name}: {status_msg})", flush=True)
 
-    def _get_latest_audit_feedback(self) -> str:
-        # 最新の loop_N ディレクトリを探し、VETO結果があればそのテキストを返す
-        existing_loops = sorted(list(self.eval_dir.glob("loop_*")), key=lambda p: int(p.name.split("_")[1]) if p.name.split("_")[1].isdigit() else 0)
-        if not existing_loops:
-            return ""
-        
-        latest_loop = existing_loops[-1]
-        summary_file = latest_loop / "audit_summary.yaml"
-        if summary_file.exists():
+    def _get_ceremony_retrospective(self) -> str:
+        retro_file = self.eval_dir / "retrospective" / "ceremony.md"
+        if retro_file.exists():
             try:
-                with open(summary_file, "r") as sf:
-                    data = yaml.safe_load(sf) or {}
-                if data.get("overall_approved") is False:
-                    # VETO指摘あり。SpecとSecurityのレポートを結合して返す
-                    feedback_str = "🚨 PREVIOUS AUDIT VETO FEEDBACK (MUST REMEDIATE):\n"
-                    spec_file = latest_loop / "audit_spec_compliance.md"
-                    sec_file = latest_loop / "audit_security_ethics.md"
-                    if spec_file.exists():
-                        feedback_str += f"=== SPEC COMPLIANCE VETO FINDINGS ===\n{spec_file.read_text(encoding='utf-8')}\n"
-                    if sec_file.exists():
-                        feedback_str += f"=== SECURITY & ETHICS VETO FINDINGS ===\n{sec_file.read_text(encoding='utf-8')}\n"
-                    return feedback_str
+                content = retro_file.read_text(encoding="utf-8").strip()
+                if content:
+                    return f"🚨 CRITICAL SCUM CEREMONY RETROSPECTIVE (LESSONS LEARNED - MUST ADHERE):\n{content}\n"
             except Exception:
                 pass
         return ""
@@ -92,7 +77,7 @@ class SprintRefinementEngine:
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="2_sprint_refinement", include_dev_rules=True, config=self.config)
         inst_file_rel = "agents/2_sprint_refinement/sprint_refinement_planner.md"
         
-        feedback = self._get_latest_audit_feedback()
+        retro_content = self._get_ceremony_retrospective()
 
         # 1. debate_log.md 生成
         if not debate_file.exists():
@@ -108,7 +93,7 @@ class SprintRefinementEngine:
                 f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
                 f"=== 5. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
                 f"=== 6. TARGET DEVELOPER AGENT PROFILE (CODER MODEL) ===\n{refs['target_agent']}\n\n"
-                f"=== 7. PREVIOUS AUDIT FEEDBACK (IF ANY) ===\n{feedback}\n\n"
+                f"=== 7. CEREMONY RETROSPECTIVE (IF ANY) ===\n{retro_content}\n\n"
                 "Output MUST follow this format:\n"
                 f"# 📋 Sprint Refinement Debate Log: {title}\n\n"
                 "## 1. Multi-Persona Discussion\n"
