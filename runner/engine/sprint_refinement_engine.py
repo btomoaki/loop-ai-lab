@@ -70,7 +70,7 @@ class SprintRefinementEngine:
                 pass
         return ""
 
-    def run_sprint_refinement_for_epic(self, epic_dir: Path, title: str, scope: str, epic_idx: int):
+    def run_sprint_refinement_for_epic(self, epic_dir: Path, title: str, scope: str, required_personas: list, epic_idx: int):
         debate_file = epic_dir / "debate_log.md"
         backlog_file = epic_dir / "epic_backlog.yaml"
 
@@ -78,6 +78,48 @@ class SprintRefinementEngine:
         inst_file_rel = "agents/2_sprint_refinement/sprint_refinement_planner.md"
         
         retro_content = self._get_ceremony_retrospective()
+
+        # ペルソナを required_personas に基づいてフィルタリング
+        filtered_personas_instruction = ""
+        if "personas" in refs:
+            persona_blocks = refs["personas"].split("\n\n")
+            active_persona_blocks = []
+            for block in persona_blocks:
+                # Scrum Master と Capacity Guardian などのベースとなる共通ガードは常に残す
+                if "Scrum Master" in block or "Capacity Guardian" in block or "Anti-Complexity" in block or "FinOps" in block:
+                    active_persona_blocks.append(block)
+                    continue
+                for p in required_personas:
+                    if p.lower() in block.lower():
+                        active_persona_blocks.append(block)
+                        break
+            filtered_personas_instruction = "\n\n".join(active_persona_blocks)
+        else:
+            filtered_personas_instruction = refs.get("personas", "")
+
+        # フォーマット指定部分のペルソナ一覧も required_personas に応じて動的フィルタリング
+        persona_format_lines = [
+            "- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD."
+        ]
+        p_lower = [p.lower() for p in required_personas]
+        if "architect" in p_lower:
+            persona_format_lines.append("- **[Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries using Go standard library.")
+        if "frontend" in p_lower:
+            persona_format_lines.append("- **[Frontend UI/UX Engineer Persona]**: Web UI components adhering strictly to specifications (No unrequested heavy frameworks).")
+        if "db" in p_lower or "data" in p_lower:
+            persona_format_lines.append("- **[DB / Data Engineer Persona]**: Data structures and persistence constraints (stateless).")
+        if "platform" in p_lower or "devops" in p_lower:
+            persona_format_lines.append("- **[Platform & DevOps Persona]**: Dockerfile (non-root UID 65532), Makefile, and Cloud Run runtime execution.")
+        if "qa" in p_lower or "test" in p_lower:
+            persona_format_lines.append("- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.")
+        
+        # ガード役
+        persona_format_lines.extend([
+            "- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict DoR, task size constraints, and prevents bloated structures.",
+            "- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering.",
+            "- **[FinOps & Cost Governance Persona]**: Resource and cloud cost efficiency guard."
+        ])
+        persona_format_str = "\n".join(persona_format_lines)
 
         # 1. debate_log.md 生成
         if not debate_file.exists():
@@ -91,23 +133,14 @@ class SprintRefinementEngine:
                 f"=== 2. TARGET EPIC ===\n- Title: {title}\n- Scope: {scope}\n\n"
                 f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
                 f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-                f"=== 5. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
+                f"=== 5. MULTI-PERSONA INSTRUCTIONS ===\n{filtered_personas_instruction}\n\n"
                 f"=== 6. TARGET DEVELOPER AGENT PROFILE (CODER MODEL) ===\n{refs['target_agent']}\n\n"
                 f"=== 7. CEREMONY RETROSPECTIVE (IF ANY) ===\n{retro_content}\n\n"
                 "Output MUST follow this format:\n"
                 f"# 📋 Sprint Refinement Debate Log: {title}\n\n"
                 "## 1. Multi-Persona Discussion\n"
                 "### 🔨 Sprint Builders:\n"
-                "- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD.\n"
-                "- **[Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries using Go standard library.\n"
-                "- **[Frontend UI/UX Engineer Persona]**: Web UI components adhering strictly to specifications (No unrequested heavy frameworks).\n"
-                "- **[DB / Data Engineer Persona]**: Data structures and persistence constraints (stateless).\n"
-                "- **[Platform & DevOps Persona]**: Dockerfile (non-root UID 65532), Makefile, and Cloud Run runtime execution.\n"
-                "- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.\n\n"
-                "### 🛡️ Independent Constraint Guards:\n"
-                "- **[Capacity Guardian Persona]**: AI Model Expert. Enforces DoR (strictly 1-2 ACs per task), limits task size (1-5 SP), mandates that any task with >=8 SP be decomposed immediately, and prohibits bloated frameworks.\n"
-                "- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering and eliminating unrequested features.\n"
-                "- **[FinOps & Cost Governance Persona]**: Resource, time, and cloud cost efficiency guard.\n\n"
+                f"{persona_format_str}\n\n"
                 "## 2. Sprint Backlog Plan\n"
                 "- **TASK-1.1**: <Description, Story Points, Dependencies, and AC (Max 2 ACs)>\n"
                 "- **TASK-1.2**: <Description, Story Points, Dependencies, and AC (Max 2 ACs)>\n"
@@ -314,7 +347,48 @@ class SprintRefinementEngine:
             epic_dir.mkdir(parents=True, exist_ok=True)
             
             print(f"\n⚙️ [Ceremony 2: Refining Epic {idx}/{len(epics)}] {title} (Dir: {epic_dir_name})", flush=True)
-            self.run_sprint_refinement_for_epic(epic_dir, title, scope, idx)
+            
+            # Gemini (クラウド) を使用して、巨大な overall_debate_log から本エピックに関する詳細仕様と関与ペルソナのみをピンポイントで切り出す
+            spec_file = epic_dir / "epic_specification.yaml"
+            if not spec_file.exists():
+                print(f"  📄 [Ceremony 2] Extracting detailed specs and target personas for: {title}...", flush=True)
+                gemini_adapter = LLMAdapterFactory.get_adapter(provider="gemini")
+                extract_prompt = (
+                    f"You are a Senior Project Manager and Systems Architect.\n"
+                    f"Read the following overall debate log, and extract ONLY the detailed technical specifications, architecture decisions, interfaces, configurations, and rules that are directly relevant to this specific epic: \"{title}\".\n"
+                    f"Also, identify the target required personas for detailed design debate of this epic from this list: [Architect, Frontend, DB, Platform, QA]. Do NOT include DB if no database is used, or Frontend if no UI is built. Base this logical choice strictly on the epic technical scope.\n\n"
+                    f"=== OVERALL DEBATE LOG ===\n{overall_debate_log}\n\n"
+                    f"Output strictly in YAML format as follows:\n"
+                    f"epic_title: \"{title}\"\n"
+                    f"required_personas:\n"
+                    f"  - Architect\n"
+                    f"  - QA\n"
+                    f"detailed_spec: |\n"
+                    f"  <detailed specs and constraints extracted from the log>\n"
+                )
+                try:
+                    spec_response = gemini_adapter.generate_text(extract_prompt)
+                    # YAMLコードブロックなどを取り除いてクリーンにする
+                    clean_yaml = spec_response or ""
+                    if "```yaml" in clean_yaml:
+                        clean_yaml = clean_yaml.split("```yaml")[1].split("```")[0]
+                    elif "```" in clean_yaml:
+                        clean_yaml = clean_yaml.split("```")[1].split("```")[0]
+                    CodeParser.atomic_write_text(spec_file, clean_yaml.strip())
+                except Exception as e:
+                    print(f"  ⚠️ [Ceremony 2 Warning] Failed to extract spec using Gemini: {e}")
+            
+            required_personas = ["Architect", "QA"]
+            detailed_spec = scope
+            if spec_file.exists():
+                try:
+                    spec_data = yaml.safe_load(spec_file.read_text(encoding="utf-8")) or {}
+                    required_personas = spec_data.get("required_personas", ["Architect", "QA"])
+                    detailed_spec = spec_data.get("detailed_spec", scope)
+                except Exception as e:
+                    print(f"  ⚠️ [Ceremony 2 Warning] Failed to parse spec file: {e}")
+
+            self.run_sprint_refinement_for_epic(epic_dir, title, detailed_spec, required_personas, idx)
 
         # Backlog 分割 & テストハーネス生成
         print("\n🚀 [Ceremony 2] Generating automated test harness scripts for all refined Epics...", flush=True)
