@@ -65,7 +65,7 @@ class SprintExecutionEngine:
         result_file = epic_dir / f"sprint_{sprint_num}_result.yaml"
         now_str = datetime.now().isoformat()
         
-        rel_files = [str(f.relative_to(self.root_dir)) for f in written_files] if written_files else []
+        rel_files = [str(Path(f).relative_to(self.root_dir)) for f in written_files] if written_files else []
         
         result_data = {
             "sprint": sprint_num,
@@ -125,12 +125,7 @@ class SprintExecutionEngine:
             f"【STRICT FOCUS MANDATE】\n"
             f"Generate ONLY the source and configuration files for the {layer_name} layer ({layer_target}).\n"
             f"Do NOT generate files for other layers in this request to avoid token truncation.\n"
-            f"Use "[FILE: <relative_path>]" format. For example:
-[FILE: path/to/file.go]
-```go
-package main
-...
-```"
+            "Use \"[FILE: <relative_path>]\" format. For example:\n[FILE: path/to/file.go]\n```go\npackage main\n...\n```"
         )
 
         actual_prompt_file = self.eval_dir / f"actual_dev_prompt_{layer_name.lower()}.md"
@@ -143,6 +138,7 @@ package main
             print(f"⚠️ [SprintExecutionEngine Warning] LLM returned empty response for layer {layer_name}!")
             return []
 
+        CodeParser.atomic_write_text(self.root_dir / "state" / f"debug_llm_response_{layer_name.lower()}.txt", llm_response)
         written_files = CodeParser.apply_code_changes(llm_response, target_ws)
         print(f"�� [SprintExecutionEngine] Written {len(written_files)} files for layer {layer_name}", flush=True)
         return written_files
