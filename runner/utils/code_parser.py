@@ -36,19 +36,65 @@ class CodeParser:
 
     @staticmethod
     def apply_code_changes(llm_output: str, target_dir: Path, config=None):
-        pattern = r"(?:\\\[FILE:\\s*([^\\n\\]]+)\\]|#\\s*FILE:\\s*([^\\n\\r]+))\\s*```(?:[a-zA-Z0-9_-]+)?\\s*\\n(.*?)```"
-        matches = list(re.finditer(pattern, llm_output, re.DOTALL))
+        """
+        Extremely robust parser that scans LLM output for files.
+        Handles both outside/inside code-block tags:
+        [FILE: path] or # FILE: path or // FILE: path
+        """
         written_files = []
+        if not llm_output:
+            return written_files
 
-        for m in matches:
-            rel_path = (m.group(1) or m.group(2) or "").strip()
-            code = m.group(3)
+        # 1. 汎用的なファイル検出用の正規表現パターン
+        # [FILE: path], # FILE: path, // FILE: path, ### filepath: path などに対応
+        file_tag_pattern = r"(?:\[FILE:\s*([^\n\]]+)\]|(?://|#)\s*FILE:\s*([^\n\r\s]+)|###\s*filepath:\s*([^\n\r\s]+))"
 
-            if CodeParser.is_invalid_path(rel_path):
+        lines = llm_output.splitlines()
+        current_path = None
+        in_code_block = False
+        code_lines = []
+
+        for line in lines:
+            stripped = line.strip()
+
+            # コードブロックの開始/終了をチェック
+            if stripped.startswith("```"):
+                if in_code_block:
+                    # コードブロック終了 -> 収集したコードを書き出す
+                    if current_path and code_lines:
+                        # もしコードブロックの内側1行目にファイル名が入っていた場合、それを取り除く
+                        final_code = "\n".join(code_lines)
+                        # 内側のタグをクリーンアップ
+                        final_code = re.sub(file_tag_pattern, "", final_code).strip()
+                        # 先頭の改行などを削除
+                        final_code = final_code.lstrip()
+
+                        if not CodeParser.is_invalid_path(current_path):
+                            full_path = target_dir / current_path
+                            CodeParser.atomic_write_text(full_path, final_code)
+                            written_files.append(current_path)
+
+                    in_code_block = False
+                    code_lines = []
+                    # 書き出し終わったらパス指定をクリア
+                    current_path = None
+                else:
+                    # コードブロック開始
+                    in_code_block = True
+                    code_lines = []
                 continue
 
-            full_path = target_dir / rel_path
-            CodeParser.atomic_write_text(full_path, code)
-            written_files.append(rel_path)
+            # 行の中にファイル指定タグがあるかチェック
+            match = re.search(file_tag_pattern, line, re.IGNORECASE)
+            if match:
+                detected_path = (match.group(1) or match.group(2) or match.group(3) or "").strip()
+                if detected_path:
+                    current_path = detected_path
+                # タグ行そのものはコードから除外するため、code_linesには追加しない
+                continue
+
+            # コードブロック内の場合、行を収集
+            if in_code_block:
+                code_lines.append(line)
 
         return written_files
