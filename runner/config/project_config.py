@@ -56,7 +56,7 @@ class ProjectConfig:
             verify_command=os.getenv("VERIFY_COMMAND", data.get("VERIFY_COMMAND", "go test ./...")),
             dev_rules_path=os.getenv("DEV_RULES_PATH", data.get("DEV_RULES_PATH", ".agents/rules/development/")),
             provider=os.getenv("DEFAULT_LLM_PROVIDER", os.getenv("REFINEMENT_PROVIDER", data.get("DEFAULT_LLM_PROVIDER", "gemini"))),
-            refinement_provider=os.getenv("REFINEMENT_PROVIDER", "gemini"),
+            refinement_provider=os.getenv("REFINEMENT_PROVIDER", data.get("REFINEMENT_PROVIDER", "gemini")),
             evaluator_provider=os.getenv("EVALUATOR_PROVIDER", "gemini"),
             executor_provider=os.getenv("EXECUTOR_PROVIDER", "llama_cpp"),
             executor_model=os.getenv("EXECUTOR_MODEL", data.get("EXECUTOR_MODEL", "mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf")),
