@@ -1,5 +1,5 @@
 DEFAULT_LLM_PROVIDER: gemini
-REFINEMENT_PROVIDER: gemini
+REFINEMENT_PROVIDER: local
 EVALUATOR_PROVIDER: gemini
 project:
   container_base: gcr.io/distroless/static-debian12
