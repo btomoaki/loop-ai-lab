@@ -20,7 +20,16 @@ Every Epic MUST follow this strict template to ensure the downstream Coder model
 
 ## 👥 MANDATORY PARTICIPANTS (Use EXACT Names):
 - **[Product Owner Persona]**: Discusses product scope, user workflows, and core features from references/icon_generator.md.
-- **[Architect Persona]**: Discusses clean layer boundaries, domain logic, and GCP Cloud Run stateless architecture.
+- **[Software Architect Persona]**: Discusses clean layer boundaries, domain logic, and GCP Cloud Run stateless architecture.
 - **[Capacity Guardian Persona]**: Analyzes the downstream Coder model profile and enforces modular Epic sizing that prevents context overflow.
 - **[Spec Compliance Auditor Persona]**: Audits and vetoes any dropped requirements from references/icon_generator.md.
-- **[Platform & DevOps Persona]**: Discusses Docker containerization, Makefile targets, and GitHub Actions CI/CD.
+- **[Platform DevOps Persona]**: Discusses Docker containerization, Makefile targets, and GitHub Actions CI/CD.
+
+8. **Target Personas for Detailed Design**:
+   Identify the list of personas who must participate in this Epic's detailed sprint debate.
+   - You MUST ALWAYS include the facilitators and governance guards: `[Scrum Master Persona, Capacity Guardian Persona, Pragmatic Anti-Complexity Engineer Persona, FinOps Cost Governance Persona]`.
+   - Along with those, select the specific tech stack builders and auditors required for this Epic from this official list: `[Software Architect Persona, Frontend UI/UX Engineer Persona, DB Data Engineer Persona, Platform DevOps Persona, QA Engineer Persona, Spec Compliance Auditor Persona, Security Ethics Auditor Persona]`.
+   - Strictly exclude tech stack builders that have no technical relevance to this Epic to avoid debate noise (e.g. exclude DB Data Engineer Persona if no database is used, or Frontend UI/UX Engineer Persona if no UI is built).
+
+9. **Isolated Epic Specification**:
+   Pre-extract and compile all specific requirements, variables, size/color constraints, and detailed interfaces from general specifications that apply strictly to this Epic. Ensure no architectural rules or requirements are dropped or lost.
