@@ -65,7 +65,7 @@ class SprintExecutionEngine:
         result_file = epic_dir / f"sprint_{sprint_num}_result.yaml"
         now_str = datetime.now().isoformat()
         
-        rel_files = [str(Path(f).relative_to(self.root_dir)) for f in written_files] if written_files else []
+        rel_files = [str(Path(self.root_dir / f).relative_to(self.root_dir)) for f in written_files] if written_files else []
         
         result_data = {
             "sprint": sprint_num,
