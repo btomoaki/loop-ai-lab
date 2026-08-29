@@ -79,17 +79,14 @@ class SprintRefinementEngine:
         
         retro_content = self._get_ceremony_retrospective()
 
-        # ペルソナを required_personas に基づいてフィルタリング
+        # ペルソナを required_personas に基づいて「厳密に」フィルタリング
         filtered_personas_instruction = ""
         if "personas" in refs:
             persona_blocks = refs["personas"].split("\n\n")
             active_persona_blocks = []
             for block in persona_blocks:
-                # Scrum Master と Capacity Guardian などのベースとなる共通ガードは常に残す
-                if "Scrum Master" in block or "Capacity Guardian" in block or "Anti-Complexity" in block or "FinOps" in block:
-                    active_persona_blocks.append(block)
-                    continue
                 for p in required_personas:
+                    # ペルソナ名がブロック内に含まれる場合のみ追加
                     if p.lower() in block.lower():
                         active_persona_blocks.append(block)
                         break
@@ -97,11 +94,11 @@ class SprintRefinementEngine:
         else:
             filtered_personas_instruction = refs.get("personas", "")
 
-        # フォーマット指定部分のペルソナ一覧も required_personas に応じて動的フィルタリング
-        persona_format_lines = [
-            "- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD."
-        ]
+        # フォーマット指定部分のペルソナ一覧も required_personas に応じて「厳密に」動的フィルタリング
+        persona_format_lines = []
         p_lower = [p.lower() for p in required_personas]
+        if "scrum master" in p_lower:
+            persona_format_lines.append("- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD.")
         if "architect" in p_lower:
             persona_format_lines.append("- **[Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries using Go standard library.")
         if "frontend" in p_lower:
@@ -112,13 +109,13 @@ class SprintRefinementEngine:
             persona_format_lines.append("- **[Platform & DevOps Persona]**: Dockerfile (non-root UID 65532), Makefile, and Cloud Run runtime execution.")
         if "qa" in p_lower or "test" in p_lower:
             persona_format_lines.append("- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.")
+        if "capacity guardian" in p_lower or "capacity" in p_lower:
+            persona_format_lines.append("- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict DoR, task size constraints, and prevents bloated structures.")
+        if "anti-complexity" in p_lower or "pragmatic" in p_lower:
+            persona_format_lines.append("- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering.")
+        if "finops" in p_lower or "cost" in p_lower:
+            persona_format_lines.append("- **[FinOps & Cost Governance Persona]**: Resource and cloud cost efficiency guard.")
         
-        # ガード役
-        persona_format_lines.extend([
-            "- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict DoR, task size constraints, and prevents bloated structures.",
-            "- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering.",
-            "- **[FinOps & Cost Governance Persona]**: Resource and cloud cost efficiency guard."
-        ])
         persona_format_str = "\n".join(persona_format_lines)
 
         # 1. debate_log.md 生成
