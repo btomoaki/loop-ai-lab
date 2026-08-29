@@ -36,13 +36,13 @@ class CodeParser:
 
     @staticmethod
     def apply_code_changes(llm_output: str, target_dir: Path, config=None):
-        pattern = r"\[FILE:\s*([^\n\]]+)\]\s*```(?:[a-zA-Z0-9_-]+)?\s*\n(.*?)```"
+        pattern = r"(?:\\\[FILE:\\s*([^\\n\\]]+)\\]|#\\s*FILE:\\s*([^\\n\\r]+))\\s*```(?:[a-zA-Z0-9_-]+)?\\s*\\n(.*?)```"
         matches = list(re.finditer(pattern, llm_output, re.DOTALL))
         written_files = []
 
         for m in matches:
-            rel_path = m.group(1).strip()
-            code = m.group(2)
+            rel_path = (m.group(1) or m.group(2) or "").strip()
+            code = m.group(3)
 
             if CodeParser.is_invalid_path(rel_path):
                 continue
