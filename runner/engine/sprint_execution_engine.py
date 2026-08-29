@@ -24,11 +24,15 @@ class SprintExecutionEngine:
         self.dev_agent = LLMAdapterFactory.get_adapter(provider=dev_provider)
 
     def _get_dev_provider(self) -> str:
+        # project_config の executor_provider (llama_cpp) を最優先で使用します
+        if hasattr(self, "config") and self.config and self.config.executor_provider:
+            return self.config.executor_provider
+
         config_file = self.root_dir / "config.yaml"
         if config_file.exists():
             try:
                 data = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
-                return data.get("DEFAULT_LLM_PROVIDER", "local")
+                return data.get("EXECUTOR_PROVIDER", data.get("DEFAULT_LLM_PROVIDER", "local"))
             except Exception:
                 pass
         return "local"
