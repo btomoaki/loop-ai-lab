@@ -48,8 +48,8 @@ echo "=================================================="
 
 cd "{target_ws}" || exit 1
 
-# Automatically resolve Go dependencies if go.mod is present
-if [ -f "go.mod" ]; then
+# Automatically resolve Go dependencies if go.mod and go command are present
+if [ -f "go.mod" ] && command -v go >/dev/null 2>&1; then
     echo "📦 Resolving Go dependencies (go mod tidy)..."
     go mod tidy
 fi
