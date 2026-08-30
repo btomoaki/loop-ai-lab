@@ -33,7 +33,10 @@ def main():
         return
 
     runner = ScrumRunner(root_dir=root_dir, config=config)
-    runner.run(phase=args.phase, sprint_index=args.sprint)
+    if args.phase in ["refinement", "all"]:
+        runner.run_refinement_phase()
+    if args.phase in ["execution", "all"]:
+        runner.run_sprint_phase(sprint_num=args.sprint)
 
 
 if __name__ == "__main__":

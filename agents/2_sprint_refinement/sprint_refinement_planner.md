@@ -33,13 +33,17 @@ Decompose the Epic into a sequence of micro-scoped, dependency-ordered, and TDD-
 ## 👥 MANDATORY PARTICIPANTS (Use EXACT Names):
 ### 🔨 Sprint Builders:
 - **[Scrum Master Persona]**: **Facilitator**. Guides the refinement session, validates task sequencing, and establishes sprint DoD (including rate limiting middleware and OpenAPI 429 validation).
-- **[Architect Persona]**: Designs Go backend package layout, pure functions, and domain interfaces using standard library.
+- **[Software Architect Persona]**: Designs Go backend package layout, pure functions, and domain interfaces using standard library.
 - **[Frontend UI/UX Engineer Persona]**: Designs web preview interface adhering strictly to specifications (No unrequested heavy frameworks).
-- **[DB / Data Engineer Persona]**: Evaluates data storage and persistence constraints (enforces stateless design).
-- **[Platform & DevOps Persona]**: Designs Dockerfile (non-root UID 65532), Makefile targets, and container runtime execution.
+- **[DB Data Engineer Persona]**: Evaluates data storage and persistence constraints (enforces stateless design).
+- **[Platform DevOps Persona]**: Designs Dockerfile (non-root UID 65532), Makefile targets, and container runtime execution.
 - **[QA Engineer Persona]**: Defines TDD unit test suites, rate-limit test assertions, and automated verify commands (`go test ./...`).
 
 ### 🛡️ Independent Constraint Guards:
 - **[Capacity Guardian Persona]**: **AI Model Expert**. Enforces strict DoR: any task with **>=8 Story Points** or **>=3 Acceptance Criteria** must be immediately decomposed into smaller tasks.
 - **[Pragmatic Anti-Complexity Engineer Persona]**: **YAGNI Sarcastic Guard**. Challenges over-engineering and eliminates unrequested features.
-- **[FinOps & Cost Governance Persona]**: **Cost & Resource Guard**. Ensures resource efficiency and cost-effective container architecture.
+- **[FinOps Cost Governance Persona]**: **Cost & Resource Guard**. Ensures resource efficiency and cost-effective container architecture.
+
+## 👥 DYNAMIC PARTICIPATION RULE
+- From the participant list, **ONLY include the personas specified in the Epic's "Target Personas for Detailed Design"** in this sprint's debate log.
+- Do NOT include or output statements for personas that are not selected (e.g., do not output Frontend UI/UX Engineer Persona statements for a pure CLI back-end epic).

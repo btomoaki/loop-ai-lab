@@ -101,43 +101,68 @@ class LocalOllamaAdapter(BaseLLMAdapter):
 class LlamaCppAdapter(BaseLLMAdapter):
     def __init__(self, base_url: str = None, model_name: str = "devstral", max_tokens: int = 4096, **kwargs):
         if not base_url:
-            base_url = "http://127.0.0.1:11435/completion"
-        base_url = base_url.strip()
-        if not base_url.endswith("/completion"):
-            base_url = base_url.rstrip("/") + "/completion"
+            base_url = "http://127.0.0.1:11435"
+        base_url = base_url.strip().rstrip("/")
+        if base_url.endswith("/completion"):
+            base_url = base_url[:-len("/completion")]
+        if not base_url.endswith("/v1/chat/completions"):
+            if base_url.endswith("/v1"):
+                base_url = f"{base_url}/chat/completions"
+            else:
+                base_url = f"{base_url}/v1/chat/completions"
         self.endpoint_url = base_url
         self.model_name = model_name
         self.max_tokens = max_tokens
 
     def generate_text(self, prompt: str, system_instruction: str = "") -> str:
-        import urllib.request
+        import http.client
+        import urllib.parse
         import json
         
-        full_prompt = f"[SYSTEM: {system_instruction}]\n\n{prompt}" if system_instruction else prompt
-        print(f"🔍 [DEBUG-LLM] Sending Request to Local LLM ({self.endpoint_url}). Prompt length: {len(full_prompt)} chars...", flush=True)
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+        messages.append({"role": "user", "content": prompt})
+
+        total_prompt_len = sum(len(m["content"]) for m in messages)
+        print(f"🔍 [DEBUG-LLM] Sending Request to Local LLM ({self.endpoint_url}). Messages: {len(messages)}, approx {total_prompt_len} chars...", flush=True)
+
         payload = {
-            "prompt": full_prompt,
-            "n_predict": int(os.getenv("MAX_TOKENS", 4096)),
-            "temperature": 0.2,
-            "stop": ["</s>", "USER:", "ASSISTANT:"]
+            "model": self.model_name,
+            "messages": messages,
+            "max_tokens": int(os.getenv("MAX_TOKENS", self.max_tokens)),
+            "temperature": 0.2
         }
-        data = json.dumps(payload).encode("utf-8")
+        data = json.dumps(payload)
         headers = {
-            "Content-Type": "application/json",
-            "Accept-Encoding": "identity",
-            "Connection": "close"
+            "Content-Type": "application/json"
         }
-        req = urllib.request.Request(self.endpoint_url, data=data, headers=headers)
+
+        parsed = urllib.parse.urlparse(self.endpoint_url)
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or 11435
+        path = parsed.path or "/v1/chat/completions"
+
+        conn = None
         try:
-            with urllib.request.urlopen(req, timeout=300) as response:
-                res_body = response.read().decode("utf-8")
-                res_json = json.loads(res_body)
+            conn = http.client.HTTPConnection(host, port, timeout=300)
+            conn.request("POST", path, body=data, headers=headers)
+            response = conn.getresponse()
+            res_body = response.read().decode("utf-8")
+            res_json = json.loads(res_body)
+            choices = res_json.get("choices", [])
+            if choices:
+                content = choices[0].get("message", {}).get("content", "")
+            else:
                 content = res_json.get("content", "")
-                print(f"✅ [DEBUG-LLM] Successfully received {len(content)} chars from Devstral 24B!", flush=True)
-                return content
+            print(f"✅ [DEBUG-LLM] Successfully received {len(content)} chars from Local LLM!", flush=True)
+            return content
         except Exception as e:
             print(f"❌ [LlamaCpp Error]: {e}", flush=True)
             return ""
+        finally:
+            if conn:
+                conn.close()
 
 
 class ClaudeAdapter(BaseLLMAdapter):
