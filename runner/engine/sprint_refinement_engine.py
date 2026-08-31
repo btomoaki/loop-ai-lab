@@ -12,6 +12,76 @@ from runner.adapters.llm_adapter import LLMAdapterFactory
 from runner.engine.epic_refinement_engine import EpicRefinementEngine
 
 
+def load_persona_mappings(root_dir: Path) -> tuple:
+    alias_to_formal = {}
+    formal_to_alias = {}
+    personas_dir = root_dir / ".agents" / "personas"
+    if personas_dir.exists():
+        for md_file in personas_dir.glob("*.md"):
+            try:
+                content = md_file.read_text(encoding="utf-8")
+                if content.startswith("---"):
+                    parts = content.split("---", 2)
+                    if len(parts) >= 3:
+                        yaml_content = parts[1]
+                        data = yaml.safe_load(yaml_content) or {}
+                        alias = data.get("alias")
+                        formal_name = data.get("formal_name")
+                        if alias and formal_name:
+                            alias_to_formal[alias.strip()] = formal_name.strip()
+                            formal_to_alias[formal_name.strip()] = alias.strip()
+            except Exception as e:
+                print(f"  ⚠️ Failed to parse persona metadata from {md_file.name}: {e}")
+    if not alias_to_formal:
+        alias_to_formal = {
+            "capacity": "[Capacity Guardian Persona]",
+            "db": "[DB / Data Engineer Persona]",
+            "devops": "[Platform & DevOps Persona]",
+            "finops": "[FinOps & Cost Governance Persona]",
+            "frontend": "[Frontend UI/UX Engineer Persona]",
+            "po": "[PO Persona]",
+            "anticomplexity": "[Pragmatic Anti-Complexity Engineer Persona]",
+            "qa": "[QA Engineer Persona]",
+            "scrummaster": "[Scrum Master Persona]",
+            "securityauditor": "[Security Ethics Auditor Persona]",
+            "architect": "[Software Architect Persona]",
+            "specauditor": "[Spec Compliance Auditor Persona]"
+        }
+        for k, v in alias_to_formal.items():
+            formal_to_alias[v] = k
+    return alias_to_formal, formal_to_alias
+
+
+def extract_personas_from_log_for_epic(overall_log: str, title: str, formal_to_alias: dict) -> list:
+    match = re.search(r"Epic\s*\d+", title, re.IGNORECASE)
+    epic_prefix = match.group(0) if match else title
+    pattern = re.compile(rf"(?:^|\n)\s*-\s*\*\*{epic_prefix}[^*]*\*\*:(.*?)(?=(?:\n\s*-\s*\*\*Epic\s*\d+)|\Z)", re.DOTALL | re.IGNORECASE)
+    m = pattern.search(overall_log)
+    if m:
+        section_content = m.group(1)
+        pers_match = re.search(r"Target\s*Personas[^:]*:\s*\[?([^\]\n\r]+)\]?", section_content, re.IGNORECASE)
+        if pers_match:
+            raw_personas = pers_match.group(1).split(",")
+            aliases = []
+            for p in raw_personas:
+                p_clean = p.strip().strip("'\"`[]*")
+                if p_clean:
+                    p_lower = p_clean.lower()
+                    matched_formal = None
+                    for formal in formal_to_alias.keys():
+                        formal_clean = formal.strip("[]")
+                        if formal_clean.lower() in p_lower or p_lower in formal_clean.lower():
+                            matched_formal = formal
+                            break
+                    if matched_formal:
+                        aliases.append(formal_to_alias[matched_formal])
+                    else:
+                        aliases.append(p_clean.lower())
+            if aliases:
+                return aliases
+    return []
+
+
 class SprintRefinementEngine:
     """【セレモニー 2】スプリントリファインメントエンジン (DoR AC 2個以下厳守 & Zero Spec Tampering & Capacity Guardian >=8 SP 分解ルール)"""
 
@@ -31,6 +101,7 @@ class SprintRefinementEngine:
 
         print("🧠 [SprintRefinementEngine] Using Provider 'gemini' for Independent Final Audits.", flush=True)
         self.gemini_audit_agent = LLMAdapterFactory.get_adapter(provider="gemini")
+        self.alias_to_formal, self.formal_to_alias = load_persona_mappings(self.root_dir)
 
     def _get_refinement_provider(self) -> str:
         # project_config.refinement_provider (llama_cpp / local) を最優先で使用
@@ -74,7 +145,7 @@ class SprintRefinementEngine:
                 pass
         return ""
 
-    def run_sprint_refinement_for_epic(self, epic_dir: Path, title: str, scope: str, required_personas: list, epic_idx: int):
+    def run_sprint_refinement_for_epic(self, epic_dir: Path, title: str, scope: str, required_personas: list, epic_idx: int, previous_audit_feedback: str = ""):
         debate_file = epic_dir / "debate_log.md"
         backlog_file = epic_dir / "epic_backlog.yaml"
 
@@ -82,43 +153,64 @@ class SprintRefinementEngine:
         inst_file_rel = "agents/2_sprint_refinement/sprint_refinement_planner.md"
         
         retro_content = self._get_ceremony_retrospective()
+        if previous_audit_feedback:
+            retro_content += f"\n🚨 PREVIOUS AUDIT VETO FEEDBACK (MUST FIX IN THIS RETRY):\n{previous_audit_feedback}\n"
 
-        # ペルソナを required_personas に基づいて「厳密に」フィルタリング
+        required_personas_formal = []
+        for p in required_personas:
+            p_clean = p.strip().lower()
+            if p_clean in self.alias_to_formal:
+                required_personas_formal.append(self.alias_to_formal[p_clean])
+            else:
+                matched = None
+                for formal in self.alias_to_formal.values():
+                    if p_clean in formal.lower() or formal.lower() in p_clean:
+                        matched = formal
+                        break
+                if matched:
+                    required_personas_formal.append(matched)
+                else:
+                    required_personas_formal.append(p)
+
         filtered_personas_instruction = ""
         if "personas" in refs:
             persona_blocks = refs["personas"].split("\n\n")
             active_persona_blocks = []
             for block in persona_blocks:
-                for p in required_personas:
-                    # ペルソナ名がブロック内に含まれる場合のみ追加
-                    if p.lower() in block.lower():
+                for p in required_personas_formal:
+                    p_clean = p.strip("[]")
+                    if p_clean.lower() in block.lower():
                         active_persona_blocks.append(block)
                         break
             filtered_personas_instruction = "\n\n".join(active_persona_blocks)
         else:
             filtered_personas_instruction = refs.get("personas", "")
 
-        # フォーマット指定部分のペルソナ一覧も required_personas に応じて「厳密に」動的フィルタリング
         persona_format_lines = []
-        p_lower = [p.lower() for p in required_personas]
-        if "scrum master" in p_lower:
-            persona_format_lines.append("- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD.")
-        if "architect" in p_lower:
-            persona_format_lines.append("- **[Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries using Go standard library.")
-        if "frontend" in p_lower:
-            persona_format_lines.append("- **[Frontend UI/UX Engineer Persona]**: Web UI components adhering strictly to specifications (No unrequested heavy frameworks).")
-        if "db" in p_lower or "data" in p_lower:
-            persona_format_lines.append("- **[DB / Data Engineer Persona]**: Data structures and persistence constraints (stateless).")
-        if "platform" in p_lower or "devops" in p_lower:
-            persona_format_lines.append("- **[Platform & DevOps Persona]**: Dockerfile (non-root UID 65532), Makefile, and Cloud Run runtime execution.")
-        if "qa" in p_lower or "test" in p_lower:
-            persona_format_lines.append("- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.")
-        if "capacity guardian" in p_lower or "capacity" in p_lower:
-            persona_format_lines.append("- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict DoR, task size constraints, and prevents bloated structures.")
-        if "anti-complexity" in p_lower or "pragmatic" in p_lower:
-            persona_format_lines.append("- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering.")
-        if "finops" in p_lower or "cost" in p_lower:
-            persona_format_lines.append("- **[FinOps & Cost Governance Persona]**: Resource and cloud cost efficiency guard.")
+        for p_formal in required_personas_formal:
+            p_f_lower = p_formal.lower()
+            if "scrum master" in p_f_lower:
+                persona_format_lines.append("- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD.")
+            elif "software architect" in p_f_lower or "architect" in p_f_lower:
+                persona_format_lines.append("- **[Software Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries using Go standard library.")
+            elif "frontend" in p_f_lower:
+                persona_format_lines.append("- **[Frontend UI/UX Engineer Persona]**: Web UI components adhering strictly to specifications (No unrequested heavy frameworks).")
+            elif "db / data" in p_f_lower or "database" in p_f_lower or "db" in p_f_lower:
+                persona_format_lines.append("- **[DB / Data Engineer Persona]**: Data structures and persistence constraints (stateless).")
+            elif "platform" in p_f_lower or "devops" in p_f_lower:
+                persona_format_lines.append("- **[Platform & DevOps Persona]**: Dockerfile (non-root UID 65532), Makefile, and Cloud Run runtime execution.")
+            elif "qa engineer" in p_f_lower or "quality assurance" in p_f_lower or "qa" in p_f_lower:
+                persona_format_lines.append("- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.")
+            elif "capacity guardian" in p_f_lower or "capacity" in p_f_lower:
+                persona_format_lines.append("- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict DoR, task size constraints, and prevents bloated structures.")
+            elif "anti-complexity" in p_f_lower or "pragmatic" in p_f_lower:
+                persona_format_lines.append("- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering.")
+            elif "finops" in p_f_lower or "cost" in p_f_lower:
+                persona_format_lines.append("- **[FinOps & Cost Governance Persona]**: Resource and cloud cost efficiency guard.")
+            elif "spec compliance" in p_f_lower or "specauditor" in p_f_lower:
+                persona_format_lines.append("- **[Spec Compliance Auditor Persona]**: Audits specification compliance and checks for vector format limitations.")
+            elif "security" in p_f_lower or "ethics" in p_f_lower or "securityauditor" in p_f_lower:
+                persona_format_lines.append("- **[Security Ethics Auditor Persona]**: Audits security standards, rate limiting, and container hardening.")
         
         persona_format_str = "\n".join(persona_format_lines)
 
@@ -162,6 +254,7 @@ class SprintRefinementEngine:
                 f"Target workspace directory is: {self.config.workspace_rel}\n"
                 f"Container image name is: {self.config.container_image_name}\n\n"
                 f"=== SCOPE & SPECIFICATION ===\n{scope}\n\n"
+                f"=== CEREMONY RETROSPECTIVE (IF ANY) ===\n{retro_content}\n\n"
                 "🚨 CRITICAL DEFINITION OF READY (DoR) RULES:\n"
                 "1. Each task MUST have at most 1 or 2 acceptance criteria (strictly Maximum 3).\n"
                 "2. references/* is READ-ONLY. NEVER create tasks modifying references/!\n"
@@ -218,6 +311,95 @@ class SprintRefinementEngine:
                     ]
                 }
                 CodeParser.atomic_write_text(backlog_file, yaml.dump(mock_data, default_flow_style=False, allow_unicode=True))
+
+    def run_epic_backlog_audit(self, epic_dir: Path, title: str, detailed_spec: str, epic_idx: int, attempt: int) -> dict:
+        """エピック単体のバックログを対象に、セキュリティと仕様漏れをGeminiで都度監査する。"""
+        backlog_file = epic_dir / "epic_backlog.yaml"
+        if not backlog_file.exists():
+            return {"overall_passed": False, "spec_passed": False, "sec_passed": False, "feedback": "No backlog file found."}
+
+        try:
+            backlog_content = backlog_file.read_text(encoding="utf-8")
+        except Exception as e:
+            return {"overall_passed": False, "spec_passed": False, "sec_passed": False, "feedback": f"Failed to read backlog: {e}"}
+
+        refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="2_sprint_refinement", include_dev_rules=True, config=self.config)
+
+        # ----------------------------------------------------
+        # 1. Spec Compliance Auditor による単独チェック
+        # ----------------------------------------------------
+        print(f"🔍 [Epic Audit 1/2 (Attempt #{attempt})] Spec Compliance Auditor inspecting {epic_dir.name}...", flush=True)
+        prompt_spec = (
+            f"[INST]\n"
+            f"[TASK: EPIC-LEVEL SPECIFICATION COMPLIANCE AUDIT]\n"
+            f"You are the Specification Compliance Auditor (.agents/personas/spec_compliance_auditor.md).\n"
+            f"Cross-reference the generated sprint backlog for this specific Epic against its detailed specification.\n\n"
+            f"🚨 AUDIT SCOPE LIMITATION (CRITICAL):\n"
+            f"- Evaluate ONLY the tasks within this Epic: '{title}'.\n"
+            f"- Do NOT inspect or complain about other Epics, missing requirements belonging to other Epics, or system integration aspects outside this Epic's scope.\n"
+            f"- If a requirement is not part of this Epic's scope, it is OUT OF SCOPE. Do NOT VETO based on out-of-scope missing features.\n\n"
+            f"=== 1. EPIC SPECIFICATION ===\n{detailed_spec}\n\n"
+            f"=== 2. GENERATED SPRINT BACKLOG FOR THIS EPIC ===\n{backlog_content}\n\n"
+            f"Output format:\n"
+            f"# 🕵️ Epic Spec Compliance Audit Report (Epic {epic_idx}, Attempt {attempt})\n\n"
+            f"## 1. Traceability Checklist\n"
+            f"- [Requirement / Decision]: [Mapped Task ID] -> Status (COVERED / MISSING / VIOLATION)\n\n"
+            f"## 2. Verdict\n"
+            f"- Verdict: **APPROVED** or **VETO**\n"
+            f"- Summary: <Details and issues found. Mention specific tasks and required actions to fix if VETO.>\n"
+            f"[/INST]\n"
+        )
+        spec_res = self.gemini_audit_agent.generate_text(prompt_spec)
+        spec_text = (spec_res or "").strip()
+        
+        # ----------------------------------------------------
+        # 2. Security & AI Ethics Auditor による単独チェック
+        # ----------------------------------------------------
+        print(f"🛡️ [Epic Audit 2/2 (Attempt #{attempt})] Security & AI Ethics Auditor inspecting {epic_dir.name}...", flush=True)
+        prompt_sec = (
+            f"[INST]\n"
+            f"[TASK: EPIC-LEVEL SECURITY & ETHICS AUDIT]\n"
+            f"You are the Security & AI Ethics Auditor (.agents/personas/security_ethics_auditor.md).\n"
+            f"Audit the sprint backlog of this specific Epic for security, container hardening, and dependency safety rules.\n\n"
+            f"🚨 AUDIT SCOPE LIMITATION (CRITICAL):\n"
+            f"- Evaluate ONLY the tasks within this Epic: '{title}'.\n"
+            f"- Do NOT inspect or complain about security aspects outside this Epic's scope (e.g., container settings if this Epic is just about domain core logic).\n\n"
+            f"=== 1. EPIC SPECIFICATION ===\n{detailed_spec}\n\n"
+            f"=== 2. GENERATED SPRINT BACKLOG FOR THIS EPIC ===\n{backlog_content}\n\n"
+            f"Output format:\n"
+            f"# 🛡️ Epic Security & AI Ethics Audit Report (Epic {epic_idx}, Attempt {attempt})\n\n"
+            f"## 1. Security Checklist\n"
+            f"- [Security Standard / Rule]: Status (COVERED / MISSING / VIOLATION / NOT_APPLICABLE)\n\n"
+            f"## 2. Verdict\n"
+            f"- Verdict: **APPROVED** or **VETO**\n"
+            f"- Summary: <Details and issues found. Mention specific tasks and required actions to fix if VETO.>\n"
+            f"[/INST]\n"
+        )
+        sec_res = self.gemini_audit_agent.generate_text(prompt_sec)
+        sec_text = (sec_res or "").strip()
+
+        # 保存
+        audit_dir = epic_dir / f"attempt_{attempt}"
+        audit_dir.mkdir(parents=True, exist_ok=True)
+        CodeParser.atomic_write_text(audit_dir / "audit_spec_compliance.md", spec_text)
+        CodeParser.atomic_write_text(audit_dir / "audit_security_ethics.md", sec_text)
+
+        spec_passed = "Verdict: **APPROVED**" in spec_text or "Verdict: APPROVED" in spec_text or "**APPROVED**" in spec_text
+        sec_passed = "Verdict: **APPROVED**" in sec_text or "Verdict: APPROVED" in sec_text or "**APPROVED**" in sec_text
+        overall_passed = spec_passed and sec_passed
+
+        feedback = ""
+        if not spec_passed:
+            feedback += f"### Spec Compliance Issues:\n{spec_text}\n\n"
+        if not sec_passed:
+            feedback += f"### Security & Ethics Issues:\n{sec_text}\n\n"
+
+        return {
+            "overall_passed": overall_passed,
+            "spec_passed": spec_passed,
+            "sec_passed": sec_passed,
+            "feedback": feedback.strip()
+        }
 
     def run_individual_final_audits(self, attempt: int = 1) -> dict:
         """【各自独立監査ゲート】loop_N ディレクトリ構造で各回の監査結果・履歴を保存"""
@@ -357,13 +539,13 @@ class SprintRefinementEngine:
                 extract_prompt = (
                     f"You are a Senior Project Manager and Systems Architect.\n"
                     f"Read the following overall debate log, and extract ONLY the detailed technical specifications, architecture decisions, interfaces, configurations, and rules that are directly relevant to this specific epic: \"{title}\".\n"
-                    f"Also, identify the target required personas for detailed design debate of this epic from this list: [Architect, Frontend, DB, Platform, QA]. Do NOT include DB if no database is used, or Frontend if no UI is built. Base this logical choice strictly on the epic technical scope.\n\n"
+                    f"Also, identify the target required personas for detailed design debate of this epic strictly based on the 'Target Personas for Detailed Design' listed under this specific epic in the overall debate log. Map them to their brief alias keys (e.g. 'architect', 'qa', 'devops', 'anticomplexity', 'finops', 'scrummaster', 'capacity', 'specauditor', 'securityauditor', 'po', 'frontend', 'db'). Do NOT dynamically re-evaluate or shrink this list, keep all listed personas.\n\n"
                     f"=== OVERALL DEBATE LOG ===\n{overall_debate_log}\n\n"
                     f"Output strictly in YAML format as follows:\n"
                     f"epic_title: \"{title}\"\n"
                     f"required_personas:\n"
-                    f"  - Architect\n"
-                    f"  - QA\n"
+                    f"  - \"architect\"\n"
+                    f"  - \"qa\"\n"
                     f"detailed_spec: |\n"
                     f"  <detailed specs and constraints extracted from the log>\n"
                 )
@@ -379,17 +561,47 @@ class SprintRefinementEngine:
                 except Exception as e:
                     print(f"  ⚠️ [Ceremony 2 Warning] Failed to extract spec using Gemini: {e}")
             
-            required_personas = ["Architect", "QA"]
+            required_personas = ["architect", "qa"]
             detailed_spec = scope
             if spec_file.exists():
                 try:
                     spec_data = yaml.safe_load(spec_file.read_text(encoding="utf-8")) or {}
-                    required_personas = spec_data.get("required_personas", ["Architect", "QA"])
+                    required_personas = spec_data.get("required_personas", ["architect", "qa"])
                     detailed_spec = spec_data.get("detailed_spec", scope)
                 except Exception as e:
                     print(f"  ⚠️ [Ceremony 2 Warning] Failed to parse spec file: {e}")
 
-            self.run_sprint_refinement_for_epic(epic_dir, title, detailed_spec, required_personas, idx)
+            # 対策案B: ハーネスによる補正処理 (エイリアスマップを使用)
+            log_personas = extract_personas_from_log_for_epic(overall_debate_log, title, self.formal_to_alias)
+            if log_personas:
+                required_personas = log_personas
+                print(f"  🎯 [Harness Persona Match] Restored persona aliases from overall log: {required_personas}")
+
+            # エピックごとの都度監査＆自動リトライループ
+            max_retries = getattr(self.config, "max_retries", 3)
+            previous_feedback = ""
+            for attempt in range(1, max_retries + 1):
+                # リトライ時は既存のディベートログとバックログYAMLを削除して再生成を強制する
+                if attempt > 1:
+                    debate_file = epic_dir / "debate_log.md"
+                    backlog_file = epic_dir / "epic_backlog.yaml"
+                    if debate_file.exists():
+                        debate_file.unlink()
+                    if backlog_file.exists():
+                        backlog_file.unlink()
+
+                self.run_sprint_refinement_for_epic(epic_dir, title, detailed_spec, required_personas, idx, previous_audit_feedback=previous_feedback)
+                
+                # エピック単体での仕様漏れ・セキュリティ都度監査
+                audit_res = self.run_epic_backlog_audit(epic_dir, title, detailed_spec, idx, attempt)
+                if audit_res["overall_passed"]:
+                    print(f"  ✅ [Refinement Approved] Epic {idx} passed all local audits on attempt #{attempt}!", flush=True)
+                    break
+                else:
+                    print(f"  🛑 [Refinement Vetoed] Epic {idx} failed audits on attempt #{attempt}. Retrying with feedback...", flush=True)
+                    previous_feedback = audit_res["feedback"]
+            else:
+                print(f"  ⚠️ [Refinement Max Retries] Epic {idx} reached maximum retry limit ({max_retries}) without passing audits.", flush=True)
 
         # Backlog 分割 & テストハーネス生成
         print("\n🚀 [Ceremony 2] Generating automated test harness scripts for all refined Epics...", flush=True)

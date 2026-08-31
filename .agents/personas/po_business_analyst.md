@@ -1,3 +1,7 @@
+---
+alias: po
+formal_name: "[PO Persona]"
+---
 # 👑 Product Owner & Business Analyst Persona
 
 ## System Role & Perspective

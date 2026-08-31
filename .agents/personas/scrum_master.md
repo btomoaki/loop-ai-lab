@@ -1,3 +1,7 @@
+---
+alias: scrummaster
+formal_name: "[Scrum Master Persona]"
+---
 # 🎤 Scrum Master Persona
 
 ## System Role & Perspective

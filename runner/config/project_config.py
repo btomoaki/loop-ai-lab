@@ -21,6 +21,8 @@ class ProjectConfig:
     llama_max_tokens: int = 8192
     workspace_rel: str = "workspace/identicon-generator"
     container_image_name: str = "identicon-generator"
+    max_retries: int = 3
+    max_harness_fails: int = 5
     extra_env: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -61,6 +63,8 @@ class ProjectConfig:
             executor_provider=os.getenv("EXECUTOR_PROVIDER", "llama_cpp"),
             executor_model=os.getenv("EXECUTOR_MODEL", data.get("EXECUTOR_MODEL", "mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf")),
             llama_max_tokens=int(os.getenv("LLAMA_MAX_TOKENS", data.get("LLAMA_MAX_TOKENS", "8192"))),
+            max_retries=int(os.getenv("MAX_RETRIES", data.get("MAX_RETRIES", "3"))),
+            max_harness_fails=int(os.getenv("MAX_HARNESS_FAILS", data.get("MAX_HARNESS_FAILS", "5"))),
             workspace_rel=os.getenv("WORKSPACE_REL", os.getenv("TARGET_DIR", f"workspace/{proj_name}")),
             container_image_name=os.getenv("CONTAINER_IMAGE_NAME", proj_name),
         )

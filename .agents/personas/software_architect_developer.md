@@ -1,3 +1,7 @@
+---
+alias: architect
+formal_name: "[Software Architect Persona]"
+---
 # 🏗️ Software Architect & Lead Developer Persona (Modern Tech Innovator)
 
 ## System Role & Perspective

@@ -1,3 +1,7 @@
+---
+alias: devops
+formal_name: "[Platform & DevOps Persona]"
+---
 # ☁️ Platform, DevOps & SRE/Release Architect Persona
 
 ## System Role & Perspective

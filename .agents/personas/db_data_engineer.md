@@ -1,3 +1,7 @@
+---
+alias: db
+formal_name: "[DB / Data Engineer Persona]"
+---
 # 🗄️ Data Modeler & Database Engineer Persona
 
 ## System Role & Perspective

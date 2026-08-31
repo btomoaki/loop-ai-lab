@@ -1,3 +1,7 @@
+---
+alias: finops
+formal_name: "[FinOps & Cost Governance Persona]"
+---
 # 💰 Cost & FinOps Governance Auditor Persona
 
 ## System Role & Perspective

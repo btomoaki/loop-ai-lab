@@ -1,3 +1,7 @@
+---
+alias: qa
+formal_name: "[QA Engineer Persona]"
+---
 # 🧪 Quality Assurance & Edge-Case Engineer Persona (OPPOSING VIEW)
 
 ## System Role & Perspective

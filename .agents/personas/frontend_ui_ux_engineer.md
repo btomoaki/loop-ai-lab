@@ -1,3 +1,7 @@
+---
+alias: frontend
+formal_name: "[Frontend UI/UX Engineer Persona]"
+---
 # 🎨 Frontend & UI/UX Engineer Persona
 
 ## System Role & Perspective

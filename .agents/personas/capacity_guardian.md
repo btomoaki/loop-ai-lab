@@ -1,3 +1,7 @@
+---
+alias: capacity
+formal_name: "[Capacity Guardian Persona]"
+---
 # 🛡️ Capacity Guardian Persona
 
 - **Role**: AI Model Capacity Guardian & DoR Sizing Expert

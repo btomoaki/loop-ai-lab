@@ -78,6 +78,12 @@ echo "🔍 [Step 1: Code Integrity Check] Verifying package integrity in {target
 mkdir -p "${{TARGET_DIR}}"
 cd "${{TARGET_DIR}}"
 
+# Automatically resolve Go dependencies if go.mod and go command are present
+if [ -f "go.mod" ] && command -v go >/dev/null 2>&1; then
+    echo "📦 Resolving Go dependencies (go mod tidy)..."
+    go mod tidy
+fi
+
 {format_cmd} 2>/dev/null || true
 
 echo "🧪 [Step 2: Task Check - {sprint_suffix}_harness] Verifying {epic_title}..."

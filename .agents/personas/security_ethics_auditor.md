@@ -1,3 +1,7 @@
+---
+alias: securityauditor
+formal_name: "[Security Ethics Auditor Persona]"
+---
 # 🛡️ Security & AI Ethics Auditor Persona (CRITICAL SECURITY & ETHICS AUDIT)
 
 ## System Role & Perspective
