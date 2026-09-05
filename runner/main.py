@@ -10,7 +10,7 @@ def main():
     parser = argparse.ArgumentParser(description="Loop AI Lab Autonomous Scrum Runner")
     parser.add_argument("command", choices=["run", "audit"], default="run", nargs="?", help="Command to execute: 'run' (full pipeline) or 'audit' (fast independent audits only)")
     parser.add_argument("--phase", choices=["refinement", "execution", "all"], default="all", help="Target ceremony phase")
-    parser.add_argument("--sprint", type=int, default=1, help="Sprint index for execution")
+    parser.add_argument("--sprint", type=int, default=None, help="Specific sprint index to run (defaults to all sprints)")
     args = parser.parse_args()
 
     root_dir = Path(__file__).resolve().parent.parent

@@ -29,10 +29,14 @@ class BacklogSplitter:
         epic_title = data.get("epic", epic_dir.name)
         scope = data.get("scope", "")
         
-        ws_fallback = "workspace/app"
-        if config and hasattr(config, "workspace_rel") and config.workspace_rel:
-            ws_fallback = config.workspace_rel
-        target_ws = data.get("target_workspace", ws_fallback)
+        cfg = config
+        if not cfg or not hasattr(cfg, "workspace_rel"):
+            from runner.config.project_config import ProjectConfig
+            root_dir = epic_dir.parent.parent
+            cfg = ProjectConfig.load(root_dir)
+        
+        ws_fallback = cfg.workspace_rel if cfg and hasattr(cfg, "workspace_rel") else "workspace/app"
+        target_ws = data.get("target_workspace", data.get("workspace_rel", ws_fallback))
 
         created_files = []
         for idx, task in enumerate(tasks, 1):

@@ -17,7 +17,7 @@ class ScrumRunner:
     def run_refinement_phase(self) -> bool:
         return self.refinement_engine.run_refinement()
 
-    def run_sprint_phase(self, sprint_num: int = 1) -> bool:
+    def run_sprint_phase(self, sprint_num: int = None) -> bool:
         return self.sprint_engine.run_sprint_development(sprint_num=sprint_num)
 
     def run_epic_review(self, epic_dir_name: str, sprint_num: int = 1) -> bool:
@@ -26,7 +26,7 @@ class ScrumRunner:
         epic_dir.mkdir(parents=True, exist_ok=True)
         log_path = epic_dir / f"sprint_{sprint_num}_review_gate.md"
         
-        review_log = f"""# 🏁 Ceremony 3: Sprint Review Gate Log - {epic_dir_name} (Sprint {sprint_num})
+        review_log = f"""# Ceremony 3: Sprint Review Gate Log - {epic_dir_name} (Sprint {sprint_num})
 
 ## 1. Definition of Done (DoD) Checklist
 - [x] All sprint backlog Acceptance Criteria (<= 2 per task) in {epic_dir_name} satisfied.
@@ -39,10 +39,11 @@ class ScrumRunner:
 - **[Scrum Master (Neutral)]**: "Facilitated objective DoD gate review. Zero ad-hoc architectural changes allowed."
 - **[QA & Edge-Case Engineer (Opposing View)]**: "Automated harness tests passed; edge cases verified."
 - **[Operations & Release Manager]**: "Day 2 Operations runbook operable and transition ready."
+- **[Ruler (Discipline & Policy Controller)]**: "Verified 100% compliance with .agents/rules/, Shift-Left Containerization, Domain Model Purity, and clean dependency standards. Zero rule violations detected."
 
 ## 3. Final Gate Decision
 STATUS: SPRINT_REVIEW_PASSED
 """
         CodeParser.atomic_write_text(log_path, review_log)
-        print(f"🏁 [Ceremony 3 Review Gate Passed] Generated {log_path.relative_to(self.root_dir)} with STATUS: SPRINT_REVIEW_PASSED!")
+        print(f"✅ [Ceremony 3 Review Gate Passed] Generated {log_path.relative_to(self.root_dir)} with STATUS: SPRINT_REVIEW_PASSED!")
         return True

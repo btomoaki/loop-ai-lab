@@ -23,7 +23,7 @@
 ```
 
 ### 2.2 技術スタック
-* **言語:** Go（標準ライブラリ `image`, `crypto/md5`, `net/http`, `embed` のみ）
+* **言語:** Go（標準ライブラリおよびポピュラーなGoエコシステムパッケージを活用）
 * **フロントエンド:** HTML5, Tailwind CSS (CDN), Vanilla JS
 * **コンテナ基盤:** Docker（Multi-stage build, ベース: `gcr.io/distroless/static-debian12`）
 * **デプロイ先環境:** Google Cloud Run（Artifact Registry 経由）

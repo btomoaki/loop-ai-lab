@@ -67,45 +67,28 @@ class EpicRefinementEngine:
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True, config=self.config)
         inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
 
-        prompt = (
-            f"[INST]\n"
-            f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
-            f"Analyze all referenced specification files and conduct a debate among the personas to establish architecture and decompose Epics.\n\n"
-            f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-            f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-            f"=== 3. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-            f"=== 4. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
-            f"=== 5. TARGET DEVELOPER AGENT PROFILE (DOWNSTREAM CODER) ===\n{refs['target_agent']}\n\n"
-            "Output MUST follow this format:\n"
-            "# 🌐 Overall System Architecture & Epic Refinement Debate Log\n\n"
-            "## 1. System Architecture Debate (PO, Architect, Capacity Guardian, Spec Auditor, DevOps)\n"
-            "- **[PO Persona]**: Discusses product scope, user workflows, and core features from references/icon_generator.md.\n"
-            "- **[Architect Persona]**: Discusses clean layer boundaries, domain logic, and GCP Cloud Run stateless architecture.\n"
-            "- **[Capacity Guardian Persona]**: Analyzes the downstream Coder model profile and enforces modular Epic sizing that prevents context overflow.\n"
-            "- **[Spec Compliance Persona]**: Audits and vetoes any dropped requirements from references/icon_generator.md.\n"
-            "- **[Platform & DevOps Persona]**: Discusses Docker containerization, Makefile targets, and GitHub Actions CI/CD.\n\n"
-            "## 2. Epic Breakdown\n"
-            "(Decompose the application into modular, self-contained Epics: Epic 1, Epic 2, ... covering core logic, image rendering, HTTP API, Web UI, and CI/CD/Docker delivery)\n"
-            "- **Epic 1 <Title>**:\n"
-            "  - **Description**: <Technical explanation of what to build>\n"
-            "  - **Objective**: <Business/functional value of what we want to achieve>\n"
-            "  - **Background & Motivation**: <Why this epic is needed and its value>\n"
-            "  - **Scope**: <Functional and technical scope>\n"
-            "  - **Dependencies**: <List of prerequisite Epics or 'None (Root Foundation)'>\n"
-            f"  - **Acceptance Criteria (AC)**: <Testable requirements>\n"
-            f"  - **Definition of Done (DoD)**: <Unit tests, code coverage, zero lint errors, buildable artifact>\n"
-            f"  - **Target Personas for Detailed Design**: <List of personas (from [Software Architect Persona], [Frontend UI/UX Engineer Persona], [DB / Data Engineer Persona], [Platform & DevOps Persona], [QA Engineer Persona]) interested or experienced in this Epic>\n"
-            f"  - **Isolated Epic Specification**: <Detailed requirement details, parameters, rules, color logics extracted specifically for this Epic from target spec files>\n"
-            "- **Epic 2 <Title>**:\n"
-            "  - **Description**: <Technical explanation of what to build>\n"
-            "  - **Objective**: <Business/functional value of what we want to achieve>\n"
-            "  - **Background & Motivation**: <Why this epic is needed and its value>\n"
-            "  - **Scope**: <Functional and technical scope>\n"
-            "  - **Dependencies**: <Prerequisite Epics (e.g. Epic 1)>\n"
-            "  - **Acceptance Criteria (AC)**: <Testable requirements>\n"
-            "  - **Definition of Done (DoD)**: <Unit tests, code coverage, zero lint errors, buildable artifact>\n"
-            "[/INST]\n"
-        )
+        tpl_file = self.root_dir / "assets" / "ceremony_1_debate.tpl"
+        if tpl_file.exists():
+            tpl_text = tpl_file.read_text(encoding="utf-8")
+            prompt = tpl_text.format(
+                rules=refs['rules'],
+                specs=refs['specs'],
+                personas=refs['personas'],
+                target_agent=refs['target_agent'],
+                inst_file_rel=inst_file_rel
+            )
+        else:
+            prompt = (
+                f"[INST]\n"
+                f"=== 1. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+                f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+                f"=== 3. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
+                f"=== 4. TARGET DEVELOPER AGENT PROFILE (DOWNSTREAM CODER) ===\n{refs['target_agent']}\n\n"
+                f"=== 5. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
+                f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
+                f"Analyze all referenced specification files and conduct a debate among the personas to establish architecture and decompose Epics.\n\n"
+                f"[/INST]\n"
+            )
 
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)

@@ -2,8 +2,11 @@ from pathlib import Path
 import yaml
 from runner.parser import atomic_write_text
 
-def ensure_initiative_files_integrity(root_dir: Path):
+from runner.config.project_config import ProjectConfig
+
+def ensure_initiative_files_integrity(root_dir: Path, config=None):
     """Dynamic Harness Generator Engine for Go Code & Container/Deployment Epics."""
+    cfg = config or ProjectConfig.load(root_dir)
     init_dir = root_dir / "state/initiatives"
     if not init_dir.exists():
         return
@@ -23,30 +26,37 @@ def ensure_initiative_files_integrity(root_dir: Path):
             harness_path = epic_dir / f"{sprint_suffix}_harness.sh"
             
             epic_name = epic_dir.name.lower()
-            test_cmd = "go test ./..."
+            test_cmd = cfg.test_command or "go test ./..."
             epic_title = epic_dir.name
+            container_tag = cfg.container_image_name or cfg.project_name
             
             # Determine appropriate default test_cmd based on Epic type
             if "container" in epic_name:
-                test_cmd = "docker build -t avatar-service:latest ."
+                test_cmd = f"docker build -t {container_tag}:latest ."
             elif "cloud_run" in epic_name or "deploy" in epic_name:
-                test_cmd = "grep -q 'USER' Dockerfile && docker build -t avatar-service:cloudrun ."
+                test_cmd = f"grep -q 'USER' Dockerfile && docker build -t {container_tag}:cloudrun ."
             
             try:
                 b_data = yaml.safe_load(b_file.read_text(encoding="utf-8")) or {}
-                if "test_command" in b_data:
+                tasks = b_data.get("tasks", [])
+                if tasks and isinstance(tasks, list) and len(tasks) > 0 and "verify_command" in tasks[0]:
+                    test_cmd = tasks[0]["verify_command"]
+                elif "test_command" in b_data:
                     test_cmd = b_data["test_command"]
                 epic_title = b_data.get("epic", epic_dir.name)
             except Exception:
                 pass
             
-            target_ws_rel = b_data.get("target_workspace", "workspace/identicon-generator")
-            module_name = b_data.get("module_name", "identicon-generator")
+            target_ws_rel = b_data.get("target_workspace", b_data.get("workspace_rel", cfg.workspace_rel))
+            module_name = b_data.get("module_name", cfg.project_name)
 
             format_cmd = b_data.get("format_cmd", "gofmt -w . 2>/dev/null || true")
 
-            # Build specialized harness script
-            if "container" in epic_name or "cloud_run" in epic_name or "deploy" in epic_name or "docker" in test_cmd:
+            # Build specialized harness script (distinguish Docker containers from DI / Dependency Wiring)
+            is_container_harness = ("docker" in test_cmd) or ("dockerfile" in test_cmd) or \
+                                   ("cloud_run" in epic_name or "deploy" in epic_name) or \
+                                   ("container" in epic_name and "di" not in epic_name and "wiring" not in epic_name and "injection" not in epic_name)
+            if is_container_harness:
                 harness_content = f"""#!/usr/bin/env bash
 set -e
 BASE_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")/../../.." && pwd)"
@@ -78,16 +88,60 @@ echo "🔍 [Step 1: Code Integrity Check] Verifying package integrity in {target
 mkdir -p "${{TARGET_DIR}}"
 cd "${{TARGET_DIR}}"
 
-# Automatically resolve Go dependencies if go.mod and go command are present
+# Go Workspace Module Guard (Self-healing workaround for missing go.mod)
+clean_mod_name="{Path(target_ws_rel).name}"
+if [ ! -f "go.mod" ] && command -v go >/dev/null 2>&1; then
+    echo "📦 [Harness Workaround] Initializing missing Go module: ${{clean_mod_name}}..."
+    go mod init "${{clean_mod_name}}" 2>/dev/null || true
+fi
+
+# Automatically resolve Go dependencies with self-healing checksum recovery
 if [ -f "go.mod" ] && command -v go >/dev/null 2>&1; then
-    echo "📦 Resolving Go dependencies (go mod tidy)..."
+    echo "📦 Resolving Go dependencies safely (self-healing go.sum)..."
+    # LLMが偽go.sumを出力した場合の checksum mismatch (SECURITY ERROR) を防ぐため、事前にクリアして公式プロキシから再検証
+    rm -f go.sum
     go mod tidy
+fi
+
+# Model Purity Enforcement: Block if 'return' keyword is present in internal/domain/model/*.go
+if [ -d "internal/domain/model" ]; then
+    MODEL_FILES=$(find internal/domain/model -maxdepth 1 -name "*.go" ! -name "*_test.go" 2>/dev/null)
+    if [ -n "$MODEL_FILES" ]; then
+        if grep -En '\\breturn\\b' $MODEL_FILES >/dev/null 2>&1; then
+            echo "❌ [Harness Failure] Model Purity Violation: Function logic or 'return' statement detected in internal/domain/model!"
+            echo "Details:"
+            grep -En '\\breturn\\b' $MODEL_FILES
+            echo "Fix: Structs in internal/domain/model/ must be pure data definitions only. Move all constructors and logic to internal/domain/service/."
+            exit 2
+        fi
+    fi
+fi
+
+# Model Test Prohibition Enforcement: Block if test files exist in internal/domain/model/
+if [ -d "internal/domain/model" ]; then
+    MODEL_TEST_FILES=$(find internal/domain/model -maxdepth 1 -name "*_test.go" 2>/dev/null)
+    if [ -n "$MODEL_TEST_FILES" ]; then
+        echo "❌ [Harness Failure] Model Test Prohibition: Test files detected in internal/domain/model/!"
+        echo "Details:"
+        echo "$MODEL_TEST_FILES"
+        echo "Fix: Structs in internal/domain/model/ are pure schema definitions with zero business logic. Do NOT write test files in internal/domain/model/. Move all unit tests to internal/domain/service/."
+        exit 2
+    fi
 fi
 
 {format_cmd} 2>/dev/null || true
 
 echo "🧪 [Step 2: Task Check - {sprint_suffix}_harness] Verifying {epic_title}..."
-{test_cmd} || exit 2
+
+# Tooling Availability Guard: If command uses golangci-lint and it's not installed on host, run tests safely
+if echo "{test_cmd}" | grep -q "golangci-lint" && ! command -v golangci-lint >/dev/null 2>&1; then
+    echo "⚠️ [Harness Notice] 'golangci-lint' not installed on host. Running verification without host-polluting linter."
+    SAFE_TEST_CMD=$(echo "{test_cmd}" | sed -E 's/&& *golangci-lint run [^ ]*//g' | sed -E 's/golangci-lint run [^ ]* *&& *//g')
+    eval "$SAFE_TEST_CMD" || exit 2
+else
+    {test_cmd} || exit 2
+fi
+
 echo "[PASS] Acceptance Criteria Passed!"
 """
 

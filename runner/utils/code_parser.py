@@ -8,18 +8,27 @@ class CodeParser:
 
     @staticmethod
     def extract_code_block(text: str, language: str = "yaml") -> str:
-        """指定された言語のコードブロック（```yaml ... ```）を抽出。"""
+        """指定された言語のコードブロックを安全に抽出（本文中の内部コードブロックを破壊しない）。"""
         if not text:
             return ""
+        stripped = text.strip()
+        lines = stripped.splitlines()
+        # 先頭行が ```xxx で末尾行が ``` の場合は単純に外枠を剥ぎ取る
+        if lines and lines[0].strip().startswith("```") and lines[-1].strip() == "```":
+            return "\n".join(lines[1:-1]).strip()
+
+        # 末尾の ``` までを貪欲にマッチ（内部の ``` による誤切断を防止）
+        pattern_greedy = rf"```(?:{language})?\s*\n(.*)\n```\s*$"
+        match_greedy = re.search(pattern_greedy, stripped, re.DOTALL | re.IGNORECASE)
+        if match_greedy:
+            return match_greedy.group(1).strip()
+
         pattern = rf"```(?:{language})?\s*\n(.*?)```"
-        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+        match = re.search(pattern, stripped, re.DOTALL | re.IGNORECASE)
         if match:
             return match.group(1).strip()
-        # フォールバック: ``` のみ
-        match_generic = re.search(r"```\s*\n(.*?)```", text, re.DOTALL)
-        if match_generic:
-            return match_generic.group(1).strip()
-        return text.strip()
+
+        return stripped
 
     @staticmethod
     def atomic_write_text(file_path: Path, content: str):
@@ -41,14 +50,28 @@ class CodeParser:
         Handles both outside/inside code-block tags:
         [FILE: path] or # FILE: path or // FILE: path
         """
-        written_files = []
-        if not llm_output:
-            return written_files
+        def flush_file(path_str: str, lines_list: list):
+            if not path_str or not lines_list:
+                return None
+            final_code = "\n".join(lines_list).strip()
+            if not final_code:
+                return None
 
-        # 1. 汎用的なファイル検出用の正規表現パターン
-        # [FILE: path], # FILE: path, // FILE: path, ### filepath: path などに対応
+            clean_path = path_str
+            if clean_path.startswith("workspace/"):
+                parts = clean_path.split("/")
+                clean_path = "/".join(parts[2:]) if len(parts) > 2 else "/".join(parts[1:])
+
+            if not CodeParser.is_invalid_path(clean_path):
+                full_path = target_dir / clean_path
+                CodeParser.atomic_write_text(full_path, final_code)
+                return clean_path
+            return None
+
+        # 1. 厳格なファイル検出用パターン: [FILE: path] を最優先
         file_tag_pattern = r"(?:\[FILE:\s*([^\n\]]+)\]|(?://|#)\s*FILE:\s*([^\n\r\s]+)|###\s*filepath:\s*([^\n\r\s]+))"
 
+        written_files = []
         lines = llm_output.splitlines()
         current_path = None
         in_code_block = False
@@ -57,54 +80,41 @@ class CodeParser:
         for line in lines:
             stripped = line.strip()
 
+            # 行の中にファイル指定タグがあるかチェック
+            match = re.search(file_tag_pattern, line, re.IGNORECASE)
+            if match:
+                # 新しいファイルタグが来たら、直前までに蓄積されたファイルを即座にフラッシュして書き出す
+                saved = flush_file(current_path, code_lines)
+                if saved and saved not in written_files:
+                    written_files.append(saved)
+
+                code_lines = []
+                detected_path = (match.group(1) or match.group(2) or match.group(3) or "").strip()
+                current_path = detected_path if detected_path else None
+                continue
+
             # コードブロックの開始/終了をチェック
             if stripped.startswith("```"):
                 if in_code_block:
-                    # コードブロック終了 -> 収集したコードを書き出す
-                    if current_path and code_lines:
-                        # もしコードブロックの内側1行目にファイル名が入っていた場合、それを取り除く
-                        final_code = "\n".join(code_lines)
-                        # 内側のタグをクリーンアップ
-                        final_code = re.sub(file_tag_pattern, "", final_code).strip()
-                        # 先頭の改行などを削除
-                        final_code = final_code.lstrip()
-
-                        # 重複するプレフィックス (workspace/ や workspace/identicon-generator/ 等) を除外
-                        clean_path = current_path
-                        if clean_path.startswith("workspace/"):
-                            parts = clean_path.split("/")
-                            if len(parts) > 2 and parts[1] == "identicon-generator":
-                                clean_path = "/".join(parts[2:])
-                            elif len(parts) > 1:
-                                clean_path = "/".join(parts[1:])
-
-                        if not CodeParser.is_invalid_path(clean_path):
-                            full_path = target_dir / clean_path
-                            current_path = clean_path
-                            CodeParser.atomic_write_text(full_path, final_code)
-                            written_files.append(current_path)
-
-                    in_code_block = False
+                    # コードブロック終了 -> 蓄積したコードをフラッシュ
+                    saved = flush_file(current_path, code_lines)
+                    if saved and saved not in written_files:
+                        written_files.append(saved)
                     code_lines = []
-                    # 書き出し終わったらパス指定をクリア
                     current_path = None
+                    in_code_block = False
                 else:
-                    # コードブロック開始
                     in_code_block = True
                     code_lines = []
                 continue
 
-            # 行の中にファイル指定タグがあるかチェック
-            match = re.search(file_tag_pattern, line, re.IGNORECASE)
-            if match:
-                detected_path = (match.group(1) or match.group(2) or match.group(3) or "").strip()
-                if detected_path:
-                    current_path = detected_path
-                # タグ行そのものはコードから除外するため、code_linesには追加しない
-                continue
-
             # コードブロック内の場合、行を収集
-            if in_code_block:
+            if in_code_block and current_path:
                 code_lines.append(line)
+
+        # 全行走査後、未フラッシュのコードがあれば書き出す
+        saved = flush_file(current_path, code_lines)
+        if saved and saved not in written_files:
+            written_files.append(saved)
 
         return written_files

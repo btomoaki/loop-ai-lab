@@ -14,12 +14,13 @@
   - 出力フォーマットは **`image/png` のみ** とする。
   - **SVG フォーマットの出力、SVG レンダラー、XML ベクター生成ロジックは一切実装しない（全面禁止）**。
 
-## Decision #3: Standard Library Only (Zero External Frameworks)
+## Decision #3: Modern Go Ecosystem & Pragmatic Dependencies (Avoid Reinventing the Wheel)
 - **Status**: ACCEPTED
-- **Context**: 下流の Coder モデルのトークン予算（8,192 tokens）を守り、メンテナンス性とセキュリティを最大化する。
+- **Context**: 下流の Coder モデルのトークン予算（8,192 tokens）を守りつつ、車輪の再発明を避けて信頼性と開発生産性を最大化する。
 - **Decision**:
-  - Go 標準ライブラリ（`image`, `image/png`, `image/color`, `crypto/md5`, `net/http`, `embed`）のみで構成する。
-  - React/Vue/Redux/Cypress などの巨大フレームワークは使用せず、Web UI は Go 1.16+ `embed` パッケージによる単一バイナリ同梱型（HTML5 + Tailwind CSS CDN + Vanilla JS）とする。
+  - 標準ライブラリを基礎としつつ、Goエコシステムにおいて広く普及し、よくメンテナンスされているポピュラーなサードパーティライブラリ（HTTPルーティング、テストアサーション、構造化ログ、画像処理等）の積極的な活用を推奨・許可する。
+  - 重量級のモノリシックフレームワークや不要な複雑性は避け、軽量・ステートレスで標準的なパッケージを選択する。
+  - Web UI は Go 1.16+ `embed` パッケージによる単一バイナリ同梱型（HTML5 + Tailwind CSS CDN + Vanilla JS）とする。
 
 ## Decision #4: Clean Architecture Interface Injection
 - **Status**: ACCEPTED

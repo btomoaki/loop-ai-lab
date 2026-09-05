@@ -15,11 +15,20 @@ Prerequisites for initiating TDD implementation in Sprint Execution:
 
 1. **Strict Acceptance Criteria Limit (Acceptance Criteria <= 2)**:
    - Each task MUST have **at most 2 Acceptance Criteria** ensuring single responsibility. (Tasks with 3+ criteria MUST be split during refinement).
-   - **Exclusion of NFRs**: Non-functional requirements (NFRs) like performance or security are excluded from DoR and validated during DoD.
-2. **Explicit Physical File Paths**:
+   - **Exclusion of NFRs**: Non-functional requirements (NFRs) like performance or security are validated during DoD rather than cluttering AC.
+2. **Capacity & Story Point Limits (Capacity Guardian)**:
+   - Any task estimated at **>=8 Story Points** MUST be immediately decomposed into smaller micro-tasks (1-5 SP).
+3. **Explicit Physical File Paths**:
    - Every task MUST specify explicit target file paths for creation or modification.
-3. **Automated Test Harness**:
-   - Each task MUST have a corresponding `sprint_x_harness.sh` script for objective verification.
+4. **Explicit Dependencies (`depends_on`)**:
+   - Every task MUST explicitly declare its dependency array (`depends_on: ["TASK-X.Y"]` or `depends_on: []`).
+5. **Read-Only System Specifications (`references/*`)**:
+   - `references/*` files are strictly **READ-ONLY Single Source of Truth**. AI agents MUST NEVER create tasks to edit, delete, or rewrite files in `references/`.
+6. **Mandatory Documentation Task**:
+   - The final task of an initiative's backlog MUST be a dedicated documentation task (e.g. API contract specifications like `docs/openapi.yaml` or feature documentation).
+   - [REPOSITORY README ALLOCATION]: Comprehensive repository documentation (`README.md`) meeting all criteria in `developer_standards.md` is architecturally allocated to the final operational documentation epic (Epic 7). In intermediate epics, documentation tasks are scoped strictly to the architectural artifacts introduced in that epic, preventing premature scope creep.
+7. **Automated Test Harness**:
+   - Each sprint backlog MUST have a corresponding `sprint_x_harness.sh` script for objective verification.
 
 ## 3. 🚫 No Ad-Hoc Design Modifications Rule (CRITICAL)
 - **System Architecture Consistency Guarantee**:
@@ -49,7 +58,7 @@ Story points are estimated exclusively at the individual **Ticket/Task** level.
 
 * **5 pt**: Domain core design and critical interface modeling
 * **4 pt**: CI/CD pipeline setup, public cloud release design, initial alert setup
-* **3 pt**: DI container assembly and wiring
+* **3 pt**: Dependency Wiring (DI Wiring) assembly
 * **2 pt**: Unit test implementation (1 file), Docker Compose setup
 * **1 - 2 pt**: Single business logic usecase implementation
 * **1 pt**: API implementation (2 endpoints), Dockerization, basic alerts
@@ -57,12 +66,13 @@ Story points are estimated exclusively at the individual **Ticket/Task** level.
 ### Capacity Governance Hard Rules
 1. **8pt+ Ticket Decomposition Rule**:
    - Any ticket estimated at **8pt or higher** MUST be immediately decomposed into smaller tickets during Ceremony 2.
-2. **1-Sprint Capacity Limit Rule**:
-   - The total story points assigned to a single sprint backlog (`sprint_x_backlog.yaml`) MUST NOT exceed **3-4 points (Max 5 points)**. Overbudget tickets must be deferred to subsequent sprints.
+2. **Task-Level Single-Responsibility Principle**:
+   - Decompositions must be driven by cohesive domain boundaries, single-responsibility principle (SRP), and downstream Coder context capacity (each task ≤ 5 SP, ≤ 2 ACs), strictly prohibiting artificial hardcoded limits on the total number or total points across a sprint.
 
 
 ---
 
-## 🚨 5. Escalation Protocol for Missing Specifications
+## 🚨 6. Escalation Protocol for Missing Specifications & Rule Corruption
 - **No Guessing or Fabricating Features**: If specification documents (`references/*`) are missing, empty, or completely ambiguous, the team and all AI agents MUST NOT invent speculative generic features (such as generic login, payment, or unrelated templates).
-- **Mandatory Escalation Halt**: The Scrum Master and Spec Compliance Auditor MUST immediately halt refinement and issue an explicit escalation to the human stakeholder requesting the input specification files.
+- **Rule Corruption & Fatal Policy Conflict**: If the Ruler Persona detects fatal contradictions across `.agents/rules/` or unexecutable mandates, the team MUST NOT perform silent workarounds or mock fallbacks.
+- **Mandatory Escalation Halt**: The Scrum Master, Spec Compliance Auditor, or Ruler Persona MUST immediately halt refinement/execution and issue an explicit escalation to the human stakeholder requesting resolution.

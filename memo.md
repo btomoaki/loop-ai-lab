@@ -1,53 +1,81 @@
-## 🎯 直近の最優先フォーカス（セレモニー 1 エピックリファインメント）
-- **目標**: 仕様書（`references/`）を確実に読める状態のまま、コンテキスト溢れ（出力トークン枯渇・無限ループ）を起こさず、エピック分解とエピックプランニング（ディベート）を安定実行できるようにプロンプト・出力密度を調整する。
-- **検証済み知見**:
-  - パス指定による指示ファイル読み込みと、プロンプト末尾の出力開始テンプレート（べた書きアンカー）による強力な出力制御が有効。
-  - 2段階分割よりも、昨日の1段階ベースライン（49ea835）を出発点として、出力サイズ（トークン消費）の調整・簡潔化を行うアプローチが最適。
-
 # 📝 プロジェクト次回引き継ぎメモ (Handover Notes)
 
-## 1. 次回再開時のクイックスタート (Quick Start for Next Session)
+## 0. 📌 直近の達成状況 & 次回再開手順 (2026-09-04 最終更新)
 
-### 🏃 次回再開時のクリーンスタート手順 (Ceremony 2 スプリントリファインメント直行)
-- **事前お掃除状態**: 🧹 生成物 (`sprint_x_backlog.yaml`, `sprint_x_harness.sh`, `workspace/identicon-generator`) のクリーンアップは完了済みです。
-- **1. スプリントリファインメント実行コマンド**:
-  - `PYTHONPATH=. python3 runner/main.py run --phase refinement`
-- **2. 自律TDD開発実行コマンド**:
-  - `PYTHONPATH=. python3 runner/main.py run --phase sprint --sprint 1`
+### 🏆 本日の達成状況 & Epic 1〜4 完走
 
+1. **Epic 1〜4 の精緻化 & 3重監査（Audit）の全件 APPROVED 獲得**:
+   - **Epic 1 (開発基盤 & コンテナ化シフトレフト)**: Attempt 1 で一発 **APPROVED**。7層ディレクトリとポート `8080:8080`、コンテナワンショット検証を完全クリア。
+   - **Epic 2 (ドメインコアモデル & 幾何学アルゴリズム)**: Attempt 2 で **APPROVED**。モデル純粋性とアルゴリズム単体テストをクリア。
+   - **Epic 3 (インフラ PNG レンダラー & ラスター化)**: Attempt 2 で **APPROVED**。ピクセル描画と画像出力の分離をクリア。
+   - **Epic 4 (ユースケース & DI配線)**: Attempt 3 で **APPROVED**。`AC <= 2` 上限遵守、非標準 `internal/di/` ディレクトリ排除、標準レイヤー内での依存性注入配線をクリア。
 
+2. **全プロンプトの完全英語化（ASCII統一）& 絵文字・全角文字の完全排除**:
+   - `assets/*.tpl` 配下のすべてのテンプレート、および `sprint_execution_engine.py`（Ceremony 3 コード生成）、`sprint_refinement_engine.py`（監査プロンプト）から絵文字（`🌐`, `📋`, `🔨`, `🚫`, `🎯`, `🚨`, `🕵️`, `🛡️` など）および全角墨付き括弧（`【】`）を完全撤廃し、純粋な ASCII 英語テキストに統一。
+   - ペルソナ定義内の日本語表記（`[Ruler Persona (ルーラー / 規律・ポリシー統制官)]`）を `[Ruler Persona (Discipline & Policy Controller)]` に英訳統一。トークン消費とトークナイザーのバイト分割ノイズを解消。
+
+3. **直前の VETO に対する全層根本是正（ホストパイプ禁止 & 受入条件具体化義務化）**:
+   - **Zero Host Piping & Chaining Policy**: `verify_command` でのホストパイプ（`| grep`）、リダイレクト、`&&` によるコマンド連鎖を全ルール・プランナー・テンプレートで厳格に禁止。ワンショット（`docker compose run --rm <service> ...`）単一コマンドに一元化。
+   - **No Ambiguity & Explicit Enumeration Mandate**: 受入条件（AC）における `"etc."` 省略を禁止し、Clean Architecture 7層ディレクトリおよび Compose 仕様（ポート `8080:8080`、ベースイメージ、ボリュームマウント、作業ディレクトリ）の完全列挙を義務化。
+
+4. **テンプレート外部化（`assets/` 配下）& プロンプトキャッシュ最適化（Cache-First Sequence）の確立**:
+   - `assets/first_phrase.tpl` を新設し、`LLMAdapter` 基底クラスにおいて全 LLM 呼び出し時に `[INST]` 特殊タグ直後へ自動注入（Prefix Injection）する共通機構を実装。
+   - `assets/ceremony_2_backlog.tpl` を「静的 DoR / ホストパイプ禁止ルール ➔ エピック仕様 ➔ リトライフィードバック ➔ YAML生成タスク」の厳格な **Cache-First 順序** に再編成。KV キャッシュヒット率を最大化。
+
+5. **スマート・レジューム機能の運用確立**:
+   - `state/initiatives` を保持しているため、合格済みの Epic 1〜4（APPROVED 獲得済み）は自動で瞬時にスキップされ、次回は未完了の **Epic 5** からピンポイントで即座に再開されます。
 
 ---
 
-## 2. 本日完了した主要成果 (Completed Milestones Today)
-- **セレモニー1 人間レビューゲート (`--phase epic`)**: エピック抽出完了時にサマリーを出力して一時停止する安全ゲートの実装と検証。
-- **プロンプト＆ルールの完全汎用化・汎用構造**: `agents/` 内のプロンプトから特定アプリ名・特定言語ルール・重複ペルソナを除去し、Single Source of Truth (`.agents/rules/`) へ一元化。
-- **`[FinOps Cost Auditor Persona]` の配備**: セレモニー 1 & 2 に配備し、仕様外の余剰構築（CLI構築等）やオーバーエンジニアリングを排除。
-- **`[Capacity Guardian Persona]` 8pt基準軸アジリティ調整**: 8 Story Points を基準軸とする動的分解ガバナンスルールの決定・明文化。
-- **`runner/` エンジン＆ハーネスの言語非依存化**: `go.mod` 等の直書きを排し、`config.yaml` の `init_commands` と `format_cmd` から動的実行する汎用スクラムエンジンへのリファクタリング。
+## 1. 🚀 今後実装予定の機能・アーキテクチャロードマップ (Future Architecture Roadmap)
+
+過去の議論および本日洗い出された、**今後優先的に実装・改善していくべき重要構想リスト** です。新チャットへ確実に引き継ぎます：
+
+### 🧩 1. 用途別・階層別（Tiered）LLMモデルルーティング機能の本格体系化
+- **現状**: 現在はエンジンコード（`sprint_refinement_engine.py` 等）内にハードコードに近い形で「仕様抽出・監査＝Cloud Gemini」「ディベート・YAML生成・コード生成＝Local LLM」と振り分けられている。
+- **構想・改善**: `config.yaml` やモデルプロファイル定義に基づき、タスク種別（大局監査、要約、コード生成、テスト生成）や入力トークン長に応じて動的かつ宣言的にモデル・プロバイダーをルーティングできる設定駆動アーキテクチャへ昇格させる。
+
+### ⚡ 2. 3重監査 & 独立エピックの並列実行エンジン化 (Parallel Execution)
+- **現状**: 各エピックおよび監査官の審査はシングルスレッド（直列）で順番に処理されている。
+- **構想・改善**:
+  - **監査の Fan-out / Fan-in 並列化**: 独立している 3 監査官（Spec Compliance, Security, Ruler）の `agy CLI` 呼び出しを `asyncio` / スレッドで同時に並行実行し、エピック毎の監査待ち時間を約 1/3 に短縮する。
+  - **依存関係のないエピックの並列ディベート**: DAG 上で独立したエピックのリファインメントを並行処理する。
+
+### ⚠️ 3. `cmd/server/main.go` 過剰束縛の是正（`cmd/<app名>/main.go` への柔軟化）
+- **現状の課題**: ルール（`developer_standards.md`）やテンプレート（`ceremony_2_backlog.tpl`）のディレクトリ骨格指示に `cmd/server/` と固定ハードコードされているため、CLIツールやワーカー等もすべて `server` コマンドに強制されてしまう（Rule Rot 懸念）。
+- **改善方針**: Go の標準プラクティスである **`cmd/<app名>/main.go`**（本プロジェクトであれば `cmd/avatar-service/main.go` や実行バイナリ名に即したディレクトリ）が選択できるよう、ルールとプロンプトテンプレートを一般化する。
+
+### 💡 4. Scrum パッケージ＆プラグイン構造化構想 (Spaghetti Prevention)
+- **現状の課題**: スクラム関連ファイルが `.agents/` (ルール/ペルソナ), `agents/` (プロンプト), `runner/engine/` (Pythonコード) と複数ディレクトリに散乱しており、スパゲッティ化の懸念がある。
+- **改善構想**: これらを `packages/scrum/` という単一パッケージ内に自己完結型としてパッケージング統合する。
+  - `packages/scrum/rules/`
+  - `packages/scrum/personas/`
+  - `packages/scrum/prompts/`
+  - `packages/scrum/engine/`
+- **効果**: `main.py` からの依存関係・呼び出し制御が極めてスマートになり、将来的に「小説執筆パッケージ」等への切り替えも容易になる。
+
+### 🚀 5. GitHub Actions CI/CD パイプライン標準化
+- **構想**: テストハーネス実行や自動デプロイをローカルシェル依存から `.github/workflows/` を基本インフラとして活用・標準化する。
 
 ---
 
-## 3. 将来的ロードマップ (Future Architecture Roadmap)
+## 2. 🏃 明日（新チャット）再開時の手順
 
-### 🚀 GitHub Actions CI/CD パイプライン標準化
-- **構想**: 検証ハーネス実行や自動デプロイを `.github/workflows/` を基本インフラとして活用・標準化する。
+次回作業を再開する際は、以下のコマンドを実行するだけで自動的にパイプラインが進行します（Epic 1〜4 はスマートレジュームで瞬時にスキップされ、**Epic 5** のスプリント精緻化から始まります）：
 
-### ⚡ エピック／スプリントの並列実行エンジン化 (Parallel Execution)
-- **構想**: `ThreadPoolExecutor` や asyncio を導入し、独立したエピックのリファインメントおよび TDD 開発ループを並列実行・高速化する。
+```bash
+PYTHONPATH=. python3 runner/main.py run --phase all
+```
 
-### 💡 Scrum パッケージ＆プラグイン構造化構想 (Spaghetti Prevention)
-- **構想**: スクラム関連ファイル（`.agents/`, `agents/`, `runner/engine/`）を `packages/scrum/` パッケージへ一元統合・モジュール化する。
+- **残エピック**:
+  - **Epic 5**: HTTP 配信 API、レートリミッター & OpenAPI 仕様
+  - **Epic 6**: プロダクション Docker パッケージング & GCP Cloud Run 配信基盤
+  - **Epic 7**: SPA Web フロントエンド & アセットプレビュー
+- **Ceremony 3（自律 TDD 開発ループ）**:
+  - 全エピックの精緻化と監査が完了次第、**Downstream Coder による自律TDD実装・Red/Green/DoD ゲート** へ突入します。
 
-### 📑 仕様書ドメイン分解・上流前処理アーキテクチャ (Specification Domain Decomposition)
-- **背景・課題**:
-  - 大規模プロジェクト（本、ゲーム、複雑な業務アプリ等）では資料が膨大になり、単一ファイルにまとめたり、ローカルLLMに無加工で渡すとコンテキスト溢れや情報埋没が不可避となる。
-  - プロダクトには本質的に性質の異なる「大きな分解点（関心事の境界）」が存在する（例: 本なら「ストーリー・本文」「表紙・装丁」「紙質・印刷」、ゲームなら「ルール・ロジック」「アート・アニメ」「音響」「基盤」）。
-- **設計方針（合意事項）**:
-  1. **上流工程（クラウドLLM/Gemini活用）**:
-     - 雑多な資料（Word/PDF/Excel/メモ等）から「大きな分解点」を見出し、独立した仕様ファイル群（`spec_1_xxx.md`, `spec_2_yyy.md`...）へドメイン分割・要件ID（`[REQ-xx]`）付与を行う。
-     - この際、無駄なディベート（会話劇）はさせず、機械的な要件チェックリスト（Diff）形式で仕様漏れを100%監査・修正させる。
-     - スプリントやエピックへの開発分割は上流では行わず、純粋な仕様書の構造化・ID化に徹する。
-  2. **下流工程（自律開発フレームワーク/loop-ai-lab）**:
-     - 整った `references/spec_*.md` を受け取り、Ceremony 1（エピック分割・個別ペルソナレビュー）以降の自律開発ループをローカルLLMで高速・堅牢に回す。
+---
 
+## 3. システム状態ダッシュボード (State Dashboard)
+- 現在の実行状態やスプリント進捗は `state/status.md` にリアルタイム自動更新されます。
+- 各エピックのスプリント成果物は `state/initiatives/<epic_dir_name>/` に集約されています。

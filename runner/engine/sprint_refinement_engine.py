@@ -10,6 +10,7 @@ from runner.utils.backlog_splitter import BacklogSplitter
 from runner.harness_generator import TestHarnessGenerator
 from runner.adapters.llm_adapter import LLMAdapterFactory
 from runner.engine.epic_refinement_engine import EpicRefinementEngine
+from runner.engine.backlog_harness import BacklogHarness
 
 
 def load_persona_mappings(root_dir: Path) -> tuple:
@@ -45,7 +46,8 @@ def load_persona_mappings(root_dir: Path) -> tuple:
             "scrummaster": "[Scrum Master Persona]",
             "securityauditor": "[Security Ethics Auditor Persona]",
             "architect": "[Software Architect Persona]",
-            "specauditor": "[Spec Compliance Auditor Persona]"
+            "specauditor": "[Spec Compliance Auditor Persona]",
+            "ruler": "[Ruler Persona (ルーラー / 規律・ポリシー統制官)]"
         }
         for k, v in alias_to_formal.items():
             formal_to_alias[v] = k
@@ -186,11 +188,15 @@ class SprintRefinementEngine:
         else:
             filtered_personas_instruction = refs.get("personas", "")
 
+        if "ruler" not in required_personas:
+            required_personas.append("ruler")
+            required_personas_formal.append("[Ruler Persona (Discipline & Policy Controller)]")
+
         persona_format_lines = []
         for p_formal in required_personas_formal:
             p_f_lower = p_formal.lower()
             if "scrum master" in p_f_lower:
-                persona_format_lines.append("- **[Scrum Master Persona]**: Facilitates the session, validates task sequencing, and establishes sprint DoD.")
+                persona_format_lines.append("- **[Scrum Master Persona]**: Facilitates the session, organizes discussion flow, validates task dependency sequencing (DAG), and establishes sprint DoD (Does not dictate technical AC sizing).")
             elif "software architect" in p_f_lower or "architect" in p_f_lower:
                 persona_format_lines.append("- **[Software Architect Persona]**: Micro-task package structure, domain interfaces, and pure function boundaries using Go standard library.")
             elif "frontend" in p_f_lower:
@@ -202,7 +208,7 @@ class SprintRefinementEngine:
             elif "qa engineer" in p_f_lower or "quality assurance" in p_f_lower or "qa" in p_f_lower:
                 persona_format_lines.append("- **[QA Engineer Persona]**: TDD unit test suites, edge cases, and automated verify commands.")
             elif "capacity guardian" in p_f_lower or "capacity" in p_f_lower:
-                persona_format_lines.append("- **[Capacity Guardian Persona]**: AI Model Expert. Enforces strict DoR, task size constraints, and prevents bloated structures.")
+                persona_format_lines.append("- **[Capacity Guardian Persona]**: AI Model Context Guardian. Absolute enforcer of Acceptance Criteria <= 2 per task and SP <= 5. Strictly vetoes >= 3 ACs without imposing artificial task count limits.")
             elif "anti-complexity" in p_f_lower or "pragmatic" in p_f_lower:
                 persona_format_lines.append("- **[Pragmatic Anti-Complexity Engineer Persona]**: YAGNI sarcastic guard cutting over-engineering.")
             elif "finops" in p_f_lower or "cost" in p_f_lower:
@@ -211,34 +217,51 @@ class SprintRefinementEngine:
                 persona_format_lines.append("- **[Spec Compliance Auditor Persona]**: Audits specification compliance and checks for vector format limitations.")
             elif "security" in p_f_lower or "ethics" in p_f_lower or "securityauditor" in p_f_lower:
                 persona_format_lines.append("- **[Security Ethics Auditor Persona]**: Audits security standards, rate limiting, and container hardening.")
+            elif "ruler" in p_f_lower or "rule" in p_f_lower:
+                persona_format_lines.append("- **[Ruler Persona (Discipline & Policy Controller)]**: Absolute enforcer of .agents/rules/ and GEMINI.md. Mandates Shift-Left Containerization (Epic 1 Sprint 1 compose.yaml), enforces docker compose for all verify_commands, blocks model logic/tests in internal/domain/model/, and mandates go mod init standards.")
         
         persona_format_str = "\n".join(persona_format_lines)
 
+        # 1. debate_log.md 生成
         # 1. debate_log.md 生成
         if not debate_file.exists():
             print(f"💬 [Ceremony 2] Step 1: Generating debate_log.md for: {title}...", flush=True)
             self.update_status_dashboard(title, "ディベートログ生成中...")
             
-            prompt_debate = (
-                f"[INST]\n"
-                f"[TASK: SPRINT REFINEMENT DEBATE FOR {title}]\n"
-                f"=== 1. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-                f"=== 2. TARGET EPIC ===\n- Title: {title}\n- Scope: {scope}\n\n"
-                f"=== 3. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-                f"=== 4. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-                f"=== 5. MULTI-PERSONA INSTRUCTIONS ===\n{filtered_personas_instruction}\n\n"
-                f"=== 6. TARGET DEVELOPER AGENT PROFILE (CODER MODEL) ===\n{refs['target_agent']}\n\n"
-                f"=== 7. CEREMONY RETROSPECTIVE (IF ANY) ===\n{retro_content}\n\n"
-                "Output MUST follow this format:\n"
-                f"# 📋 Sprint Refinement Debate Log: {title}\n\n"
-                "## 1. Multi-Persona Discussion\n"
-                "### 🔨 Sprint Builders:\n"
-                f"{persona_format_str}\n\n"
-                "## 2. Sprint Backlog Plan\n"
-                "- **TASK-1.1**: <Description, Story Points, Dependencies, and AC (Max 2 ACs)>\n"
-                "- **TASK-1.2**: <Description, Story Points, Dependencies, and AC (Max 2 ACs)>\n"
-                "[/INST]\n"
-            )
+            tpl_debate = self.root_dir / "assets" / "ceremony_2_debate.tpl"
+            if tpl_debate.exists():
+                prompt_debate = tpl_debate.read_text(encoding="utf-8").format(
+                    rules=refs['rules'],
+                    specs=refs['specs'],
+                    personas=filtered_personas_instruction,
+                    target_agent=refs['target_agent'],
+                    inst_file_rel=inst_file_rel,
+                    title=title,
+                    scope=scope,
+                    retro_content=retro_content,
+                    persona_format_str=persona_format_str
+                )
+            else:
+                prompt_debate = (
+                    f"[INST]\n"
+                    f"=== 1. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
+                    f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
+                    f"=== 3. MULTI-PERSONA INSTRUCTIONS ===\n{filtered_personas_instruction}\n\n"
+                    f"=== 4. TARGET DEVELOPER AGENT PROFILE (CODER MODEL) ===\n{refs['target_agent']}\n\n"
+                    f"=== 5. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
+                    f"=== 6. TARGET EPIC ===\n- Title: {title}\n- Scope: {scope}\n\n"
+                    f"=== 7. CEREMONY RETROSPECTIVE (IF ANY) ===\n{retro_content}\n\n"
+                    f"[TASK: SPRINT REFINEMENT DEBATE FOR {title}]\n"
+                    "Output MUST follow this format:\n"
+                    f"# 📋 Sprint Refinement Debate Log: {title}\n\n"
+                    "## 1. Multi-Persona Discussion\n"
+                    "### 🔨 Sprint Builders:\n"
+                    f"{persona_format_str}\n\n"
+                    "## 2. Sprint Backlog Plan\n"
+                    "- **TASK-1.1**: <Description, Story Points, Dependencies, and AC (Max 2 ACs)>\n"
+                    "- **TASK-1.2**: <Description, Story Points, Dependencies, and AC (Max 2 ACs)>\n"
+                    "[/INST]\n"
+                )
             res = self.refinement_agent.generate_text(prompt_debate)
             CodeParser.atomic_write_text(debate_file, (res or "").strip())
 
@@ -247,45 +270,48 @@ class SprintRefinementEngine:
             print(f"📝 [Ceremony 2] Step 2: Generating epic_backlog.yaml for: {title}...", flush=True)
             self.update_status_dashboard(title, "バックログYAML生成中...")
 
-            prompt_yaml = (
-                f"[INST]\n"
-                f"[TASK: GENERATE EPIC BACKLOG YAML FOR {title}]\n"
-                f"Generate a valid YAML block containing micro-scoped, dependency-ordered tasks for {title}.\n"
-                f"Target workspace directory is: {self.config.workspace_rel}\n"
-                f"Container image name is: {self.config.container_image_name}\n\n"
-                f"=== SCOPE & SPECIFICATION ===\n{scope}\n\n"
-                f"=== CEREMONY RETROSPECTIVE (IF ANY) ===\n{retro_content}\n\n"
-                "🚨 CRITICAL DEFINITION OF READY (DoR) RULES:\n"
-                "1. Each task MUST have at most 1 or 2 acceptance criteria (strictly Maximum 3).\n"
-                "2. references/* is READ-ONLY. NEVER create tasks modifying references/!\n"
-                "3. Any task estimated >=8 SP must be decomposed into smaller sub-tasks (1-5 SP).\n\n"
-                "Output MUST be a valid YAML block enclosed in ```yaml ... ```:\n"
-                "```yaml\n"
-                f"epic_id: EPIC-{epic_idx}\n"
-                f"title: \"{title}\"\n"
-                f"workspace_rel: \"{self.config.workspace_rel}\"\n"
-                "tasks:\n"
-                f"  - id: TASK-{epic_idx}.1\n"
-                "    title: \"Setup domain foundation and interfaces\"\n"
-                "    description: \"Detailed task scope\"\n"
-                "    story_points: 1\n"
-                "    depends_on: []\n"
-                "    acceptance_criteria:\n"
-                "      - \"Criterion 1 (Concrete assertion)\"\n"
-                "      - \"Criterion 2 (Concrete assertion)\"\n"
-                "    verify_command: \"go test ./...\"\n"
-                f"  - id: TASK-{epic_idx}.2\n"
-                "    title: \"Implement core functionality\"\n"
-                "    description: \"Detailed task scope\"\n"
-                "    story_points: 2\n"
-                f"    depends_on: [\"TASK-{epic_idx}.1\"]\n"
-                "    acceptance_criteria:\n"
-                "      - \"Criterion 1 (Concrete assertion)\"\n"
-                "      - \"Criterion 2 (Concrete assertion)\"\n"
-                "    verify_command: \"go test ./...\"\n"
-                "```\n"
-                "[/INST]\n"
-            )
+            tpl_backlog = self.root_dir / "assets" / "ceremony_2_backlog.tpl"
+            if tpl_backlog.exists():
+                prompt_yaml = tpl_backlog.read_text(encoding="utf-8").format(
+                    title=title,
+                    workspace_rel=self.config.workspace_rel,
+                    container_image_name=self.config.container_image_name,
+                    scope=scope,
+                    retro_content=retro_content,
+                    epic_idx=epic_idx
+                )
+            else:
+                prompt_yaml = (
+                    f"[INST]\n"
+                    f"[TASK: GENERATE EPIC BACKLOG YAML FOR {title}]\n"
+                    f"Generate a valid YAML block containing micro-scoped, dependency-ordered tasks for {title}.\n"
+                    f"Target workspace directory is: {self.config.workspace_rel}\n"
+                    f"Container image name is: {self.config.container_image_name}\n\n"
+                    f"=== SCOPE & SPECIFICATION ===\n{scope}\n\n"
+                    f"=== CEREMONY RETROSPECTIVE (IF ANY) ===\n{retro_content}\n\n"
+                    "🚨 CRITICAL DEFINITION OF READY (DoR) RULES:\n"
+                    "1. Each task MUST have at most 1 or 2 acceptance criteria (strictly Maximum 2).\n"
+                    "2. references/* is READ-ONLY. NEVER create tasks modifying references/!\n"
+                    "3. Any task estimated >=8 SP must be decomposed into smaller sub-tasks (1-5 SP).\n"
+                    "4. Task-Appropriate Verification: For setup/skeleton/config tasks, verify via `docker compose run --rm test echo OK`.\n"
+                    "Output MUST be a valid YAML block enclosed in ```yaml ... ```:\n"
+                    "```yaml\n"
+                    f"epic_id: EPIC-{epic_idx}\n"
+                    f"title: \"{title}\"\n"
+                    f"workspace_rel: \"{self.config.workspace_rel}\"\n"
+                    "tasks:\n"
+                    f"  - id: TASK-{epic_idx}.1\n"
+                    "    title: \"Setup domain foundation and interfaces\"\n"
+                    "    description: \"Detailed task scope\"\n"
+                    "    story_points: 1\n"
+                    "    depends_on: []\n"
+                    "    acceptance_criteria:\n"
+                    "      - \"Criterion 1 (Concrete assertion)\"\n"
+                    "      - \"Criterion 2 (Concrete assertion)\"\n"
+                    "    verify_command: \"docker compose run --rm test echo OK\"\n"
+                    "```\n"
+                    "[/INST]\n"
+                )
             res_yaml = self.refinement_agent.generate_text(prompt_yaml)
             parsed_yaml = CodeParser.extract_code_block(res_yaml or "", "yaml")
             
@@ -312,6 +338,14 @@ class SprintRefinementEngine:
                 }
                 CodeParser.atomic_write_text(backlog_file, yaml.dump(mock_data, default_flow_style=False, allow_unicode=True))
 
+            # 🛡️ Backlog Pre-Flight Harness による決定論的 7大ガードレール検査 & 自動補正
+            harness = BacklogHarness(self.root_dir, self.config)
+            remediated, report = harness.validate_and_remediate(epic_dir, epic_idx, title)
+            if remediated:
+                print(f"  🛡️ [Backlog Harness] Auto-remediated backlog for Epic {epic_idx} before audit:\n{report}", flush=True)
+            else:
+                print(f"  🛡️ [Backlog Harness] Verified Epic {epic_idx} backlog: All 7 guardrails passed.", flush=True)
+
     def run_epic_backlog_audit(self, epic_dir: Path, title: str, detailed_spec: str, epic_idx: int, attempt: int) -> dict:
         """エピック単体のバックログを対象に、セキュリティと仕様漏れをGeminiで都度監査する。"""
         backlog_file = epic_dir / "epic_backlog.yaml"
@@ -334,14 +368,15 @@ class SprintRefinementEngine:
             f"[TASK: EPIC-LEVEL SPECIFICATION COMPLIANCE AUDIT]\n"
             f"You are the Specification Compliance Auditor (.agents/personas/spec_compliance_auditor.md).\n"
             f"Cross-reference the generated sprint backlog for this specific Epic against its detailed specification.\n\n"
-            f"🚨 AUDIT SCOPE LIMITATION (CRITICAL):\n"
-            f"- Evaluate ONLY the tasks within this Epic: '{title}'.\n"
+            f"[AUDIT SCOPE LIMITATION & RESPONSIBILITY BOUNDARY (CRITICAL)]:\n"
+            f"- Evaluate ONLY whether the functional requirements, pure data structures, APIs, and algorithms from '{title}' are comprehensively mapped (100% Traceability / What to build).\n"
             f"- Do NOT inspect or complain about other Epics, missing requirements belonging to other Epics, or system integration aspects outside this Epic's scope.\n"
-            f"- If a requirement is not part of this Epic's scope, it is OUT OF SCOPE. Do NOT VETO based on out-of-scope missing features.\n\n"
+            f"- If a requirement is not part of this Epic's scope, it is OUT OF SCOPE. Do NOT VETO based on out-of-scope missing features.\n"
+            f"- [STRICT PROHIBITION ON OVERREACH]: Task execution order (dependency DAGs), shell command syntax, and Docker runtime operational feasibility are the EXCLUSIVE domain of the Ruler Persona (.agents/personas/ruler.md). You MUST NOT VETO on the basis of task execution sequencing, shell command validity, or container runtime checks! Focus strictly on specification traceability.\n\n"
             f"=== 1. EPIC SPECIFICATION ===\n{detailed_spec}\n\n"
             f"=== 2. GENERATED SPRINT BACKLOG FOR THIS EPIC ===\n{backlog_content}\n\n"
             f"Output format:\n"
-            f"# 🕵️ Epic Spec Compliance Audit Report (Epic {epic_idx}, Attempt {attempt})\n\n"
+            f"# Epic Spec Compliance Audit Report (Epic {epic_idx}, Attempt {attempt})\n\n"
             f"## 1. Traceability Checklist\n"
             f"- [Requirement / Decision]: [Mapped Task ID] -> Status (COVERED / MISSING / VIOLATION)\n\n"
             f"## 2. Verdict\n"
@@ -361,13 +396,13 @@ class SprintRefinementEngine:
             f"[TASK: EPIC-LEVEL SECURITY & ETHICS AUDIT]\n"
             f"You are the Security & AI Ethics Auditor (.agents/personas/security_ethics_auditor.md).\n"
             f"Audit the sprint backlog of this specific Epic for security, container hardening, and dependency safety rules.\n\n"
-            f"🚨 AUDIT SCOPE LIMITATION (CRITICAL):\n"
+            f"[AUDIT SCOPE LIMITATION (CRITICAL)]:\n"
             f"- Evaluate ONLY the tasks within this Epic: '{title}'.\n"
             f"- Do NOT inspect or complain about security aspects outside this Epic's scope (e.g., container settings if this Epic is just about domain core logic).\n\n"
             f"=== 1. EPIC SPECIFICATION ===\n{detailed_spec}\n\n"
             f"=== 2. GENERATED SPRINT BACKLOG FOR THIS EPIC ===\n{backlog_content}\n\n"
             f"Output format:\n"
-            f"# 🛡️ Epic Security & AI Ethics Audit Report (Epic {epic_idx}, Attempt {attempt})\n\n"
+            f"# Epic Security & AI Ethics Audit Report (Epic {epic_idx}, Attempt {attempt})\n\n"
             f"## 1. Security Checklist\n"
             f"- [Security Standard / Rule]: Status (COVERED / MISSING / VIOLATION / NOT_APPLICABLE)\n\n"
             f"## 2. Verdict\n"
@@ -378,26 +413,62 @@ class SprintRefinementEngine:
         sec_res = self.gemini_audit_agent.generate_text(prompt_sec)
         sec_text = (sec_res or "").strip()
 
+        # ----------------------------------------------------
+        # 3. Ruler による規律遵守・ルール腐敗監査
+        # ----------------------------------------------------
+        print(f"🔍 [Epic Audit 3/3 (Attempt #{attempt})] Ruler Persona inspecting rules & containerization for {epic_dir.name}...", flush=True)
+        prompt_ruler = (
+            f"[INST]\n"
+            f"[TASK: EPIC-LEVEL RULES & GOVERNANCE COMPLIANCE AUDIT]\n"
+            f"You are the Ruler (.agents/rules/ and GEMINI.md Absolute Enforcer).\n"
+            f"Evaluate this Epic's sprint backlog against .agents/rules/:\n\n"
+            f"1. Shift-Left Containerization: Are all verify_commands containerized (docker compose run --rm ...)? Prohibit host toolchain pollution (e.g. bare 'go test' or 'golangci-lint' directly on host).\n"
+            f"2. Domain Model Purity: Pure struct schemas ONLY in internal/domain/model/ (Zero functions, methods, logic, or test files in model).\n"
+            f"3. Rule Rot Detection: Did you detect any contradictions across .agents/rules/ or unexecutable rules? If so, report 'RULER_ALERT: <details>'.\n\n"
+            f"=== SPRINT BACKLOG FOR THIS EPIC ===\n{backlog_content}\n\n"
+            f"Output format:\n"
+            f"# Ruler Persona Compliance Audit: {epic_dir.name}\n\n"
+            f"## 1. Compliance Findings\n"
+            f"- Shift-Left Containerization: <Pass / Violation>\n"
+            f"- Model Purity: <Pass / Violation>\n"
+            f"- Rule Rot Alerts: <None / RULER_ALERT: ...>\n\n"
+            f"## 2. Verdict\n"
+            f"- Verdict: **APPROVED** or **VETO**\n"
+            f"- Summary: <Details and issues found.>\n"
+            f"[/INST]\n"
+        )
+        ruler_res = self.gemini_audit_agent.generate_text(prompt_ruler)
+        ruler_text = (ruler_res or "").strip()
+
         # 保存
         audit_dir = epic_dir / f"attempt_{attempt}"
         audit_dir.mkdir(parents=True, exist_ok=True)
         CodeParser.atomic_write_text(audit_dir / "audit_spec_compliance.md", spec_text)
         CodeParser.atomic_write_text(audit_dir / "audit_security_ethics.md", sec_text)
+        CodeParser.atomic_write_text(audit_dir / "audit_ruler_governance.md", ruler_text)
+
+        if "RULER_ALERT:" in ruler_text:
+            alert_msg = ruler_text.split("RULER_ALERT:")[1].splitlines()[0].strip()
+            print(f"⚠️ [Ruler Alert Detected in {epic_dir.name}] {alert_msg}", flush=True)
 
         spec_passed = "Verdict: **APPROVED**" in spec_text or "Verdict: APPROVED" in spec_text or "**APPROVED**" in spec_text
         sec_passed = "Verdict: **APPROVED**" in sec_text or "Verdict: APPROVED" in sec_text or "**APPROVED**" in sec_text
-        overall_passed = spec_passed and sec_passed
+        ruler_passed = "Verdict: **APPROVED**" in ruler_text or "Verdict: APPROVED" in ruler_text or "**APPROVED**" in ruler_text
+        overall_passed = spec_passed and sec_passed and ruler_passed
 
         feedback = ""
         if not spec_passed:
             feedback += f"### Spec Compliance Issues:\n{spec_text}\n\n"
         if not sec_passed:
             feedback += f"### Security & Ethics Issues:\n{sec_text}\n\n"
+        if not ruler_passed:
+            feedback += f"### Ruler Governance & Policy Violations:\n{ruler_text}\n\n"
 
         return {
             "overall_passed": overall_passed,
             "spec_passed": spec_passed,
             "sec_passed": sec_passed,
+            "ruler_passed": ruler_passed,
             "feedback": feedback.strip()
         }
 
@@ -429,17 +500,18 @@ class SprintRefinementEngine:
         spec_audit_file = loop_dir / "audit_spec_compliance.md"
         prompt_spec = (
             f"[INST]\n"
-            f"[TASK: INDEPENDENT SPECIFICATION COMPLIANCE AUDIT (LOOP #{attempt})]\n"
+            f"=== 1. SYSTEM SPECIFICATIONS & DECISIONS ===\n{refs['specs']}\n\n"
+            f"=== 2. AUDIT INSTRUCTIONS ===\n"
             f"You are the Specification Compliance Auditor (.agents/personas/spec_compliance_auditor.md).\n"
             f"Cross-reference ALL generated sprint backlogs against the source specifications in references/ line-by-line.\n\n"
             f"CRITICAL AUDIT RULES:\n"
             f"1. ZERO SPEC TAMPERING: If ANY task attempts to edit, modify, or update files in references/, you MUST ISSUE AN IMMEDIATE VETO.\n"
             f"2. DoR COMPLIANCE: Verify that each task has at most 2-3 acceptance criteria (single responsibility micro-tasks).\n"
             f"3. Check for 100% adherence to specifications in references/* and decisions in references/decisions.md.\n\n"
-            f"=== 1. SYSTEM SPECIFICATIONS & DECISIONS ===\n{refs['specs']}\n\n"
-            f"=== 2. GENERATED SPRINT BACKLOGS ACROSS ALL EPICS ===\n{all_backlogs_str}\n\n"
+            f"=== 3. GENERATED SPRINT BACKLOGS ACROSS ALL EPICS (LOOP #{attempt}) ===\n{all_backlogs_str}\n\n"
+            f"[TASK: INDEPENDENT SPECIFICATION COMPLIANCE AUDIT]\n"
             f"Output format:\n"
-            f"# 🕵️ Specification Compliance Audit Report (Loop #{attempt})\n\n"
+            f"# Specification Compliance Audit Report (Loop #{attempt})\n\n"
             f"## 1. Traceability Checklist\n"
             f"- [Requirement / Decision]: [Mapped Task ID] -> Status (COVERED / MISSING / VIOLATION / TAMPERING)\n\n"
             f"## 2. Verdict\n"
@@ -463,12 +535,13 @@ class SprintRefinementEngine:
         sec_audit_file = loop_dir / "audit_security_ethics.md"
         prompt_sec = (
             f"[INST]\n"
-            f"[TASK: INDEPENDENT SECURITY & ETHICS AUDIT (LOOP #{attempt})]\n"
+            f"=== 1. AUDIT INSTRUCTIONS ===\n"
             f"You are the Security & AI Ethics Auditor (.agents/personas/security_ethics_auditor.md).\n"
             f"Audit the sprint backlogs for security standards, rate limiting (HTTP 429), container hardening (non-root UID 65532), and zero unrequested external services.\n\n"
-            f"=== GENERATED SPRINT BACKLOGS ===\n{all_backlogs_str}\n\n"
+            f"=== 2. GENERATED SPRINT BACKLOGS (LOOP #{attempt}) ===\n{all_backlogs_str}\n\n"
+            f"[TASK: INDEPENDENT SECURITY & ETHICS AUDIT]\n"
             f"Output format:\n"
-            f"# 🛡️ Security & AI Ethics Audit Report (Loop #{attempt})\n\n"
+            f"# Security & AI Ethics Audit Report (Loop #{attempt})\n\n"
             f"## 1. Security Checklist\n"
             f"- Rate Limiting & DoS Protection: (PASS / FAIL)\n"
             f"- Container Security (non-root): (PASS / FAIL)\n"
@@ -485,14 +558,53 @@ class SprintRefinementEngine:
 
         sec_passed = "Verdict: **APPROVED**" in sec_text or "Verdict: APPROVED" in sec_text or "**APPROVED**" in sec_text
         sec_status_icon = "✅ APPROVED" if sec_passed else "🛑 VETO/REJECTED"
-        print(f"📝 [Audit 2/2 Complete - Loop #{attempt}] Security & Ethics: {sec_status_icon} (Saved to {sec_audit_file.relative_to(self.root_dir)})")
+        print(f"📝 [Audit 2/3 Complete - Loop #{attempt}] Security & Ethics: {sec_status_icon} (Saved to {sec_audit_file.relative_to(self.root_dir)})")
 
+        # ----------------------------------------------------
+        # 3. Ruler による全エピック横断の規律・コンテナ化・ルール腐敗監査
+        # ----------------------------------------------------
+        print(f"🔍 [Audit 3/3 (Loop #{attempt})] Ruler Persona inspecting cross-epic governance & containerization...", flush=True)
+        ruler_audit_file = loop_dir / "audit_ruler_governance.md"
+        prompt_ruler = (
+            f"[INST]\n"
+            f"=== 1. GOVERNANCE & AUDIT RULES ===\n"
+            f"You are the Ruler (.agents/rules/ and GEMINI.md Absolute Enforcer).\n"
+            f"Audit the sprint backlogs across ALL Epics for:\n\n"
+            f"1. Shift-Left Containerization: ALL verification commands (`verify_command`) MUST invoke containerized environments (e.g. `docker compose run --rm <service> ...`). Strictly VETO any bare host commands (e.g. bare `go test`, `go build`, `make`, `grep`, `test` on host).\n"
+            f"2. Container Lifecycle Pair & Guaranteed Cleanup: ALL container executions MUST guarantee cleanup (`--rm`, `trap 'docker compose down -v' EXIT`, or `--abort-on-container-exit`). Strictly VETO any command that hangs (e.g. blocking foreground `docker run`), leaves orphaned background containers (`docker run -d` without teardown), or uses host `&`/`pkill`.\n"
+            f"3. Domain Model Purity: Pure struct schemas ONLY in `internal/domain/model/` (Zero functions, methods, logic, or test files in model).\n"
+            f"4. Rule Rot Detection: Did you detect any contradictions across `.agents/rules/` or unexecutable rules?\n\n"
+            f"=== 2. GENERATED SPRINT BACKLOGS ACROSS ALL EPICS (LOOP #{attempt}) ===\n{all_backlogs_str}\n\n"
+            f"[TASK: INDEPENDENT CROSS-EPIC RULES & GOVERNANCE AUDIT]\n"
+            f"Output format:\n"
+            f"# Ruler Governance & Policy Audit Report (Loop #{attempt})\n\n"
+            f"## 1. Governance Findings\n"
+            f"- Shift-Left Containerization: (PASS / VIOLATION)\n"
+            f"- Container Lifecycle & Guaranteed Cleanup: (PASS / VIOLATION)\n"
+            f"- Domain Model Purity: (PASS / VIOLATION)\n"
+            f"- Rule Rot Alerts: (None / RULER_ALERT: ...)\n\n"
+            f"## 2. Verdict\n"
+            f"- Verdict: **APPROVED** or **VETO**\n"
+            f"- Summary: <Details and issues found. Mention specific tasks and required actions to fix if VETO.>\n"
+            f"[/INST]\n"
+        )
+        ruler_res = self.gemini_audit_agent.generate_text(prompt_ruler)
+        ruler_text = (ruler_res or "").strip()
+        CodeParser.atomic_write_text(ruler_audit_file, ruler_text)
+        CodeParser.atomic_write_text(self.eval_dir / "audit_ruler_governance.md", ruler_text)
+
+        ruler_passed = "Verdict: **APPROVED**" in ruler_text or "Verdict: APPROVED" in ruler_text or "**APPROVED**" in ruler_text
+        ruler_status_icon = "✅ APPROVED" if ruler_passed else "🛑 VETO/REJECTED"
+        print(f"📝 [Audit 3/3 Complete - Loop #{attempt}] Ruler Governance: {ruler_status_icon} (Saved to {ruler_audit_file.relative_to(self.root_dir)})")
+
+        overall_passed = spec_passed and sec_passed and ruler_passed
         summary_data = {
             "loop_attempt": attempt,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "spec_compliance_passed": spec_passed,
             "security_ethics_passed": sec_passed,
-            "overall_approved": spec_passed and sec_passed
+            "ruler_governance_passed": ruler_passed,
+            "overall_approved": overall_passed
         }
         CodeParser.atomic_write_text(loop_dir / "audit_summary.yaml", yaml.dump(summary_data, default_flow_style=False))
 
@@ -500,7 +612,8 @@ class SprintRefinementEngine:
             "attempt": attempt,
             "spec_passed": spec_passed,
             "sec_passed": sec_passed,
-            "overall_passed": spec_passed and sec_passed,
+            "ruler_passed": ruler_passed,
+            "overall_passed": overall_passed,
             "loop_dir": loop_dir
         }
 
@@ -551,13 +664,15 @@ class SprintRefinementEngine:
                 )
                 try:
                     spec_response = gemini_adapter.generate_text(extract_prompt)
-                    # YAMLコードブロックなどを取り除いてクリーンにする
-                    clean_yaml = spec_response or ""
-                    if "```yaml" in clean_yaml:
-                        clean_yaml = clean_yaml.split("```yaml")[1].split("```")[0]
-                    elif "```" in clean_yaml:
-                        clean_yaml = clean_yaml.split("```")[1].split("```")[0]
-                    CodeParser.atomic_write_text(spec_file, clean_yaml.strip())
+                    # 最外層のマークダウンコードブロック枠のみ安全に取り除き、本文中のコードブロックは保護する
+                    clean_yaml = (spec_response or "").strip()
+                    lines = clean_yaml.splitlines()
+                    if lines and lines[0].strip().startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].strip() == "```":
+                        lines = lines[:-1]
+                    clean_yaml = "\n".join(lines).strip()
+                    CodeParser.atomic_write_text(spec_file, clean_yaml)
                 except Exception as e:
                     print(f"  ⚠️ [Ceremony 2 Warning] Failed to extract spec using Gemini: {e}")
             
@@ -576,6 +691,19 @@ class SprintRefinementEngine:
             if log_personas:
                 required_personas = log_personas
                 print(f"  🎯 [Harness Persona Match] Restored persona aliases from overall log: {required_personas}")
+
+            # ⏩ スマート・レジューム判定: 既に合格済み（APPROVED）の監査ログがあるエピックはスキップ
+            backlog_file = epic_dir / "epic_backlog.yaml"
+            if backlog_file.exists():
+                approved = False
+                for att_dir in sorted(epic_dir.glob("attempt_*"), reverse=True):
+                    r_file = att_dir / "audit_ruler_governance.md"
+                    if r_file.exists() and ("Verdict: **APPROVED**" in r_file.read_text(encoding="utf-8") or "Verdict: APPROVED" in r_file.read_text(encoding="utf-8")):
+                        approved = True
+                        break
+                if approved:
+                    print(f"⏩ [Resume Skip] Epic {idx}: {title} は既に全監査合格済みです。即座にスキップして次へ進みます。", flush=True)
+                    continue
 
             # エピックごとの都度監査＆自動リトライループ
             max_retries = getattr(self.config, "max_retries", 3)
@@ -601,7 +729,8 @@ class SprintRefinementEngine:
                     print(f"  🛑 [Refinement Vetoed] Epic {idx} failed audits on attempt #{attempt}. Retrying with feedback...", flush=True)
                     previous_feedback = audit_res["feedback"]
             else:
-                print(f"  ⚠️ [Refinement Max Retries] Epic {idx} reached maximum retry limit ({max_retries}) without passing audits.", flush=True)
+                self.update_status_dashboard(title, f"🛑 監査不合格 (最大リトライ {max_retries} 回到達) - 安全停止中")
+                raise RuntimeError(f"🚨 [Fail-Fast Halt] Epic {idx} ({title}) reached maximum retry limit ({max_retries}) without passing audits! Last feedback: {previous_feedback}")
 
         # Backlog 分割 & テストハーネス生成
         print("\n🚀 [Ceremony 2] Generating automated test harness scripts for all refined Epics...", flush=True)
@@ -617,8 +746,19 @@ class SprintRefinementEngine:
         print(f"  - Loop Attempt Count: #{audit_result['attempt']}")
         print(f"  - Spec Compliance Audit: {'✅ PASS' if audit_result['spec_passed'] else '🛑 REJECTED/VETO'}")
         print(f"  - Security & Ethics Audit: {'✅ PASS' if audit_result['sec_passed'] else '🛑 REJECTED/VETO'}")
-        print(f"  - Final Verdict: {'🎉 ALL APPROVED' if audit_result['overall_passed'] else '⚠️ VETO DETECTED (Requires Review)'}")
+        print(f"  - Ruler Governance Audit: {'✅ PASS' if audit_result.get('ruler_passed', False) else '🛑 REJECTED/VETO'}")
+        print(f"  - Final Verdict: {'🎉 ALL APPROVED' if audit_result['overall_passed'] else '🛑 VETO DETECTED (Halting Execution)'}")
         print("=" * 50 + "\n")
+
+        if not audit_result["overall_passed"]:
+            self.update_status_dashboard("All Epics", f"🛑 全体監査不合格 (VETO) - 安全停止中 (Loop #{audit_result['attempt']})")
+            raise RuntimeError(
+                f"🚨 [Fail-Fast Halt] Ceremony 2 Final Audits VETOED in Loop #{audit_result['attempt']}! "
+                f"Spec: {'PASS' if audit_result['spec_passed'] else 'FAIL'}, "
+                f"Sec: {'PASS' if audit_result['sec_passed'] else 'FAIL'}, "
+                f"Ruler: {'PASS' if audit_result.get('ruler_passed', False) else 'FAIL'}. "
+                f"Halting execution immediately to prevent unverified tasks from proceeding to implementation."
+            )
 
         self.update_status_dashboard("All Epics", f"リファインメント完了 (監査 Loop #{audit_result['attempt']})")
         print(f"🎉 [Ceremony 2 Complete] Sprint Refinement & Independent Final Audits saved in {audit_result['loop_dir'].relative_to(self.root_dir)}!", flush=True)
