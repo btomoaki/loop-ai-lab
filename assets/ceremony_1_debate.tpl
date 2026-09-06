@@ -20,13 +20,14 @@ Analyze all referenced specification files and conduct a debate among the person
 Output MUST follow this format:
 # Overall System Architecture & Epic Refinement Debate Log
 
-## 1. System Architecture Debate (PO, Architect, Capacity Guardian, Spec Auditor, DevOps, Ruler)
+## 1. System Architecture Debate (PO, Architect, FinOps, Spec Auditor, Capacity Guardian, DevOps, Ruler)
 - **[PO Persona]**: Discusses product scope, user workflows, and core features from references/icon_generator.md.
-- **[Architect Persona]**: Discusses clean layer boundaries, domain logic, and GCP Cloud Run stateless architecture.
+- **[Architect Persona]**: Champions Clean Architecture 4-layer boundaries, domain logic purity, testability, and GCP Cloud Run stateless architecture as inviolable internal quality criteria (DoD).
+- **[FinOps & Cost Governance Persona]**: Mandates minimal operational overhead and strictly VETOES and ELIMINATES unauthorized features (e.g. unrequested Rate Limiting, unnecessary external DBs/auth, heavy libraries) from Epic titles and scopes. [GUARDRAIL]: Clean Architecture layer separation and testing are internal quality (DoD) and MUST NOT be stripped.
+- **[Spec Compliance Persona]**: Audits and vetoes any dropped requirements from references/icon_generator.md, while validating that cloud/container Platform Contracts (dynamic $PORT, /healthz, SIGTERM 10s drain) are preserved.
 - **[Capacity Guardian Persona]**: Analyzes the downstream Coder model profile and enforces modular Epic sizing that prevents context overflow.
-- **[Spec Compliance Persona]**: Audits and vetoes any dropped requirements from references/icon_generator.md.
 - **[Platform & DevOps Persona]**: Discusses Docker containerization, Makefile targets, and GitHub Actions CI/CD.
-- **[Ruler Persona (Discipline & Policy Controller)]**: Enforces .agents/rules/ and GEMINI.md with absolute rigor. Mandates Shift-Left Containerization (Epic 1 must prioritize compose.yaml), prohibits host toolchain pollution (all test/lint verify_commands must run inside Docker containers), enforces pure struct models with zero logic/methods/tests in internal/domain/model/, and mandates canonical go mod init.
+- **[Ruler Persona (Discipline & Policy Controller)]**: Enforces .agents/rules/ and GEMINI.md with absolute rigor. Mandates Shift-Left Containerization (Epic 1 must prioritize compose.yaml), prohibits host toolchain pollution (all test/lint verify_commands must run inside Docker containers), enforces pure struct models with zero logic/methods/tests in internal/domain/model/, and mandates canonical go mod init. Strict prohibition on invented features like Rate Limiting.
 
 ## 2. Epic Breakdown
 (Decompose the application into modular, self-contained Epics: Epic 1, Epic 2, ... covering core logic, image rendering, HTTP API, Web UI, and CI/CD/Docker delivery)
