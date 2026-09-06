@@ -25,3 +25,16 @@
 ## 4. Import Resolution & Entrypoint
 - Internal package imports must be prefixed with the project's root module name (do not use external placeholders or relative paths).
 - The main entrypoint must always be located at `cmd/server/main.go`.
+
+## 5. Clean Architecture DIP & Import Cycle Elimination
+1. **Interface Placement**: In accordance with Clean Architecture and Dependency Inversion Principle (DIP), repository, rasterizer, and external adapter interfaces MUST be defined in `internal/domain/` or `internal/usecase/`.
+2. **Implementation in Infrastructure**: `internal/infrastructure/` must exclusively implement these domain interfaces. Defining interfaces in `infrastructure` and importing them from `usecase` is strictly prohibited.
+3. **Strict Inward Dependency**: `internal/usecase/` and `internal/domain/` are STRICTLY FORBIDDEN from importing `internal/infrastructure/` to eliminate Go's fatal `import cycle not allowed` compiler error.
+
+## 6. Single HTTP Stack Mandate & Ghost Package Prohibition
+1. **Unified HTTP Router**: Standard library `net/http` (Go 1.22+ routing) is the primary HTTP standard.
+2. **Zero Conflicting Frameworks**: Never concurrently import or mix disparate HTTP frameworks (e.g. `github.com/gin-gonic/gin` and `github.com/gorilla/mux`). Unused handler files must be purged immediately to keep `go.mod` and `go.sum` clean.
+
+## 7. Container Base Image & Compiler Synchronization
+1. **Modern Alpine Base**: Dockerfiles must specify maintained, modern compiler base images (e.g. `golang:alpine`) rather than obsolete fixed toolchains (e.g. `golang:1.21`), preventing `go.mod requires go >= X` build failures.
+

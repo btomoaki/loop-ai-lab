@@ -59,6 +59,46 @@ class SprintExecutionEngine:
         else:
             return re.sub(r"[^a-zA-Z0-9_\-]", "_", clean).lower()
 
+    @staticmethod
+    def _sync_dependencies(ws_dir: Path):
+        """プロジェクト言語に応じた依存関係の同期 (Language Adapter)"""
+        if (ws_dir / "go.mod").exists():
+            subprocess.run(["go", "mod", "tidy"], cwd=str(ws_dir), capture_output=True, text=True)
+        elif (ws_dir / "Cargo.toml").exists():
+            subprocess.run(["cargo", "check"], cwd=str(ws_dir), capture_output=True, text=True)
+        elif (ws_dir / "pyproject.toml").exists() or (ws_dir / "poetry.lock").exists():
+            subprocess.run(["poetry", "check"], cwd=str(ws_dir), capture_output=True, text=True)
+
+    @staticmethod
+    def _verify_global_build_gate(ws_dir: Path) -> tuple[bool, str]:
+        """言語非依存の不退転全体ビルド＆全体整合性ゲート (Zero-Tolerance Global Build Gate)"""
+        # 1. Go プロジェクト
+        if (ws_dir / "go.mod").exists():
+            chk_res = subprocess.run(["go", "test", "-run=^$", "./..."], cwd=str(ws_dir), capture_output=True, text=True)
+            if chk_res.returncode != 0:
+                return False, f"Whole-package compilation failed:\n{chk_res.stdout}\n{chk_res.stderr}"
+            if (ws_dir / "cmd").exists():
+                build_res = subprocess.run(["go", "build", "./cmd/..."], cwd=str(ws_dir), capture_output=True, text=True)
+                if build_res.returncode != 0:
+                    return False, f"Binary build failed for ./cmd/...:\n{build_res.stdout}\n{build_res.stderr}"
+            return True, ""
+
+        # 2. Rust プロジェクト
+        elif (ws_dir / "Cargo.toml").exists():
+            chk_res = subprocess.run(["cargo", "check", "--all-targets"], cwd=str(ws_dir), capture_output=True, text=True)
+            if chk_res.returncode != 0:
+                return False, f"Cargo check failed:\n{chk_res.stdout}\n{chk_res.stderr}"
+            return True, ""
+
+        # 3. Python プロジェクト
+        elif (ws_dir / "pyproject.toml").exists():
+            chk_res = subprocess.run(["python3", "-m", "compileall", "-q", "."], cwd=str(ws_dir), capture_output=True, text=True)
+            if chk_res.returncode != 0:
+                return False, f"Python compilation failed:\n{chk_res.stdout}\n{chk_res.stderr}"
+            return True, ""
+
+        return True, ""
+
     def update_status_dashboard(self, active_epic: str, sprint_num: int, current_task: str, tdd_status: str, epic_statuses: dict):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -393,18 +433,31 @@ class SprintExecutionEngine:
 
             if harness_path.exists():
                 print(f"🧪 [TDD Cycle] Running Test Harness: {harness_path.name}", flush=True)
+                
+                # 言語アダプターによる依存関係同期
+                self._sync_dependencies(target_ws_dir)
+
                 res = subprocess.run(["bash", str(harness_path)], cwd=str(self.root_dir), capture_output=True, text=True)
                 
                 if res.returncode == 0:
-                    print(f"🎉 [TDD Cycle Passed!] Harness for {epic_dir.name} Sprint {sprint_num} PASSED at Attempt {attempt}/{max_retries} with Exit Code 0!", flush=True)
-                    if attempt > 1:
-                        print(f"🔄 [Retry Count Reset] Resetting retry counter. Next sprint/task will start fresh from Attempt 1.", flush=True)
-                    epic_statuses[epic_dir.name] = f"✅ 【Pass】{sprint_progress_tag} ハーネス合格! (Attempt {attempt})"
-                    self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, f"✅ ハーネス合格 (Attempt {attempt})", epic_statuses)
-                    
-                    self.write_sprint_result_log(epic_dir, sprint_num, backlog_data, "PASSED", 0, last_written_files, attempt=attempt, retry_reset=True)
-                    commit_sprint_checkpoint(target_ws_dir, epic_dir.name, sprint_num, current_task_name)
-                    return True
+                    # 🛡️ 不退転の全体ビルド＆全体整合性ゲート (Zero-Tolerance Global Build Gate)
+                    print(f"🛡️ [Global Build Gate] Verifying whole-project build integrity across all packages...", flush=True)
+                    global_build_passed, build_error_msg = self._verify_global_build_gate(target_ws_dir)
+
+                    if global_build_passed:
+                        print(f"🎉 [TDD Cycle Passed!] Harness & Global Build for {epic_dir.name} Sprint {sprint_num} PASSED at Attempt {attempt}/{max_retries} with Exit Code 0!", flush=True)
+                        if attempt > 1:
+                            print(f"🔄 [Retry Count Reset] Resetting retry counter. Next sprint/task will start fresh from Attempt 1.", flush=True)
+                        epic_statuses[epic_dir.name] = f"✅ 【Pass】{sprint_progress_tag} ハーネス＆全体ビルド合格! (Attempt {attempt})"
+                        self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, f"✅ 全体ビルド合格 (Attempt {attempt})", epic_statuses)
+                        
+                        self.write_sprint_result_log(epic_dir, sprint_num, backlog_data, "PASSED", 0, last_written_files, attempt=attempt, retry_reset=True)
+                        commit_sprint_checkpoint(target_ws_dir, epic_dir.name, sprint_num, current_task_name)
+                        return True
+                    else:
+                        print(f"🛑 [Global Build Rejected] Local harness passed, but global build/compilation failed! Rejecting sprint completion.", flush=True)
+                        last_error = f"Local harness PASSED, but GLOBAL BUILD GATE FAILED:\n{build_error_msg}"
+                        result_file_ref = self.write_sprint_result_log(epic_dir, sprint_num, backlog_data, "FAILED", 1, last_written_files, last_error, attempt=attempt, retry_reset=False)
                 else:
                     last_error = res.stdout + "\n" + res.stderr
                     print(f"⚠️ [TDD Cycle Failed] Attempt {attempt} returned exit code {res.returncode}. Logged to result.yaml.", flush=True)
@@ -412,6 +465,9 @@ class SprintExecutionEngine:
 
         epic_statuses[epic_dir.name] = f"❌ 【Fail】{sprint_progress_tag} リトライ上限到達 ({max_retries} 回)"
         self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, "🛑 開発失敗・安全停止", epic_statuses)
+        # リトライ上限到達時は作業ツリーに壊れた残骸を残さず最後のチェックポイントへ完全ロールバック
+        print(f"🧹 [Auto-Rollback] Exhausted retries. Rolling back dirty workspace to last clean checkpoint...", flush=True)
+        rollback_to_last_checkpoint(target_ws_dir)
         return False
 
     def run_sprint_development(self, sprint_num: int = None) -> bool:
