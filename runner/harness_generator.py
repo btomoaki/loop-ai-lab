@@ -68,8 +68,11 @@ if [ ! -d "${{TARGET_DIR}}" ]; then
 fi
 
 cd "${{TARGET_DIR}}"
-if [ ! -f "Dockerfile" ]; then
+if [[ "{test_cmd}" == *"docker build"* ]] && [ ! -f "Dockerfile" ]; then
     echo "❌ [Harness Failure] Dockerfile missing in workspace!"
+    exit 2
+elif [[ "{test_cmd}" != *"docker build"* ]] && [ ! -f "compose.yaml" ]; then
+    echo "❌ [Harness Failure] compose.yaml missing in workspace!"
     exit 2
 fi
 

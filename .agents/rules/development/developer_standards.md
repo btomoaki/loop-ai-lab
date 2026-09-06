@@ -34,6 +34,13 @@ Every developer and AI agent MUST naturally and instinctively enforce the follow
 - **Mandatory Test Coverage**: Every domain logic, usecase handler, and edge-case calculation MUST be accompanied by automated unit/integration tests.
 - **Regression Prevention**: Test positive paths, negative paths, boundary inputs (nil/null, empty strings, payload limits), and expected error codes.
 - **Automated Verification**: Ensure all tests run and pass cleanly inside containerized testing environments (`docker compose run --rm test` or equivalent standard tooling).
+- **🚫 Strict Prohibition of Fake Grep Testing (ハーネス形骸化の完全禁止)**:
+  - Verification commands (`verify_command`) MUST NOT pass executable scripts (e.g. `scripts/health-check.sh`, smoke tests) via mere static grep inspection (e.g. `grep -q 'trap' scripts/health-check.sh && echo OK`).
+  - All executable test/health scripts MUST actually be executed and verified with zero exit code (`sh scripts/health-check.sh`).
+- **🌐 Mandatory Real E2E HTTP Communication & Asset Smoke Test (実通信・実画像検証の義務化)**:
+  - Applications exposing HTTP APIs MUST include automated containerized smoke tests verifying actual network delivery:
+    1. **Live Health Probe**: `curl -s -f http://localhost:8080/healthz` returning HTTP `200` with `status: ok`.
+    2. **Real Binary Download & Magic Bytes Verification**: `curl -s -f "http://localhost:8080/api/avatar?seed=test" -o /tmp/avatar.png` followed by binary format verification (`file /tmp/avatar.png | grep -q "PNG image data, 250 x 250"` and `Content-Type: image/png` validation).
 
 ---
 
@@ -82,3 +89,11 @@ Every repository/workspace MUST include a comprehensive and standard `README.md`
 - **Container Verification Guide**: Steps to build the hardened production Docker image, run it locally, and verify non-root UID execution (`docker run --user 65532 ...`).
 - **CI/CD Pipeline Status**: GitHub Actions status verification and workflow overview.
 - **Architectural Reference Links**: Clear pointers to project ADRs (`references/decisions.md`) for architectural alignment.
+
+---
+
+## 7. 🚫 Prohibition of Package Lockfile Hallucination (パッケージ管理ロックファイルのハルシネーション禁止)
+- **Zero Lockfile Generation by LLM**: AI agents and developers MUST NEVER generate, edit, or hallucinate package manager lockfiles containing cryptographic checksums (e.g. `go.sum`, `package-lock.json`, `poetry.lock`, `Cargo.lock`).
+- **Manifest-Only Dependency Declaration**: All dependencies and version constraints MUST strictly be declared in human-managed manifest files (e.g. `go.mod`, `package.json`, `pyproject.toml`).
+- **Toolchain Exclusive Ownership**: Lockfiles must strictly and exclusively be created, resolved, and updated by official package management toolchains (e.g. Go compiler, npm, cargo) during container execution.
+
