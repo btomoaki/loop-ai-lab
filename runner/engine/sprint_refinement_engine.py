@@ -265,8 +265,64 @@ class SprintRefinementEngine:
             res = self.refinement_agent.generate_text(prompt_debate)
             CodeParser.atomic_write_text(debate_file, (res or "").strip())
 
-        # 2. epic_backlog.yaml 生成
-        if not backlog_file.exists():
+        # 2. epic_backlog.yaml 生成 または 実装者主導の PATCH / REBUILD
+        if backlog_file.exists() and previous_audit_feedback:
+            # 🔄 リトライ時: 実装者（プランナー）に既存バックログと監査指摘を提示し、PATCH または REBUILD を判断させる
+            print(f"🔄 [Ceremony 2] Step 2: Evaluating audit feedback with existing backlog for: {title}...", flush=True)
+            self.update_status_dashboard(title, "監査フィードバック反映・修正中...")
+
+            tpl_patch = self.root_dir / "assets" / "ceremony_2_patch.tpl"
+            current_backlog_yaml = backlog_file.read_text(encoding="utf-8")
+            if tpl_patch.exists():
+                prompt_patch = tpl_patch.read_text(encoding="utf-8").format(
+                    title=title,
+                    workspace_rel=self.config.workspace_rel,
+                    container_image_name=self.config.container_image_name,
+                    scope=scope,
+                    previous_audit_feedback=previous_audit_feedback,
+                    current_backlog_yaml=current_backlog_yaml,
+                    epic_idx=epic_idx
+                )
+            else:
+                prompt_patch = (
+                    f"[INST]\n"
+                    f"=== 1. AUDIT REVIEW FINDINGS ===\n{previous_audit_feedback}\n\n"
+                    f"=== 2. CURRENT BACKLOG YAML ===\n```yaml\n{current_backlog_yaml}\n```\n\n"
+                    f"[TASK: SPRINT PLANNER DECISION & ACTION FOR {title}]\n"
+                    f"If addressable via incremental task updates, output updated yaml block in ```yaml ... ```.\n"
+                    f"If fundamentally broken, output 'ACTION: REBUILD' with reason.\n"
+                    f"[/INST]\n"
+                )
+
+            res_patch = self.refinement_agent.generate_text(prompt_patch)
+            res_patch_str = (res_patch or "").strip()
+
+            if "ACTION: REBUILD" in res_patch_str:
+                rebuild_reason = res_patch_str.split("Reason:")[1].strip() if "Reason:" in res_patch_str else "Architectural mismatch"
+                print(f"  🔄 [Implementer Decision] Planner requested FULL REBUILD for Epic {epic_idx}: {rebuild_reason}", flush=True)
+                if debate_file.exists():
+                    debate_file.unlink()
+                if backlog_file.exists():
+                    backlog_file.unlink()
+                # ディベートから再生成
+                return self.run_sprint_refinement_for_epic(epic_dir, title, scope, required_personas, epic_idx, previous_audit_feedback="")
+            
+            parsed_yaml = CodeParser.extract_code_block(res_patch_str, "yaml")
+            if parsed_yaml and "tasks:" in parsed_yaml:
+                CodeParser.atomic_write_text(backlog_file, parsed_yaml.strip())
+                print(f"  📝 [Implementer Decision] Planner applied micro-patch to epic_backlog.yaml for: {epic_dir.name}", flush=True)
+            else:
+                print(f"  ⚠️ [Ceremony 2] Could not extract valid YAML from patch response. Keeping previous backlog with targeted fallback.")
+
+            # 🛡️ Backlog Pre-Flight Harness による決定論的 7大ガードレール検査 & 自動補正
+            harness = BacklogHarness(self.root_dir, self.config)
+            remediated, report = harness.validate_and_remediate(epic_dir, epic_idx, title)
+            if remediated:
+                print(f"  🛡️ [Backlog Harness] Auto-remediated backlog for Epic {epic_idx} after patch:\n{report}", flush=True)
+            else:
+                print(f"  🛡️ [Backlog Harness] Verified Epic {epic_idx} backlog: All 7 guardrails passed.", flush=True)
+
+        elif not backlog_file.exists():
             print(f"📝 [Ceremony 2] Step 2: Generating epic_backlog.yaml for: {title}...", flush=True)
             self.update_status_dashboard(title, "バックログYAML生成中...")
 
@@ -487,16 +543,19 @@ class SprintRefinementEngine:
         for b_file in sorted(self.init_dir.glob("*/epic_backlog.yaml")):
             try:
                 data = yaml.safe_load(b_file.read_text(encoding="utf-8")) or {}
-                t_list = [f"  - [{t.get('id')}] {t.get('title')} (SP: {t.get('story_points', 1)}, AC: {', '.join(t.get('acceptance_criteria', []))})" for t in data.get("tasks", [])]
+                t_list = []
+                for t in data.get("tasks", []):
+                    ac_strs = [str(c) if not isinstance(c, dict) else f"{list(c.keys())[0]}: {list(c.values())[0]}" for c in t.get("acceptance_criteria", [])]
+                    t_list.append(f"  - [{t.get('id')}] {t.get('title')} (SP: {t.get('story_points', 1)}, AC: {', '.join(ac_strs)})")
                 backlog_summaries.append(f"### {data.get('title', b_file.parent.name)}\n" + "\n".join(t_list))
-            except Exception:
-                pass
+            except Exception as e:
+                raise RuntimeError(f"🚨 [Fatal Backlog Syntax Error] Failed to parse {b_file}: {e}. Ensure all strings with colons are quoted in YAML.")
         all_backlogs_str = "\n\n".join(backlog_summaries)
 
         # ----------------------------------------------------
         # 1. Spec Compliance Auditor による単独チェック (仕様改ざん即時VETO & DoR ACチェック)
         # ----------------------------------------------------
-        print(f"🔍 [Audit 1/2 (Loop #{attempt})] Spec Compliance Auditor inspecting backlog...", flush=True)
+        print(f"🔍 [Audit 1/4 (Loop #{attempt})] Spec Compliance Auditor inspecting backlog...", flush=True)
         spec_audit_file = loop_dir / "audit_spec_compliance.md"
         prompt_spec = (
             f"[INST]\n"
@@ -526,24 +585,25 @@ class SprintRefinementEngine:
 
         spec_passed = "Verdict: **APPROVED**" in spec_text or "Verdict: APPROVED" in spec_text or "**APPROVED**" in spec_text
         spec_status_icon = "✅ APPROVED" if spec_passed else "🛑 VETO/REJECTED"
-        print(f"📝 [Audit 1/2 Complete - Loop #{attempt}] Spec Compliance: {spec_status_icon} (Saved to {spec_audit_file.relative_to(self.root_dir)})")
+        print(f"📝 [Audit 1/4 Complete - Loop #{attempt}] Spec Compliance: {spec_status_icon} (Saved to {spec_audit_file.relative_to(self.root_dir)})")
 
         # ----------------------------------------------------
         # 2. Security & AI Ethics Auditor による単独チェック
         # ----------------------------------------------------
-        print(f"🛡️ [Audit 2/2 (Loop #{attempt})] Security & AI Ethics Auditor inspecting backlog...", flush=True)
+        print(f"🛡️ [Audit 2/4 (Loop #{attempt})] Security & AI Ethics Auditor inspecting backlog...", flush=True)
         sec_audit_file = loop_dir / "audit_security_ethics.md"
         prompt_sec = (
             f"[INST]\n"
             f"=== 1. AUDIT INSTRUCTIONS ===\n"
             f"You are the Security & AI Ethics Auditor (.agents/personas/security_ethics_auditor.md).\n"
-            f"Audit the sprint backlogs for security standards, rate limiting (HTTP 429), container hardening (non-root UID 65532), and zero unrequested external services.\n\n"
+            f"Audit the sprint backlogs for input validation, resource exhaustion limits, container hardening (non-root UID 65532), and zero unrequested external services (no databases, no external auth).\n"
+            f"Note: Public IP rate limiting is handled by the platform layer, do not mandate in-memory rate limiting in the application.\n\n"
             f"=== 2. GENERATED SPRINT BACKLOGS (LOOP #{attempt}) ===\n{all_backlogs_str}\n\n"
             f"[TASK: INDEPENDENT SECURITY & ETHICS AUDIT]\n"
             f"Output format:\n"
             f"# Security & AI Ethics Audit Report (Loop #{attempt})\n\n"
             f"## 1. Security Checklist\n"
-            f"- Rate Limiting & DoS Protection: (PASS / FAIL)\n"
+            f"- Input Validation & Resource Protection: (PASS / FAIL)\n"
             f"- Container Security (non-root): (PASS / FAIL)\n"
             f"- Zero Unrequested Services (DB/Auth): (PASS / FAIL)\n\n"
             f"## 2. Verdict\n"
@@ -558,12 +618,55 @@ class SprintRefinementEngine:
 
         sec_passed = "Verdict: **APPROVED**" in sec_text or "Verdict: APPROVED" in sec_text or "**APPROVED**" in sec_text
         sec_status_icon = "✅ APPROVED" if sec_passed else "🛑 VETO/REJECTED"
-        print(f"📝 [Audit 2/3 Complete - Loop #{attempt}] Security & Ethics: {sec_status_icon} (Saved to {sec_audit_file.relative_to(self.root_dir)})")
+        print(f"📝 [Audit 2/4 Complete - Loop #{attempt}] Security & Ethics: {sec_status_icon} (Saved to {sec_audit_file.relative_to(self.root_dir)})")
 
         # ----------------------------------------------------
-        # 3. Ruler による全エピック横断の規律・コンテナ化・ルール腐敗監査
+        # 3. Platform & DevOps Auditor による単独チェック (責務分解点監査 & PF協調契約)
         # ----------------------------------------------------
-        print(f"🔍 [Audit 3/3 (Loop #{attempt})] Ruler Persona inspecting cross-epic governance & containerization...", flush=True)
+        print(f"☁️ [Audit 3/4 (Loop #{attempt})] Platform & DevOps Auditor inspecting responsibility boundary & cloud contract...", flush=True)
+        platform_audit_file = loop_dir / "audit_platform_ops.md"
+        prompt_platform = (
+            f"[INST]\n"
+            f"=== 1. AUDIT INSTRUCTIONS ===\n"
+            f"You are the Platform, DevOps & Infrastructure Operator Auditor (.agents/personas/devops_cloud_architect.md).\n"
+            f"Audit the sprint backlogs strictly from an Infrastructure & Cloud Operations perspective for:\n\n"
+            f"1. Platform vs Application Boundary Enforcement (責務分解点監査):\n"
+            f"   - Public Rate Limiting, DDoS / WAF protection, and SSL termination are strictly PLATFORM responsibilities.\n"
+            f"   - The application MUST remain stateless and lightweight. It MUST NOT embed in-memory IP rate limiters or proxy logic.\n"
+            f"   - If any task introduces in-memory IP rate limiting or breaks statelessness, you MUST ISSUE A VETO.\n"
+            f"2. Platform Co-operation Contract Verification:\n"
+            f"   - Health check probe: `GET /healthz` returning 200 OK `{{\"status\":\"ok\"}}`.\n"
+            f"   - Dynamic port configuration: `$PORT` binding with 8080 fallback.\n"
+            f"   - Graceful shutdown: Explicit `SIGTERM` / `SIGINT` handling draining within 10s.\n"
+            f"   - Container security: Non-root user execution (`USER nonroot` or UID 65532:65532) and Distroless base image.\n"
+            f"   - Standard lifecycle: Standard Makefile targets and containerized CI workflow.\n\n"
+            f"=== 2. GENERATED SPRINT BACKLOGS ACROSS ALL EPICS (LOOP #{attempt}) ===\n{all_backlogs_str}\n\n"
+            f"[TASK: INDEPENDENT PLATFORM & DEVOPS AUDIT]\n"
+            f"Output format:\n"
+            f"# Platform, DevOps & Infrastructure Audit Report (Loop #{attempt})\n\n"
+            f"## 1. Boundary & Operational Checklist\n"
+            f"- Platform Responsibility Isolation (No App Rate Limiting/WAF): (PASS / FAIL)\n"
+            f"- Health Probe & Dynamic Port Contract: (PASS / FAIL)\n"
+            f"- Graceful Shutdown Contract: (PASS / FAIL)\n"
+            f"- Container Security (Non-Root UID 65532): (PASS / FAIL)\n\n"
+            f"## 2. Verdict\n"
+            f"- Verdict: **APPROVED** or **VETO**\n"
+            f"- Summary: <Details>\n"
+            f"[/INST]\n"
+        )
+        platform_res = self.gemini_audit_agent.generate_text(prompt_platform)
+        platform_text = (platform_res or "").strip()
+        CodeParser.atomic_write_text(platform_audit_file, platform_text)
+        CodeParser.atomic_write_text(self.eval_dir / "audit_platform_ops.md", platform_text)
+
+        platform_passed = "Verdict: **APPROVED**" in platform_text or "Verdict: APPROVED" in platform_text or "**APPROVED**" in platform_text
+        platform_status_icon = "✅ APPROVED" if platform_passed else "🛑 VETO/REJECTED"
+        print(f"📝 [Audit 3/4 Complete - Loop #{attempt}] Platform & DevOps: {platform_status_icon} (Saved to {platform_audit_file.relative_to(self.root_dir)})")
+
+        # ----------------------------------------------------
+        # 4. Ruler による全エピック横断の規律・コンテナ化・ルール腐敗監査
+        # ----------------------------------------------------
+        print(f"🔍 [Audit 4/4 (Loop #{attempt})] Ruler Persona inspecting cross-epic governance & containerization...", flush=True)
         ruler_audit_file = loop_dir / "audit_ruler_governance.md"
         prompt_ruler = (
             f"[INST]\n"
@@ -595,14 +698,15 @@ class SprintRefinementEngine:
 
         ruler_passed = "Verdict: **APPROVED**" in ruler_text or "Verdict: APPROVED" in ruler_text or "**APPROVED**" in ruler_text
         ruler_status_icon = "✅ APPROVED" if ruler_passed else "🛑 VETO/REJECTED"
-        print(f"📝 [Audit 3/3 Complete - Loop #{attempt}] Ruler Governance: {ruler_status_icon} (Saved to {ruler_audit_file.relative_to(self.root_dir)})")
+        print(f"📝 [Audit 4/4 Complete - Loop #{attempt}] Ruler Governance: {ruler_status_icon} (Saved to {ruler_audit_file.relative_to(self.root_dir)})")
 
-        overall_passed = spec_passed and sec_passed and ruler_passed
+        overall_passed = spec_passed and sec_passed and platform_passed and ruler_passed
         summary_data = {
             "loop_attempt": attempt,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "spec_compliance_passed": spec_passed,
             "security_ethics_passed": sec_passed,
+            "platform_devops_passed": platform_passed,
             "ruler_governance_passed": ruler_passed,
             "overall_approved": overall_passed
         }
@@ -612,6 +716,7 @@ class SprintRefinementEngine:
             "attempt": attempt,
             "spec_passed": spec_passed,
             "sec_passed": sec_passed,
+            "platform_passed": platform_passed,
             "ruler_passed": ruler_passed,
             "overall_passed": overall_passed,
             "loop_dir": loop_dir
@@ -692,15 +797,21 @@ class SprintRefinementEngine:
                 required_personas = log_personas
                 print(f"  🎯 [Harness Persona Match] Restored persona aliases from overall log: {required_personas}")
 
-            # ⏩ スマート・レジューム判定: 既に合格済み（APPROVED）の監査ログがあるエピックはスキップ
+            # ⏩ スマート・レジューム判定: 既に全監査（Spec / Security / Ruler）合格済みの監査ログがあるエピックはスキップ
             backlog_file = epic_dir / "epic_backlog.yaml"
             if backlog_file.exists():
                 approved = False
                 for att_dir in sorted(epic_dir.glob("attempt_*"), reverse=True):
+                    spec_f = att_dir / "audit_spec_compliance.md"
+                    sec_f = att_dir / "audit_security_ethics.md"
                     r_file = att_dir / "audit_ruler_governance.md"
-                    if r_file.exists() and ("Verdict: **APPROVED**" in r_file.read_text(encoding="utf-8") or "Verdict: APPROVED" in r_file.read_text(encoding="utf-8")):
-                        approved = True
-                        break
+                    if spec_f.exists() and sec_f.exists() and r_file.exists():
+                        spec_ok = "Verdict: **APPROVED**" in spec_f.read_text(encoding="utf-8") or "Verdict: APPROVED" in spec_f.read_text(encoding="utf-8")
+                        sec_ok = "Verdict: **APPROVED**" in sec_f.read_text(encoding="utf-8") or "Verdict: APPROVED" in sec_f.read_text(encoding="utf-8")
+                        ruler_ok = "Verdict: **APPROVED**" in r_file.read_text(encoding="utf-8") or "Verdict: APPROVED" in r_file.read_text(encoding="utf-8")
+                        if spec_ok and sec_ok and ruler_ok:
+                            approved = True
+                            break
                 if approved:
                     print(f"⏩ [Resume Skip] Epic {idx}: {title} は既に全監査合格済みです。即座にスキップして次へ進みます。", flush=True)
                     continue
@@ -709,15 +820,6 @@ class SprintRefinementEngine:
             max_retries = getattr(self.config, "max_retries", 3)
             previous_feedback = ""
             for attempt in range(1, max_retries + 1):
-                # リトライ時は既存のディベートログとバックログYAMLを削除して再生成を強制する
-                if attempt > 1:
-                    debate_file = epic_dir / "debate_log.md"
-                    backlog_file = epic_dir / "epic_backlog.yaml"
-                    if debate_file.exists():
-                        debate_file.unlink()
-                    if backlog_file.exists():
-                        backlog_file.unlink()
-
                 self.run_sprint_refinement_for_epic(epic_dir, title, detailed_spec, required_personas, idx, previous_audit_feedback=previous_feedback)
                 
                 # エピック単体での仕様漏れ・セキュリティ都度監査

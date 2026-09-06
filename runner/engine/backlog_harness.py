@@ -8,7 +8,8 @@ class BacklogHarness:
     🛡️ Backlog Pre-Flight Harness (決定論的バックログ補正・防壁システム)
     
     Local LLM が生成したスプリントバックログ YAML に対し、Gemini 3重監査を呼び出す前に
-    7大決定論的ガードレールをプログラムで検査・自律補正する。
+    決定論的ガードレールをプログラムで検査・構造的自律補正する。
+    アドホックなファイルパスの捏造は行わず、構造的・機械的整合性に純化する。
     """
 
     def __init__(self, root_dir: Path, config: Any = None):
@@ -17,7 +18,7 @@ class BacklogHarness:
 
     def validate_and_remediate(self, epic_dir: Path, epic_idx: int, title: str) -> Tuple[bool, str]:
         """
-        epic_backlog.yaml を読み込み、7大ガードレールを適用して補正・上書き保存する。
+        epic_backlog.yaml を読み込み、構造的ガードレールを適用して補正・上書き保存する。
         戻り値: (補正が行われたか: bool, 適用レポート: str)
         """
         backlog_file = epic_dir / "epic_backlog.yaml"
@@ -46,22 +47,23 @@ class BacklogHarness:
         if rem_purity:
             remediations.extend(rem_purity)
 
-        # 3. 物理ファイルパスの明示 (DoR Rule 3)
-        tasks, rem_path = self._remediate_physical_paths(tasks, epic_idx)
-        if rem_path:
-            remediations.extend(rem_path)
+        # 3. 物理ファイルパスの静的判定 (Path Linter - 捏造はせず検知のみ)
+        path_warnings = self._lint_physical_paths(tasks)
+        if path_warnings:
+            for w in path_warnings:
+                print(f"  ⚠️ [Backlog Harness Lint] {w}", flush=True)
 
         # 4. ホストパイプ・連鎖コマンドの自動変換 (Zero Host Piping)
         tasks, rem_pipe = self._remediate_verify_commands(tasks)
         if rem_pipe:
             remediations.extend(rem_pipe)
 
-        # 5. Acceptance Criteria 上限 (AC <= 2) の自動分割
+        # 5. Acceptance Criteria 上限 (AC <= 2) の自動分割 & DAGリマップ
         tasks, rem_ac = self._remediate_ac_limits(tasks, epic_idx)
         if rem_ac:
             remediations.extend(rem_ac)
 
-        # 6. 最終ドキュメンテーションタスク (DoR Rule 6) の自動補完
+        # 6. 最終ドキュメンテーションタスクの整合性 (DoR Rule 6 & Epic 7専任方針)
         tasks, rem_readme = self._ensure_readme_task(tasks, epic_idx)
         if rem_readme:
             remediations.extend(rem_readme)
@@ -79,10 +81,10 @@ class BacklogHarness:
             report = "\n".join(f"- {r}" for r in remediations)
             return True, report
 
-        return False, "All 7 deterministic guardrails satisfied without modification."
+        return False, "All deterministic guardrails satisfied without modification."
 
     def _remediate_cross_epic_duplication(self, tasks: List[Dict[str, Any]], epic_idx: int) -> Tuple[List[Dict[str, Any]], List[str]]:
-        """Epic 2以降で全層ディレクトリ再作成や過去エピックのユースケース再実装をトリミング"""
+        """Epic 2以降で全層ディレクトリ再作成や過去エピックのユースケース再実装をトリミング/排除"""
         remediations = []
         new_tasks = []
 
@@ -101,6 +103,15 @@ class BacklogHarness:
                     ]
                     task["verify_command"] = 'docker compose run --rm test sh -c "test -d internal/interface/http && test -d internal/interface/http/middleware"'
                     remediations.append(f"Trimmed whole-project skeleton task {task.get('id')} to Epic 5 delivery skeleton")
+                elif epic_idx == 6:
+                    task["title"] = "Create Web SPA package skeleton"
+                    task["description"] = "Initialize internal/interface/web/ and internal/interface/web/static/ with .gitkeep"
+                    task["acceptance_criteria"] = [
+                        "internal/interface/web/ directory exists with .gitkeep",
+                        "internal/interface/web/static/ directory exists with .gitkeep"
+                    ]
+                    task["verify_command"] = 'docker compose run --rm test sh -c "test -d internal/interface/web && test -d internal/interface/web/static"'
+                    remediations.append(f"Trimmed whole-project skeleton task {task.get('id')} to Epic 6 delivery skeleton")
 
             # Epic 5以降で過去エピックのドメインモデルやユースケースを再作成するタスクは完全排除
             if epic_idx >= 5:
@@ -131,41 +142,20 @@ class BacklogHarness:
             task["acceptance_criteria"] = new_acs
         return tasks, remediations
 
-    def _remediate_physical_paths(self, tasks: List[Dict[str, Any]], epic_idx: int) -> Tuple[List[Dict[str, Any]], List[str]]:
-        """各タスクに具体的な拡張子付き物理ファイルパスを保証 (DoR Rule 3)"""
-        remediations = []
-        path_patterns = re.compile(r'[\w/-]+\.(?:go|yaml|yml|md|sh|json|html|css|js)')
+    def _lint_physical_paths(self, tasks: List[Dict[str, Any]]) -> List[str]:
+        """各タスクに具体的な拡張子付き物理ファイルパスまたは .gitkeep が含まれているかを静的検査 (DoR Rule 3)"""
+        warnings = []
+        path_patterns = re.compile(r'[\w./-]+\.(?:go|html|js|css|yaml|yml|md|sh|json|gitkeep)')
 
         for task in tasks:
             desc = task.get("description", "")
             acs = task.get("acceptance_criteria", [])
             all_text = desc + " " + " ".join(acs)
 
-            # 既に .gitkeep や 物理パスが含まれていればスキップ
-            if ".gitkeep" in all_text or path_patterns.search(all_text):
-                continue
+            if not path_patterns.search(all_text):
+                warnings.append(f"Task {task.get('id')} ('{task.get('title')}') lacks explicit physical file path in description/AC.")
 
-            title_lower = task.get("title", "").lower()
-            inferred_path = ""
-            if "handler" in title_lower or "avatar" in title_lower:
-                inferred_path = "internal/interface/http/handler.go"
-            elif "ratelimit" in title_lower or "rate" in title_lower:
-                inferred_path = "internal/interface/http/middleware/ratelimit.go"
-            elif "openapi" in title_lower:
-                inferred_path = "docs/openapi.yaml"
-            elif "server" in title_lower or "main" in title_lower:
-                inferred_path = "cmd/server/main.go"
-            elif "readme" in title_lower:
-                inferred_path = "README.md"
-            else:
-                inferred_path = f"internal/interface/http/handler.go"
-
-            task["description"] = f"{desc} (Target: {inferred_path})"
-            if acs:
-                acs[0] = f"{acs[0]} in {inferred_path}"
-            remediations.append(f"Added explicit physical path '{inferred_path}' to {task.get('id')}")
-
-        return tasks, remediations
+        return warnings
 
     def _remediate_verify_commands(self, tasks: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[str]]:
         """ホストパイプ (| grep) や && 連鎖を排除し、コンテナ内 sh -c に統一"""
@@ -193,9 +183,10 @@ class BacklogHarness:
         return tasks, remediations
 
     def _remediate_ac_limits(self, tasks: List[Dict[str, Any]], epic_idx: int) -> Tuple[List[Dict[str, Any]], List[str]]:
-        """Acceptance Criteria が 3個以上のタスクを単一責任 Part 1, Part 2 に自動分割"""
+        """Acceptance Criteria が 3個以上のタスクを単一責任 Part 1, Part 2 に自動分割し、後続タスクの依存先をリマップ"""
         remediations = []
         new_tasks = []
+        split_remap = {}  # {元タスクID: 分割後の最終サブタスクID}
 
         for task in tasks:
             acs = task.get("acceptance_criteria", [])
@@ -232,7 +223,22 @@ class BacklogHarness:
                 new_tasks.append(sub_task)
                 prev_sub_id = sub_id
 
+            split_remap[task_id] = prev_sub_id
             remediations.append(f"Auto-decomposed overloaded task {task_id} ({len(acs)} ACs) into {num_parts} micro-tasks")
+
+        # 後続タスクの depends_on を、分割された最終サブタスクへ自動リマップ (DAG Restitching)
+        if split_remap:
+            for t in new_tasks:
+                original_deps = t.get("depends_on", [])
+                updated_deps = []
+                for d in original_deps:
+                    if d in split_remap:
+                        target_id = split_remap[d]
+                        updated_deps.append(target_id)
+                        remediations.append(f"Restitched DAG dependency in {t.get('id')}: '{d}' -> '{target_id}'")
+                    else:
+                        updated_deps.append(d)
+                t["depends_on"] = updated_deps
 
         return new_tasks, remediations
 

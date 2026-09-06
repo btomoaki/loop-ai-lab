@@ -7,7 +7,6 @@
    - [PROHIBITION OF ARTIFICIAL TASK LIMITS]: NEVER artificially restrict the number of tasks. Create as many micro-tasks as needed to satisfy single-responsibility and AC <= 2.
 2. Specificity (No Ambiguity & Explicit Enumeration):
    - NEVER use "etc.", "and so on", or vague shortcuts in acceptance criteria. Fully enumerate all required directories, services, or configurations explicitly.
-   - [EXPLICIT TARGET FILE PATH MANDATE]: Every task MUST explicitly state its concrete physical target file path (e.g. `internal/interface/web/static/index.html`, `app.js`, `embed.go`, etc.) directly from Section 2 Scope in its description and acceptance criteria. Never omit the target file path!
    - For Clean Architecture directory skeleton tasks, explicitly list all 7 required directories: `cmd/server/`, `internal/domain/model/`, `internal/domain/service/`, `internal/usecase/`, `internal/interface/`, `internal/infrastructure/`, and `docs/`, along with their `.gitkeep` files.
    - For Docker Compose tasks, explicitly specify ports (e.g. `8080:8080`), base images, working directories (`/app`), and volume mounts (`.:/app`) in the AC to ensure 100% specification traceability.
 3. Verification Command Governance:
@@ -18,9 +17,6 @@
    - For setup/skeleton/config tasks, consolidate into a single setup task and verify via `docker compose run --rm test echo OK`. NEVER use bare host commands (e.g. `test -f`) or premature `go build`/`go test` on skeleton tasks!
 4. Mandatory Documentation Task (DoR Rule 6):
    - The final task of every epic backlog MUST be a dedicated documentation task documenting that epic's deliverables (e.g. `docs/openapi.yaml` for Epic 5). Comprehensive repository `README.md` is exclusively allocated to Epic 7; NEVER create premature `README.md` tasks in intermediate epics (Epic 1-6)!
-5. Mandatory String Quoting (Strict YAML Syntax):
-   - Every `verify_command`, `title`, and item in `acceptance_criteria` MUST be enclosed in explicit double quotes (`"..."`).
-   - Unquoted strings containing colons followed by spaces (e.g. `: `, CSS properties like `width: 250px`, or regex patterns) cause fatal YAML parser collisions and are strictly prohibited!
 
 === 2. TARGET EPIC SCOPE & SPECIFICATION ===
 - Epic ID: EPIC-{epic_idx}
@@ -30,44 +26,28 @@
 - Detailed Scope:
 {scope}
 
-=== 3. CEREMONY RETROSPECTIVE & AUDIT FEEDBACK (IF ANY) ===
-{retro_content}
+=== 3. AUDIT REVIEW FINDINGS (FEEDBACK) ===
+{previous_audit_feedback}
 
-[TASK: GENERATE EPIC BACKLOG YAML FOR {title}]
-Generate a valid YAML block containing micro-scoped, dependency-ordered tasks for {title}.
-Ensure 100% traceability to all specifications and address any audit feedback above.
-
-Output MUST be a valid YAML block enclosed in ```yaml ... ```:
+=== 4. CURRENT BACKLOG YAML (TO REUSE OR REBUILD) ===
 ```yaml
-epic_id: EPIC-{epic_idx}
-title: "{title}"
-workspace_rel: "{workspace_rel}"
-tasks:
-  - id: TASK-{epic_idx}.1
-    title: "Setup domain foundation and interfaces"
-    description: "Detailed task scope"
-    story_points: 1
-    depends_on: []
-    acceptance_criteria:
-      - "Criterion 1 (Concrete assertion)"
-      - "Criterion 2 (Concrete assertion)"
-    verify_command: "docker compose run --rm test echo OK"
-  - id: TASK-{epic_idx}.2
-    title: "Implement core functionality"
-    description: "Detailed task scope"
-    story_points: 2
-    depends_on: ["TASK-{epic_idx}.1"]
-    acceptance_criteria:
-      - "Criterion 1 (Concrete assertion)"
-      - "Criterion 2 (Concrete assertion)"
-    verify_command: "docker compose run --rm test go test -v ./..."
-  - id: TASK-{epic_idx}.3
-    title: "Document epic specifications"
-    description: "Create or update documentation for this epic"
-    story_points: 1
-    depends_on: ["TASK-{epic_idx}.2"]
-    acceptance_criteria:
-      - "Specification file exists and passes validation"
-    verify_command: "docker compose run --rm test echo OK"
+{current_backlog_yaml}
 ```
+
+[TASK: SPRINT PLANNER DECISION & ACTION]
+You are the Sprint Planning Lead.
+Analyze the 3-Auditor Review Findings (Feedback). Your primary responsibility is to resolve all issues with minimal disruption by applying an incremental patch.
+
+【Default Policy: Micro-Patch (ALWAYS PREFERRED)】
+- Default to this option whenever issues can be resolved by updating, adding, or adjusting tasks in the backlog.
+- Reuse all valid existing tasks from the Current Backlog.
+- Directly update or add tasks to satisfy the audit feedback and all DoR rules (AC <= 2, containerized verify_command, no host pipes).
+- [MANDATORY QUOTING]: Ensure all string values—especially `verify_command`, `title`, and `acceptance_criteria`—are strictly enclosed in double quotes (`"..."`) to prevent YAML parser collisions with colons (`: `).
+- Output the complete, updated `epic_backlog.yaml` enclosed in ```yaml ... ```.
+
+【Exception: Full Re-Design (REBUILD)】
+- ONLY choose this if the current backlog is completely unrecoverable because the epic's core domain or architectural purpose was fundamentally misunderstood.
+- Output:
+ACTION: REBUILD
+Reason: <Specific explanation why existing tasks cannot be patched>
 [/INST]

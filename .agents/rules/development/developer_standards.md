@@ -37,9 +37,16 @@ Every developer and AI agent MUST naturally and instinctively enforce the follow
 
 ---
 
-## 3. 📜 Modern API, Security & Delivery Standards
+## 3. 📜 Platform vs Application Responsibility Boundary & Delivery Standards
 - **Formal API Contracts**: When building web/HTTP delivery endpoints, accompany them with formal OpenAPI 3.0 / Swagger YAML specifications (`docs/openapi.yaml`) as standard industry practice. Document all endpoints, parameters, and error codes.
-- **Mandatory API Rate Limiting**: Public API endpoints MUST include IP-based Rate Limiting middleware returning `HTTP 429 Too Many Requests` upon limit breach. Accompany with unit/integration tests asserting 429 status and document 429 in the OpenAPI specification.
+- **Platform vs Application Responsibility Boundary (プラットフォームとアプリの責務分解点)**:
+  - **Platform Responsibility (インフラ/プラットフォームの責務)**: IP-based Rate Limiting, DDoS / WAF protection, SSL/TLS termination, and ingress routing are strictly the responsibility of the edge platform (e.g. Cloud Armor, API Gateway, or Reverse Proxy).
+  - **Application Responsibility (アプリケーションの責務)**: The application MUST remain strictly stateless and lightweight. It MUST NOT embed in-memory IP rate limiters (which break stateless auto-scaling and cause unnecessary memory leaks).
+  - **Platform Co-operation Contract (PFとの協調契約)**: The application must fulfill its platform contract via:
+    1. Dynamic port binding via `$PORT` (defaulting to 8080).
+    2. Lightweight health probe endpoint (`GET /healthz` returning `200 OK {"status":"ok"}`).
+    3. Graceful shutdown on `SIGTERM` / `SIGINT` (draining within 10s).
+    4. Internal request timeout enforcement (`context.WithTimeout`) to prevent thread leakage.
 - **Client Usability**: Ensure clear endpoint routing, structured error responses, and discoverable documentation.
 
 ---

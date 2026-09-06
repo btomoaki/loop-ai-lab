@@ -29,6 +29,9 @@ Prerequisites for initiating TDD implementation in Sprint Execution:
    - [REPOSITORY README ALLOCATION]: Comprehensive repository documentation (`README.md`) meeting all criteria in `developer_standards.md` is architecturally allocated to the final operational documentation epic (Epic 7). In intermediate epics, documentation tasks are scoped strictly to the architectural artifacts introduced in that epic, preventing premature scope creep.
 7. **Automated Test Harness**:
    - Each sprint backlog MUST have a corresponding `sprint_x_harness.sh` script for objective verification.
+8. **Strict YAML Quoting Governance (Mandatory String Quoting)**:
+   - All string values within `epic_backlog.yaml`—especially `verify_command`, `title`, and items in `acceptance_criteria`—MUST be explicitly enclosed in double quotes (`"..."`).
+   - Unquoted strings containing colons followed by spaces (e.g. `: `, CSS properties like `width: 250px`, or regex patterns) cause fatal YAML parser collisions and are strictly prohibited.
 
 ## 3. 🚫 No Ad-Hoc Design Modifications Rule (CRITICAL)
 - **System Architecture Consistency Guarantee**:
