@@ -15,15 +15,13 @@ class LLMAdapter(ABC):
     @classmethod
     def get_first_phrase(cls) -> str:
         if cls._first_phrase_cache is None:
-            tpl_path = Path("assets/first_phrase.tpl")
-            if tpl_path.exists():
-                try:
-                    cls._first_phrase_cache = tpl_path.read_text(encoding="utf-8").strip()
-                except Exception as e:
-                    print(f"⚠️ [LLMAdapter Warning] Failed to read assets/first_phrase.tpl: {e}", flush=True)
-                    cls._first_phrase_cache = ""
-            else:
-                cls._first_phrase_cache = ""
+            try:
+                from runner.utils.template_manager import TemplateManager
+                cls._first_phrase_cache = TemplateManager.render("common/first_phrase.tpl").strip()
+            except Exception as e:
+                raise RuntimeError(
+                    f"❌ [LLMAdapter Error] Failed to load or render prompt prefix template 'common/first_phrase.tpl': {e}"
+                ) from e
         return cls._first_phrase_cache
 
     def apply_prefix(self, prompt: str) -> str:
@@ -86,6 +84,7 @@ class LocalLLMAdapter(LLMAdapter):
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
         max_attempts = 3
+        last_error = None
         for attempt in range(1, max_attempts + 1):
             try:
                 with opener.open(req, timeout=180) as response:
@@ -100,14 +99,15 @@ class LocalLLMAdapter(LLMAdapter):
                         print(f"✅ [LLM:Local] Successfully received {len(content)} chars from local LLM!", flush=True)
                         return content
                     else:
-                        print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] Received empty response (0 chars). Retrying in 3s...", flush=True)
+                        last_error = "Received empty response (0 chars)"
+                        print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] {last_error}. Retrying in 3s...", flush=True)
                         time.sleep(3)
             except Exception as e:
+                last_error = str(e)
                 print(f"⚠️ [LLM:Local Retry {attempt}/{max_attempts}] Error: {e}. Retrying in 3s...", flush=True)
                 time.sleep(3)
 
-        print("❌ [LLM:Local Failure] Max attempts reached for local LLM request.", flush=True)
-        return ""
+        raise RuntimeError(f"❌ [Local LLM Failure] Max attempts ({max_attempts}) reached for {self.endpoint_url}. Last error: {last_error}")
 
 
 class GeminiLLMAdapter(LLMAdapter):

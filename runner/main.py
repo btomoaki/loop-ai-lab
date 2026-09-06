@@ -11,6 +11,7 @@ def main():
     parser.add_argument("command", choices=["run", "audit"], default="run", nargs="?", help="Command to execute: 'run' (full pipeline) or 'audit' (fast independent audits only)")
     parser.add_argument("--phase", choices=["refinement", "execution", "all"], default="all", help="Target ceremony phase")
     parser.add_argument("--sprint", type=int, default=None, help="Specific sprint index to run (defaults to all sprints)")
+    parser.add_argument("-y", "--yes", action="store_true", help="Automatically approve human review gate without interactive confirmation")
     args = parser.parse_args()
 
     root_dir = Path(__file__).resolve().parent.parent
@@ -34,7 +35,7 @@ def main():
 
     runner = ScrumRunner(root_dir=root_dir, config=config)
     if args.phase in ["refinement", "all"]:
-        runner.run_refinement_phase()
+        runner.run_refinement_phase(auto_approve=args.yes)
     if args.phase in ["execution", "all"]:
         runner.run_sprint_phase(sprint_num=args.sprint)
 

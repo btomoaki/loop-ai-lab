@@ -7,6 +7,7 @@ from pathlib import Path
 from runner.config.project_config import ProjectConfig
 from runner.utils.code_parser import CodeParser
 from runner.utils.context_loader import ContextLoader
+from runner.utils.template_manager import TemplateManager
 from runner.adapters.llm_adapter import LLMAdapterFactory
 from runner.git_ops import ensure_target_git_init, commit_sprint_checkpoint, rollback_to_last_checkpoint
 
@@ -169,7 +170,9 @@ class SprintExecutionEngine:
         lang = self.config.language or "target programming language"
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="3_sprint_execution", include_dev_rules=True)
         inst_file = self.root_dir / "agents" / "3_sprint_execution" / "sprint_dev_executor.md"
-        inst_content = inst_file.read_text(encoding="utf-8") if inst_file.exists() else f"Write clean {lang} code."
+        if not inst_file.exists():
+            raise FileNotFoundError(f"❌ [SprintExecutionEngine] Dev executor instruction file not found: {inst_file}")
+        inst_content = inst_file.read_text(encoding="utf-8")
 
         backlog_file = epic_dir / f"sprint_{sprint_num}_backlog.yaml"
         backlog_content = backlog_file.read_text(encoding="utf-8") if backlog_file.exists() else yaml.dump(backlog_data)
@@ -189,7 +192,9 @@ class SprintExecutionEngine:
         lang_rule_content = lang_rule_file.read_text(encoding="utf-8") if lang_rule_file.exists() else ""
 
         arch_rule_file = self.root_dir / ".agents" / "rules" / "development" / "clean_architecture_and_design.md"
-        arch_rule_content = arch_rule_file.read_text(encoding="utf-8") if arch_rule_file.exists() else ""
+        if not arch_rule_file.exists():
+            raise FileNotFoundError(f"❌ [SprintExecutionEngine] Clean architecture rule file not found: {arch_rule_file}")
+        arch_rule_content = arch_rule_file.read_text(encoding="utf-8")
 
         # config.yaml からモジュール名を取得し、言語仕様に即してサニタイズ
         raw_mod_name = getattr(self.config, "project_name", None) or target_ws.name
@@ -207,8 +212,8 @@ class SprintExecutionEngine:
                         rel_p = tf.relative_to(target_ws)
                         content = tf.read_text(encoding="utf-8")
                         test_snippets.append(f"--- [EXISTING TEST: {rel_p}] ---\n{content}\n")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        raise RuntimeError(f"❌ [SprintExecutionEngine] Failed to read existing test file '{tf}': {e}") from e
                 if test_snippets:
                     existing_test_context = (
                         "\n=== 2.5 EXISTING TEST SPECIFICATIONS (TEST-FIRST TDD CONTRACT) ===\n"
@@ -217,37 +222,22 @@ class SprintExecutionEngine:
                         + "\n".join(test_snippets) + "\n"
                     )
 
-        prompt = (
-            f"[INST]\n"
-            f"=== 1. MANDATORY LANGUAGE & ARCHITECTURE RULES ===\n"
-            f"{lang_rule_content}\n\n{arch_rule_content}\n\n"
-            f"=== 2. EXECUTION INSTRUCTIONS ===\n{inst_content}\n\n"
-            f"{existing_test_context}"
-            f"[CRITICAL ARCHITECTURAL & CODING MANDATES]\n"
-            f"1. The root module/package name in {project_file} and for all internal package imports MUST strictly be '{clean_mod_name}'.\n"
-            f"2. NEVER prefix module names or internal imports with 'workspace/' or directory paths.\n"
-            f"   - Correct:   import \"{clean_mod_name}/internal/domain/model\"\n"
-            f"   - Forbidden: import \"workspace/{clean_mod_name}/...\" or \"workspace/...\"\n"
-            f"3. [PACKAGE NAME COLLISION GUARD]: When importing both standard 'net/http' and internal '{clean_mod_name}/internal/interface/http',\n"
-            f"   you MUST use an explicit alias for the internal package (e.g. `httpDelivery \"{clean_mod_name}/internal/interface/http\"`) to avoid 'redeclared' errors.\n"
-            f"4. [STRICT PROHIBITION OF LOCKFILES]: NEVER generate or output 'go.sum', 'package-lock.json', or checksum files. Dependencies must be declared ONLY in {project_file}.\n"
-            f"5. [NO UNAUTHORIZED SUBMODULES OR NESTED DIRECTORIES]: NEVER create 'go.mod' or 'go.sum' inside internal/ subdirectories.\n"
-            f"6. [NO UNAUTHORIZED EXTERNAL LIBRARIES]: Do NOT import unapproved external libraries (e.g. gorilla/mux, time/rate) unless explicitly instructed in tasks.\n\n"
-            f"=== 3. BACKLOG TASKS ===\n{backlog_content}\n"
-            f"{error_content}\n\n"
-            f"[TASK: CEREMONY 3 STEPPED CODE GENERATION - {epic_name} (Sprint {sprint_num})]\n"
-            f"Target Workspace Path: {target_ws.relative_to(self.root_dir)}\n"
-            f"Project Root Module Name: {clean_mod_name}\n"
-            f"Programming Language: {lang}\n"
-            f"CURRENT TARGET LAYER FOCUS: {layer_name} ({layer_target})\n\n"
-            f"[STRICT OUTPUT FORMAT MANDATE]\n"
-            f"For EACH file, you MUST write '[FILE: relative/path/to/file]' on its own separate line immediately BEFORE its code block.\n"
-            f"NEVER combine multiple files into a single code block. NEVER use '# FILE:' comments inside code blocks.\n"
-            f"Example format:\n"
-            f"[FILE: internal/domain/model/entity.go]\n"
-            f"```{lang}\npackage model\n...\n```\n\n"
-            f"Generate ONLY files belonging to the {layer_name} layer ({layer_target}).\n"
-            f"[/INST]\n"
+        prompt = TemplateManager.render(
+            "ceremony_3/code_gen.tpl",
+            lang_rule_content=lang_rule_content,
+            arch_rule_content=arch_rule_content,
+            inst_content=inst_content,
+            existing_test_context=existing_test_context,
+            project_file=project_file,
+            clean_mod_name=clean_mod_name,
+            backlog_content=backlog_content,
+            error_content=error_content,
+            epic_name=epic_name,
+            sprint_num=sprint_num,
+            target_ws_rel=target_ws.relative_to(self.root_dir),
+            lang=lang,
+            layer_name=layer_name,
+            layer_target=layer_target,
         )
 
         actual_prompt_file = self.eval_dir / f"actual_dev_prompt_{layer_name.lower()}.md"
@@ -257,8 +247,10 @@ class SprintExecutionEngine:
         llm_response = self.dev_agent.generate_text(prompt)
 
         if not llm_response or not llm_response.strip():
-            print(f"⚠️ [SprintExecutionEngine Warning] LLM returned empty response for layer {layer_name}!")
-            return []
+            raise RuntimeError(
+                f"❌ [SprintExecutionEngine Failed] LLM returned empty code response for layer '{layer_name}' "
+                f"in {epic_name} (Sprint {sprint_num}). Aborting to prevent silent empty build."
+            )
 
         CodeParser.atomic_write_text(self.root_dir / "state" / f"debug_llm_response_{layer_name.lower()}.txt", llm_response)
         written_files = CodeParser.apply_code_changes(llm_response, target_ws)

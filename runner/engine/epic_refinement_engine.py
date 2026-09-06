@@ -6,6 +6,7 @@ from pathlib import Path
 from runner.config.project_config import ProjectConfig
 from runner.utils.code_parser import CodeParser
 from runner.utils.context_loader import ContextLoader
+from runner.utils.template_manager import TemplateManager
 from runner.adapters.llm_adapter import LLMAdapterFactory
 
 
@@ -67,28 +68,14 @@ class EpicRefinementEngine:
         refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True, config=self.config)
         inst_file_rel = "agents/1_epic_refinement/epic_refinement_planner.md"
 
-        tpl_file = self.root_dir / "assets" / "ceremony_1_debate.tpl"
-        if tpl_file.exists():
-            tpl_text = tpl_file.read_text(encoding="utf-8")
-            prompt = tpl_text.format(
-                rules=refs['rules'],
-                specs=refs['specs'],
-                personas=refs['personas'],
-                target_agent=refs['target_agent'],
-                inst_file_rel=inst_file_rel
-            )
-        else:
-            prompt = (
-                f"[INST]\n"
-                f"=== 1. REPOSITORY & DEV RULES ===\n{refs['rules']}\n\n"
-                f"=== 2. SYSTEM SPECIFICATIONS ===\n{refs['specs']}\n\n"
-                f"=== 3. MULTI-PERSONA INSTRUCTIONS ===\n{refs['personas']}\n\n"
-                f"=== 4. TARGET DEVELOPER AGENT PROFILE (DOWNSTREAM CODER) ===\n{refs['target_agent']}\n\n"
-                f"=== 5. EXECUTION INSTRUCTIONS ===\n- {inst_file_rel}\n\n"
-                f"[TASK: CEREMONY 1 EPIC REFINEMENT DEBATE]\n"
-                f"Analyze all referenced specification files and conduct a debate among the personas to establish architecture and decompose Epics.\n\n"
-                f"[/INST]\n"
-            )
+        prompt = TemplateManager.render(
+            "ceremony_1/debate.tpl",
+            rules=refs['rules'],
+            specs=refs['specs'],
+            personas=refs['personas'],
+            target_agent=refs['target_agent'],
+            inst_file_rel=inst_file_rel,
+        )
 
         actual_prompt_file = self.eval_dir / "actual_ceremony_1_prompt.md"
         CodeParser.atomic_write_text(actual_prompt_file, prompt)

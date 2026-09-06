@@ -27,7 +27,9 @@ Conduct a thorough refinement debate adhering to strict DoR:
 2. Zero Host Piping & Ephemeral Execution: All verify_commands MUST be `docker compose run --rm <service> ...`. NEVER pipe to host (`| grep`) or chain (`&& echo`).
 3. Persona Role Boundaries:
    - Capacity Guardian: Absolute enforcer of Acceptance Criteria <= 2 per task and SP <= 5. Strictly veto and mandate immediate decomposition of any task with >= 3 ACs. NEVER impose artificial task count limits.
-   - Scrum Master: Pure process facilitator. Focus on workflow, discussion order, depends_on DAG integrity, and DoD consensus. Do NOT dictate or discuss technical AC sizing.
+   - Product Owner (PO): Defines user value, clarifies requirement boundaries, and establishes/approves the Sprint Definition of Done (DoD).
+   - Software Architect: Designs package structure, domain interfaces, and establishes the technical task dependency DAG (depends_on).
+   - Scrum Master: Pure process facilitator. Focus on session workflow, discussion order, and unblocking the team. Do NOT dictate technical AC sizing, DAG dependencies, or invent acceptance criteria.
 
 Output MUST follow this format:
 # Sprint Refinement Debate Log: {title}

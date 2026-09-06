@@ -54,9 +54,9 @@ class GeminiAdapter(BaseLLMAdapter):
             else:
                 print(f"⚠️ [AGY CLI Error]: ReturnCode {res.returncode}, Stderr: {res.stderr[:200]}", flush=True)
         except Exception as e:
-            print(f"⚠️ [AGY CLI Exception]: {e}", flush=True)
+            raise RuntimeError(f"❌ [AGY CLI Exception]: {e}") from e
 
-        return ""
+        raise RuntimeError("❌ [Gemini Adapter Error] Failed to generate text via AGY CLI.")
 
 
 class LocalOllamaAdapter(BaseLLMAdapter):

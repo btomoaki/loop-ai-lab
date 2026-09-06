@@ -14,8 +14,8 @@ class ScrumRunner:
         self.refinement_engine = RefinementEngine(self.root_dir, self.config)
         self.sprint_engine = SprintEngine(self.root_dir, self.config)
 
-    def run_refinement_phase(self) -> bool:
-        return self.refinement_engine.run_refinement()
+    def run_refinement_phase(self, auto_approve: bool = False) -> bool:
+        return self.refinement_engine.run_refinement(auto_approve=auto_approve)
 
     def run_sprint_phase(self, sprint_num: int = None) -> bool:
         return self.sprint_engine.run_sprint_development(sprint_num=sprint_num)
