@@ -8,6 +8,7 @@ from runner.config.project_config import ProjectConfig
 from runner.utils.code_parser import CodeParser
 from runner.utils.context_loader import ContextLoader
 from runner.adapters.llm_adapter import LLMAdapterFactory
+from runner.git_ops import ensure_target_git_init, commit_sprint_checkpoint, rollback_to_last_checkpoint
 
 
 class SprintExecutionEngine:
@@ -155,16 +156,43 @@ class SprintExecutionEngine:
         clean_mod_name = self.sanitize_module_name(raw_mod_name, lang)
         project_file = "go.mod" if lang.lower() in ["go", "golang"] else "project_file"
 
+        # 先行生成されたテストコードがある場合、実装レイヤーのコンテキストとして注入 (Test-First TDD)
+        existing_test_context = ""
+        if layer_name in ["Business_Logic_and_Usecase", "Entrypoint_and_Interface"]:
+            test_files = list(target_ws.glob("**/*_test.go"))
+            if test_files:
+                test_snippets = []
+                for tf in test_files[:3]:  # コンテキスト長を考慮し最大3ファイル
+                    try:
+                        rel_p = tf.relative_to(target_ws)
+                        content = tf.read_text(encoding="utf-8")
+                        test_snippets.append(f"--- [EXISTING TEST: {rel_p}] ---\n{content}\n")
+                    except Exception:
+                        pass
+                if test_snippets:
+                    existing_test_context = (
+                        "\n=== 2.5 EXISTING TEST SPECIFICATIONS (TEST-FIRST TDD CONTRACT) ===\n"
+                        "The following test files have been generated FIRST. Your implementation MUST strictly match\n"
+                        "the function names, signatures, receiver types, and return types expected in these tests:\n"
+                        + "\n".join(test_snippets) + "\n"
+                    )
+
         prompt = (
             f"[INST]\n"
             f"=== 1. MANDATORY LANGUAGE & ARCHITECTURE RULES ===\n"
             f"{lang_rule_content}\n\n{arch_rule_content}\n\n"
             f"=== 2. EXECUTION INSTRUCTIONS ===\n{inst_content}\n\n"
-            f"[CRITICAL ROOT MODULE NAME MANDATE]\n"
+            f"{existing_test_context}"
+            f"[CRITICAL ARCHITECTURAL & CODING MANDATES]\n"
             f"1. The root module/package name in {project_file} and for all internal package imports MUST strictly be '{clean_mod_name}'.\n"
             f"2. NEVER prefix module names or internal imports with 'workspace/' or directory paths.\n"
             f"   - Correct:   import \"{clean_mod_name}/internal/domain/model\"\n"
-            f"   - Forbidden: import \"workspace/{clean_mod_name}/...\" or \"workspace/...\"\n\n"
+            f"   - Forbidden: import \"workspace/{clean_mod_name}/...\" or \"workspace/...\"\n"
+            f"3. [PACKAGE NAME COLLISION GUARD]: When importing both standard 'net/http' and internal '{clean_mod_name}/internal/interface/http',\n"
+            f"   you MUST use an explicit alias for the internal package (e.g. `httpDelivery \"{clean_mod_name}/internal/interface/http\"`) to avoid 'redeclared' errors.\n"
+            f"4. [STRICT PROHIBITION OF LOCKFILES]: NEVER generate or output 'go.sum', 'package-lock.json', or checksum files. Dependencies must be declared ONLY in {project_file}.\n"
+            f"5. [NO UNAUTHORIZED SUBMODULES OR NESTED DIRECTORIES]: NEVER create 'go.mod' or 'go.sum' inside internal/ subdirectories.\n"
+            f"6. [NO UNAUTHORIZED EXTERNAL LIBRARIES]: Do NOT import unapproved external libraries (e.g. gorilla/mux, time/rate) unless explicitly instructed in tasks.\n\n"
             f"=== 3. BACKLOG TASKS ===\n{backlog_content}\n"
             f"{error_content}\n\n"
             f"[TASK: CEREMONY 3 STEPPED CODE GENERATION - {epic_name} (Sprint {sprint_num})]\n"
@@ -194,8 +222,29 @@ class SprintExecutionEngine:
 
         CodeParser.atomic_write_text(self.root_dir / "state" / f"debug_llm_response_{layer_name.lower()}.txt", llm_response)
         written_files = CodeParser.apply_code_changes(llm_response, target_ws)
-        print(f"�� [SprintExecutionEngine] Written {len(written_files)} files for layer {layer_name}", flush=True)
-        return written_files
+
+        # 🛡️ ロックファイル（go.sum）および不正なサブディレクトリ内 go.mod/go.sum の強制排除
+        sanitized_written_files = []
+        for wf in written_files:
+            rel_wf = wf.relative_to(target_ws)
+            if rel_wf.name == "go.sum":
+                print(f"🛡️ [Lockfile Guard] Removing unauthorized LLM-generated lockfile: {rel_wf}")
+                try:
+                    wf.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                continue
+            if len(rel_wf.parts) > 1 and rel_wf.name in ["go.mod", "go.sum"]:
+                print(f"🛡️ [Submodule Guard] Removing unauthorized nested module file: {rel_wf}")
+                try:
+                    wf.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                continue
+            sanitized_written_files.append(wf)
+
+        print(f" [SprintExecutionEngine] Written {len(sanitized_written_files)} files for layer {layer_name}", flush=True)
+        return sanitized_written_files
 
     @staticmethod
     def determine_target_layers(backlog_data: dict) -> list:
@@ -222,34 +271,53 @@ class SprintExecutionEngine:
         has_service_path = "internal/domain/service" in text_lower or "internal/usecase" in text_lower
         has_interface_path = any(p in text_lower for p in ["internal/interface", "cmd/", "docker", "compose", "makefile", "openapi"])
 
+        # 専用タスク判定（既存コードの破壊防止・過剰レイヤー除外）
+        is_pure_test_task = bool(re.search(r"\b(add|create|implement)\s+.*(unit\s+tests?|integration\s+tests?|test\s+cases?)\b", text_lower)) and not bool(re.search(r"\b(implement|create)\s+.*(service|handler|rasterizer|model)\b", text_lower))
+        is_lint_or_docs_task = bool(re.search(r"\b(linter|golangci|\.golangci|readme|documentation|docs)\b", text_lower)) and not bool(re.search(r"\b(service|usecase|domain|matrix|hasher)\b", text_lower))
+
+        # テスト単体追加タスク: 実装レイヤーを厳格に除外して既存コードの破壊を防止
+        if is_pure_test_task:
+            return [("Unit_and_Integration_Tests", "Unit tests and integration test suites")]
+
+        # Linter / ドキュメント単体タスク: インターフェース・設定レイヤーのみ
+        if is_lint_or_docs_task:
+            return [("Entrypoint_and_Interface", "Main entrypoints, interface handlers/controllers, and build configs")]
+
         # Model層単体タスク（TASK-1.1等）: テスト不要・Model層のみ1ステップで即完了
         if has_model_path and not has_service_path and not has_interface_path:
             return [("Domain_and_Models", "Core domain models, schemas, and business entity structures")]
 
-        target_layers = []
+        selected = {}
 
         # 1. Domain & Models レイヤー判定
         if has_model_path or re.search(r"\bmodels?\b|\bentity\b|\bentities\b", text_lower):
-            target_layers.append(("Domain_and_Models", "Core domain models, schemas, and business entity structures"))
+            selected["Domain_and_Models"] = ("Domain_and_Models", "Core domain models, schemas, and business entity structures")
 
-        # 2. Business Logic & Usecase レイヤー判定
-        if has_service_path or re.search(r"\bservices?\b|\busecases?\b|\bhash\b|\brasteriz\b|\bencoding\b", text_lower):
-            target_layers.append(("Business_Logic_and_Usecase", "Application usecase / service logic handlers"))
-
-        # 3. Entrypoint & Interface レイヤー判定
-        if has_interface_path or re.search(r"\bcmd/|\bhttps?\b|\bhandlers?\b|\brouters?\b|\bapi\b|\bdocker\b|\bcompose\b|\bmakefile\b|\bopenapi\b", text_lower):
-            target_layers.append(("Entrypoint_and_Interface", "Main entrypoints, interface handlers/controllers, and build configs"))
-
-        # 4. Unit & Integration Tests レイヤー判定
+        # 2. Unit & Integration Tests レイヤー判定 (Test-First: テストを先行生成)
         if re.search(r"\btests?\b|\bverify\b|\bcoverage\b", text_lower):
-            target_layers.append(("Unit_and_Integration_Tests", "Unit tests and integration test suites"))
+            selected["Unit_and_Integration_Tests"] = ("Unit_and_Integration_Tests", "Unit tests and integration test suites")
 
-        if not target_layers:
-            target_layers = [
-                ("Domain_and_Models", "Core domain models, schemas, and business entity structures"),
-                ("Business_Logic_and_Usecase", "Application usecase / service logic handlers")
-            ]
+        # 3. Business Logic & Usecase レイヤー判定
+        if has_service_path or re.search(r"\bservices?\b|\busecases?\b|\bhash\b|\brasteriz\b|\bencoding\b", text_lower):
+            selected["Business_Logic_and_Usecase"] = ("Business_Logic_and_Usecase", "Application usecase / service logic handlers")
 
+        # 4. Entrypoint & Interface レイヤー判定
+        if has_interface_path or re.search(r"\bcmd/|\bhttps?\b|\bhandlers?\b|\brouters?\b|\bapi\b|\bdocker\b|\bcompose\b|\bmakefile\b|\bopenapi\b", text_lower):
+            selected["Entrypoint_and_Interface"] = ("Entrypoint_and_Interface", "Main entrypoints, interface handlers/controllers, and build configs")
+
+        if not selected:
+            selected["Domain_and_Models"] = ("Domain_and_Models", "Core domain models, schemas, and business entity structures")
+            selected["Business_Logic_and_Usecase"] = ("Business_Logic_and_Usecase", "Application usecase / service logic handlers")
+
+        # 🏆 Test-First TDD 順序でソート:
+        # [1] Domain_and_Models -> [2] Unit_and_Integration_Tests (先行テスト) -> [3] Business_Logic_and_Usecase -> [4] Entrypoint_and_Interface
+        test_first_order = [
+            "Domain_and_Models",
+            "Unit_and_Integration_Tests",
+            "Business_Logic_and_Usecase",
+            "Entrypoint_and_Interface"
+        ]
+        target_layers = [selected[layer_key] for layer_key in test_first_order if layer_key in selected]
         return target_layers
 
     def generate_code_in_steps(self, epic_dir: Path, sprint_num: int, backlog_data: dict, result_file_ref: Path = None) -> list:
@@ -303,23 +371,16 @@ class SprintExecutionEngine:
             except Exception:
                 pass
 
-        # スプリント開始時点のワークスペースファイル集合を記録（リトライ時の安全ロールバック用）
+        # ターゲットリポジトリの Git 管理を保証
         target_ws_rel = backlog_data.get("target_workspace", "workspace/identicon-generator")
         target_ws_dir = (self.root_dir / target_ws_rel).resolve()
-        initial_files = set([p.resolve() for p in target_ws_dir.rglob("*") if p.is_file()]) if target_ws_dir.exists() else set()
-        attempt_created_files = []
+        ensure_target_git_init(target_ws_dir)
 
         for attempt in range(1, max_retries + 1):
-            if attempt > 1 and attempt_created_files:
-                # 直前の失敗Attemptで新規作成された残骸ファイルを自動ロールバック
-                print(f"🧹 [Auto-Rollback] Attempt {attempt}: Cleaning up {len(attempt_created_files)} failed files from previous attempt to prevent duplicate accumulation...", flush=True)
-                for f_path in attempt_created_files:
-                    try:
-                        if f_path.exists() and f_path.is_file() and f_path not in initial_files:
-                            f_path.unlink()
-                    except Exception as e:
-                        print(f"⚠️ [Auto-Rollback] Failed to remove {f_path}: {e}")
-                attempt_created_files = []
+            if attempt > 1:
+                # 直前の失敗Attemptで散らかった残骸を直前の合格コミット状態へ安全に完全ロールバック
+                print(f"🧹 [Auto-Rollback] Attempt {attempt}: Rolling back workspace to last clean checkpoint (HEAD)...", flush=True)
+                rollback_to_last_checkpoint(target_ws_dir)
 
             tdd_status = f"🧪 TDD サイクル試行中 (Attempt {attempt}/{max_retries})"
             epic_statuses[epic_dir.name] = f"🏃 開発進行中 [{sprint_progress_tag} | {tdd_status}]"
@@ -329,10 +390,6 @@ class SprintExecutionEngine:
             new_files = self.generate_code_in_steps(epic_dir, sprint_num, backlog_data, result_file_ref)
             if new_files:
                 last_written_files = new_files
-                for f_rel in new_files:
-                    abs_p = (self.root_dir / f_rel).resolve()
-                    if abs_p.exists() and abs_p not in initial_files:
-                        attempt_created_files.append(abs_p)
 
             if harness_path.exists():
                 print(f"🧪 [TDD Cycle] Running Test Harness: {harness_path.name}", flush=True)
@@ -346,6 +403,7 @@ class SprintExecutionEngine:
                     self.update_status_dashboard(epic_dir.name, sprint_num, current_task_name, f"✅ ハーネス合格 (Attempt {attempt})", epic_statuses)
                     
                     self.write_sprint_result_log(epic_dir, sprint_num, backlog_data, "PASSED", 0, last_written_files, attempt=attempt, retry_reset=True)
+                    commit_sprint_checkpoint(target_ws_dir, epic_dir.name, sprint_num, current_task_name)
                     return True
                 else:
                     last_error = res.stdout + "\n" + res.stderr
