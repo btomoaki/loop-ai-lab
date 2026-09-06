@@ -7,7 +7,7 @@ from runner.config.project_config import ProjectConfig
 def ensure_initiative_files_integrity(root_dir: Path, config=None):
     """Dynamic Harness Generator Engine for Go Code & Container/Deployment Epics."""
     cfg = config or ProjectConfig.load(root_dir)
-    init_dir = root_dir / "state/initiatives"
+    init_dir = root_dir / cfg.initiatives_dir
     if not init_dir.exists():
         return
         

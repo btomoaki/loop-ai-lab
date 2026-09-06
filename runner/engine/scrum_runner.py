@@ -22,7 +22,7 @@ class ScrumRunner:
 
     def run_epic_review(self, epic_dir_name: str, sprint_num: int = 1) -> bool:
         """セレモニー 3: スプリント開発 & 受入判定 (DoD 受入判定ログ出力)"""
-        epic_dir = self.root_dir / "state" / "initiatives" / epic_dir_name
+        epic_dir = self.root_dir / self.config.initiatives_dir / epic_dir_name
         epic_dir.mkdir(parents=True, exist_ok=True)
         log_path = epic_dir / f"sprint_{sprint_num}_review_gate.md"
         

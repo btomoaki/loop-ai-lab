@@ -15,9 +15,9 @@ class EpicRefinementEngine:
     def __init__(self, root_dir: Path, config: ProjectConfig = None):
         self.root_dir = root_dir
         self.config = config or ProjectConfig.load(root_dir)
-        self.init_dir = root_dir / "state" / "initiatives"
-        self.eval_dir = root_dir / "state" / ".evaluator"
-        self.status_file = root_dir / "state" / "status.md"
+        self.init_dir = root_dir / self.config.initiatives_dir
+        self.eval_dir = root_dir / self.config.evaluator_dir
+        self.status_file = root_dir / self.config.status_file
 
         self.init_dir.mkdir(parents=True, exist_ok=True)
         self.eval_dir.mkdir(parents=True, exist_ok=True)

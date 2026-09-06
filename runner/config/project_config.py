@@ -21,6 +21,10 @@ class ProjectConfig:
     llama_max_tokens: int = 8192
     workspace_rel: str = "workspace/identicon-generator"
     container_image_name: str = "identicon-generator"
+    state_dir: str = "state"
+    initiatives_dir: str = "state/initiatives"
+    evaluator_dir: str = "state/.evaluator"
+    status_file: str = "state/status.md"
     max_retries: int = 3
     max_harness_fails: int = 5
     extra_env: Dict[str, str] = field(default_factory=dict)
@@ -67,4 +71,8 @@ class ProjectConfig:
             max_harness_fails=int(os.getenv("MAX_HARNESS_FAILS", data.get("MAX_HARNESS_FAILS", "5"))),
             workspace_rel=os.getenv("WORKSPACE_REL", os.getenv("TARGET_DIR", f"workspace/{proj_name}")),
             container_image_name=os.getenv("CONTAINER_IMAGE_NAME", proj_name),
+            state_dir=os.getenv("STATE_DIR", data.get("STATE_DIR", "state")),
+            initiatives_dir=os.getenv("INITIATIVES_DIR", data.get("INITIATIVES_DIR", "state/initiatives")),
+            evaluator_dir=os.getenv("EVALUATOR_DIR", data.get("EVALUATOR_DIR", "state/.evaluator")),
+            status_file=os.getenv("STATUS_FILE", data.get("STATUS_FILE", "state/status.md")),
         )
