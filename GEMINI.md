@@ -32,8 +32,8 @@
 - **Explicit User Consent for Recovery**: Any fallback, retry strategy shift, or degraded operation mode requires explicit user instruction before execution.
 
 ## Section 7: CLEAN ARCHITECTURE DIP & GLOBAL BUILD GATE MANDATE (依存性逆転と全体ビルド不退転ルール)
-- **DIP Interface Ownership**: In accordance with Clean Architecture and DIP, all interfaces for repositories, external adapters, and drivers MUST be defined within inward layers (`domain` or `usecase`). Defining interfaces inside `infrastructure` and importing them from inward layers is strictly prohibited across all languages.
-- **Strict Inward Dependency**: Dependencies must point exclusively inward. Inward layers (`usecase`, `domain`) must never import outer `infrastructure` layers.
+- **DIP Interface Ownership**: In accordance with Clean Architecture and DIP, all interfaces for repositories, external adapters, and drivers MUST be defined within the inward `domain` layer. Defining interfaces inside `infrastructure` and importing them from inward layers is strictly prohibited across all languages.
+- **Strict Inward Dependency**: Dependencies must point exclusively inward. Inward layers (`domain`, application logic) must never import outer `infrastructure` layers.
 - **Zero-Tolerance Global Build Gate**: A sprint MUST NEVER be marked as PASSED based solely on isolated local unit tests. Every sprint completion requires full-project compilation, type-checking, and binary/package build validation. Any broken syntax, circular dependency cycle, or unreferenced module failure must immediately reject the sprint and trigger the retry/rollback loop. Detailed language-specific build and tooling rules are governed by `.agents/rules/languages/`.
 
 ## Master Constraint: Workspace Self-Containment & No Outside Files Rule

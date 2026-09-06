@@ -27,9 +27,9 @@
 - The main entrypoint must always be located at `cmd/server/main.go`.
 
 ## 5. Clean Architecture DIP & Import Cycle Elimination
-1. **Interface Placement**: In accordance with Clean Architecture and Dependency Inversion Principle (DIP), repository, rasterizer, and external adapter interfaces MUST be defined in `internal/domain/` or `internal/usecase/`.
-2. **Implementation in Infrastructure**: `internal/infrastructure/` must exclusively implement these domain interfaces. Defining interfaces in `infrastructure` and importing them from `usecase` is strictly prohibited.
-3. **Strict Inward Dependency**: `internal/usecase/` and `internal/domain/` are STRICTLY FORBIDDEN from importing `internal/infrastructure/` to eliminate Go's fatal `import cycle not allowed` compiler error.
+1. **Interface Placement in Domain**: In accordance with Clean Architecture and Dependency Inversion Principle (DIP), repository, rasterizer, and external adapter interfaces MUST be defined strictly within `internal/domain/`.
+2. **Implementation in Infrastructure**: `internal/infrastructure/` must exclusively implement these domain interfaces. Defining interfaces in `infrastructure` and importing them from inward layers is strictly prohibited.
+3. **Strict Inward Dependency**: Inward layers (`internal/domain/` and application workflow layers) are STRICTLY FORBIDDEN from importing `internal/infrastructure/` to eliminate Go's fatal `import cycle not allowed` compiler error.
 
 ## 6. Single HTTP Stack Mandate & Ghost Package Prohibition
 1. **Unified HTTP Router**: Standard library `net/http` (Go 1.22+ routing) is the primary HTTP standard.
