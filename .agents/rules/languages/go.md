@@ -30,6 +30,7 @@
 1. **Interface Placement in Domain**: In accordance with Clean Architecture and Dependency Inversion Principle (DIP), repository, rasterizer, and external adapter interfaces MUST be defined strictly within `internal/domain/`.
 2. **Implementation in Infrastructure**: `internal/infrastructure/` must exclusively implement these domain interfaces. Defining interfaces in `infrastructure` and importing them from inward layers is strictly prohibited.
 3. **Strict Inward Dependency**: Inward layers (`internal/domain/` and application workflow layers) are STRICTLY FORBIDDEN from importing `internal/infrastructure/` to eliminate Go's fatal `import cycle not allowed` compiler error.
+4. **Interface Definition Scope Exemption**: Downstream sprints (e.g. infrastructure rasterizer, CI verification, delivery adapters) are explicitly permitted to add new interface contract files (e.g. `internal/domain/rasterizer.go`, `internal/domain/repository.go`) in the domain package to satisfy DIP without scope deadlocks. Modifying existing domain calculation logic or struct definitions remains forbidden.
 
 ## 6. Single HTTP Stack Mandate & Ghost Package Prohibition
 1. **Unified HTTP Router**: Standard library `net/http` (Go 1.22+ routing) is the primary HTTP standard.

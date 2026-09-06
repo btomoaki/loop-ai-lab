@@ -33,6 +33,7 @@
 
 ## Section 7: CLEAN ARCHITECTURE DIP & GLOBAL BUILD GATE MANDATE (依存性逆転と全体ビルド不退転ルール)
 - **DIP Interface Ownership**: In accordance with Clean Architecture and DIP, all interfaces for repositories, external adapters, and drivers MUST be defined within the inward `domain` layer. Defining interfaces inside `infrastructure` and importing them from inward layers is strictly prohibited across all languages.
+- **Interface Definition Scope Exemption**: To uphold DIP without scope deadlocks, downstream development sprints (e.g. infrastructure, delivery, application) are explicitly granted permission to add or extend pure interface definitions (`type X interface`) within the `domain` layer. Modifying existing domain entities or computational logic remains strictly prohibited.
 - **Strict Inward Dependency**: Dependencies must point exclusively inward. Inward layers (`domain`, application logic) must never import outer `infrastructure` layers.
 - **Zero-Tolerance Global Build Gate**: A sprint MUST NEVER be marked as PASSED based solely on isolated local unit tests. Every sprint completion requires full-project compilation, type-checking, and binary/package build validation. Any broken syntax, circular dependency cycle, or unreferenced module failure must immediately reject the sprint and trigger the retry/rollback loop. Detailed language-specific build and tooling rules are governed by `.agents/rules/languages/`.
 
