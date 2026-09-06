@@ -565,7 +565,7 @@ class SprintRefinementEngine:
             f"Cross-reference ALL generated sprint backlogs against the source specifications in references/ line-by-line.\n\n"
             f"CRITICAL AUDIT RULES:\n"
             f"1. ZERO SPEC TAMPERING: If ANY task attempts to edit, modify, or update files in references/, you MUST ISSUE AN IMMEDIATE VETO.\n"
-            f"2. DoR COMPLIANCE: Verify that each task has at most 2-3 acceptance criteria (single responsibility micro-tasks).\n"
+            f"2. DoR COMPLIANCE: Verify that each task has at most 2 acceptance criteria (single responsibility micro-tasks).\n"
             f"3. Check for 100% adherence to specifications in references/* and decisions in references/decisions.md.\n\n"
             f"=== 3. GENERATED SPRINT BACKLOGS ACROSS ALL EPICS (LOOP #{attempt}) ===\n{all_backlogs_str}\n\n"
             f"[TASK: INDEPENDENT SPECIFICATION COMPLIANCE AUDIT]\n"
