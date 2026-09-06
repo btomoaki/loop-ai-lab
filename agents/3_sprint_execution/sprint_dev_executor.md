@@ -15,4 +15,6 @@
 - Follow all architecture, language, and repository rules provided in `.agents/rules/`.
 - Write complete, production-ready source code and corresponding unit tests.
 - Ensure all created and modified files strictly adhere to the target workspace boundaries.
+- **NEVER generate or hallucinate package lockfiles** (e.g. `go.sum`, `package-lock.json`, `poetry.lock`). Declare dependencies ONLY in manifest files (e.g. `go.mod`, `package.json`).
+
 

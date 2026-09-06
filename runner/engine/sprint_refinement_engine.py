@@ -840,6 +840,26 @@ class SprintRefinementEngine:
         BacklogSplitter.split_all_epics(self.root_dir, self.config)
         TestHarnessGenerator.generate_all(self.root_dir, self.config)
 
+        # 🛡️ 全体独立監査ゲートのスマート・レジューム判定:
+        # 既存の loop_* ディレクトリの最新 audit_summary.yaml を確認し、既に全体承認 (overall_approved: true) されていれば再監査をスキップ
+        latest_approved_loop = None
+        for loop_d in sorted(self.eval_dir.glob("loop_*"), key=lambda p: int(p.name.split("_")[1]) if p.name.split("_")[1].isdigit() else 0, reverse=True):
+            summary_f = loop_d / "audit_summary.yaml"
+            if summary_f.exists():
+                try:
+                    s_data = yaml.safe_load(summary_f.read_text(encoding="utf-8")) or {}
+                    if s_data.get("overall_approved", False):
+                        latest_approved_loop = (loop_d, s_data)
+                        break
+                except Exception:
+                    pass
+
+        if latest_approved_loop:
+            loop_dir, s_data = latest_approved_loop
+            print(f"\n⏩ [Resume Skip] 全体独立監査は既に {loop_dir.name} にて全者承認 (APPROVED) 済みです。再監査をスキップして即座に Ceremony 3 へ進みます！", flush=True)
+            self.update_status_dashboard("All Epics", f"リファインメント完了 (監査 {loop_dir.name} 承認済み)")
+            return True
+
         # 🛡️ Gemini による各自独立監査ゲートの実行 (loop_N ディレクトリ構造で履歴管理)
         audit_result = self.run_individual_final_audits(attempt=current_attempt)
 
