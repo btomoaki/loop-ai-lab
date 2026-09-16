@@ -224,8 +224,8 @@ PYTHONPATH=. python3 runner/main.py run --phase all
 ## 5. 🐧 Linux 環境移行に伴うローカル LLM (llama.cpp / llama-server) 運用引き継ぎ
 
 ### ① 移行の背景と目的
-- **課題**: Windows ホスト側での `run_llama.ps1` 実行時、グラフィックドライバタイムアウト（BSoD: `0x00000116` `VIDEO_TDR_FAILURE`）や管理者権限昇格、Windows-WSL2 間のポート中継の不安定性が発生。
-- **方針**: 以降のローカル LLM 実行基盤を Linux (WSL2 Ubuntu 24.04) ネイティブ環境に移行・集約し、プロセス管理と通信を同一 Linux OS 内で完結させて安定性とレスポンスを担保する。
+- **課題**: Windows ホスト側での `run_llama.ps1` 実行時、グラフィックドライバタイムアウト（BSoD: `0x00000116` `VIDEO_TDR_FAILURE`）や管理者権限昇格、Windows-WSL2 間のポート中継の不安定性が発生。さらに、Linux サーバー側から C ドライブ（`/mnt/c`）が不可視だったため、大容量ストレージである E ドライブ（`E:\llama` / `/mnt/e/llama`）へ移行・再配置を実施。
+- **方針**: 以降のローカル LLM 実行基盤を Linux (WSL2 Ubuntu 24.04) ネイティブ環境に移行・集約し、モデル格納先を `/mnt/e/llama/models/` とした上で、プロセス管理と通信を同一 Linux OS 内で完結させて安定性とレスポンスを担保する。
 
 ---
 
@@ -234,8 +234,8 @@ PYTHONPATH=. python3 runner/main.py run --phase all
 | 項目 | Windows 環境 (旧) | Linux 環境 (新: WSL2 / Ubuntu 24.04) | 備考・注意点 |
 | :--- | :--- | :--- | :--- |
 | **起動スクリプト** | `run_llama.ps1` (PowerShell) | `scripts/run_llama.sh` (Bash) | バックグラウンド起動・プロセス管理を Bash で完結 |
-| **実行バイナリ** | `C:\llama\llama-server.exe` | `llama-server` (ビルドまたはバイナリ) | `~/llama.cpp/build/bin/llama-server` 等に配置 |
-| **モデル配置場所** | `C:\llama\models\` | `/mnt/c/llama/models/` | 既存モデル（Devstral 24B, Qwen2.5 32B）を直接参照可能 |
+| **実行バイナリ** | `E:\llama\llama-server.exe` | `llama-server` (ビルドまたはバイナリ) | `~/llama.cpp/build/bin/llama-server` 等に配置 |
+| **モデル配置場所** | `E:\llama\models\` | `/mnt/e/llama/models/` | CドライブからEドライブへ移動完了。Linuxから常時参照可能 |
 | **モデルファイル名** | `mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf` | 同左 (14.3 GB) | `config.env` の `EXECUTOR_MODEL` と一致 |
 | **バックエンド / GPU** | Vulkan (`-dev Vulkan0,Vulkan1`) | CUDA (`GGML_CUDA=on`) または CPU | WSL2 CUDA 利用時は `/usr/lib/wsl/lib` 参照 |
 | **待受ポート** | `11435` | `11435` | 変更なし (Linux 内 `127.0.0.1:11435`) |
@@ -251,7 +251,17 @@ PYTHONPATH=. python3 runner/main.py run --phase all
 #!/usr/bin/env bash
 set -euo pipefail
 
-MODEL_DIR="/mnt/c/llama/models"
+# Eドライブ (/mnt/e/llama/models) を最優先で探索
+if [ -n "${MODEL_DIR:-}" ]; then
+  : # 環境変数指定優先
+elif [ -d "/mnt/e/llama/models" ]; then
+  MODEL_DIR="/mnt/e/llama/models"
+elif [ -d "/mnt/c/llama/models" ]; then
+  MODEL_DIR="/mnt/c/llama/models"
+else
+  MODEL_DIR="/mnt/e/llama/models"
+fi
+
 MODEL_NAME="${1:-mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf}"
 MODEL_PATH="${MODEL_DIR}/${MODEL_NAME}"
 PORT=11435

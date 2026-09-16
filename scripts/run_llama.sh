@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MODEL_DIR="/mnt/c/llama/models"
+# Eドライブ (/mnt/e/llama/models) を最優先で探索
+if [ -n "${MODEL_DIR:-}" ]; then
+  : # 環境変数指定優先
+elif [ -d "/mnt/e/llama/models" ]; then
+  MODEL_DIR="/mnt/e/llama/models"
+elif [ -d "/mnt/c/llama/models" ]; then
+  MODEL_DIR="/mnt/c/llama/models"
+else
+  MODEL_DIR="/mnt/e/llama/models"
+fi
+
 MODEL_NAME="${1:-mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf}"
 MODEL_PATH="${MODEL_DIR}/${MODEL_NAME}"
 PORT=11435
