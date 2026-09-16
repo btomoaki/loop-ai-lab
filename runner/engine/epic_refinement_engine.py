@@ -93,6 +93,91 @@ class EpicRefinementEngine:
         print(f"\n⚠️ [Ceremony 1 Halted] Insufficient debate content ({len(overall_debate_log)} chars). Saved raw output to {overall_debate_file.relative_to(self.root_dir)}")
         raise RuntimeError("❌ [Ceremony 1 Failed] Failed to generate valid overall architecture debate log on 1st attempt.")
 
+    def review_tripartite_governance(self, debate_log: str) -> bool:
+        """セレモニー 1 で生成された overall_debate_log に対する3者独立レビュー（コスト・技術・責任の分離判定）"""
+        review_cost_file = self.eval_dir / "ceremony_1_review_cost.md"
+        review_tech_file = self.eval_dir / "ceremony_1_review_tech.md"
+        review_scope_file = self.eval_dir / "ceremony_1_review_scope.md"
+
+        # 中断再開チェック（既に3つとも APPROVED で存在する場合はスキップ）
+        if review_cost_file.exists() and review_tech_file.exists() and review_scope_file.exists():
+            c_text = review_cost_file.read_text(encoding="utf-8")
+            t_text = review_tech_file.read_text(encoding="utf-8")
+            s_text = review_scope_file.read_text(encoding="utf-8")
+            c_ok = ("Verdict: **APPROVED**" in c_text or "APPROVED" in c_text) and "**VETO**" not in c_text and "Verdict: VETO" not in c_text
+            t_ok = ("Verdict: **APPROVED**" in t_text or "APPROVED" in t_text) and "**VETO**" not in t_text and "Verdict: VETO" not in t_text
+            s_ok = ("Verdict: **APPROVED**" in s_text or "APPROVED" in s_text) and "**VETO**" not in s_text and "Verdict: VETO" not in s_text
+            if c_ok and t_ok and s_ok:
+                print("⏯️ [Ceremony 1 Review 中断再開] 3者レビューログが全て APPROVED で存在するためスキップします。")
+                return True
+
+        print("\n" + "=" * 70)
+        print("⚖️ [Ceremony 1: 3者ディベートによるコスト・技術・責任の独立レビュー判定開始]")
+        print("=" * 70, flush=True)
+
+        refs = ContextLoader.get_ceremony_context(self.root_dir, ceremony="1_epic_refinement", include_dev_rules=True, config=self.config)
+
+        # 1. コストの分離・判断 (FinOps & Cost Governance)
+        print("💰 [Ceremony 1 Review 1/3] FinOps & Cost Governance Auditor inspecting Rate Limiting & Over-Engineering...", flush=True)
+        finops_persona_file = self.root_dir / ".agents" / "personas" / "finops_cost_governance.md"
+        finops_content = finops_persona_file.read_text(encoding="utf-8") if finops_persona_file.exists() else refs['personas']
+
+        prompt_cost = TemplateManager.render(
+            "ceremony_1/review_cost.tpl",
+            finops_directives=finops_content,
+            debate_log=debate_log,
+        )
+        cost_res = self.refinement_agent.generate_text(prompt_cost)
+        cost_text = (cost_res or "").strip()
+        CodeParser.atomic_write_text(review_cost_file, cost_text)
+        print(f"  📝 Saved FinOps cost review to {review_cost_file.relative_to(self.root_dir)}")
+
+        # 2. 技術の分離・判断 (Software Architect & Ruler)
+        print("🏛️ [Ceremony 1 Review 2/3] Software Architect & Ruler inspecting Clean Architecture & Rules...", flush=True)
+        prompt_tech = TemplateManager.render(
+            "ceremony_1/review_tech.tpl",
+            tech_rules=refs['rules'],
+            debate_log=debate_log,
+        )
+        tech_res = self.refinement_agent.generate_text(prompt_tech)
+        tech_text = (tech_res or "").strip()
+        CodeParser.atomic_write_text(review_tech_file, tech_text)
+        print(f"  📝 Saved Tech architecture review to {review_tech_file.relative_to(self.root_dir)}")
+
+        # 3. 責任・仕様の分離・判断 (PO & Spec Compliance Auditor)
+        print("📋 [Ceremony 1 Review 3/3] Spec Compliance Auditor & PO inspecting Specifications & Scope...", flush=True)
+        prompt_scope = TemplateManager.render(
+            "ceremony_1/review_scope.tpl",
+            specs=refs['specs'],
+            debate_log=debate_log,
+        )
+        scope_res = self.refinement_agent.generate_text(prompt_scope)
+        scope_text = (scope_res or "").strip()
+        CodeParser.atomic_write_text(review_scope_file, scope_text)
+        print(f"  📝 Saved Spec compliance review to {review_scope_file.relative_to(self.root_dir)}")
+
+        # 判定検証
+        cost_pass = ("Verdict: **APPROVED**" in cost_text or "APPROVED" in cost_text) and "**VETO**" not in cost_text and "Verdict: VETO" not in cost_text
+        tech_pass = ("Verdict: **APPROVED**" in tech_text or "APPROVED" in tech_text) and "**VETO**" not in tech_text and "Verdict: VETO" not in tech_text
+        scope_pass = ("Verdict: **APPROVED**" in scope_text or "APPROVED" in scope_text) and "**VETO**" not in scope_text and "Verdict: VETO" not in scope_text
+
+        print("\n" + "-" * 50)
+        print("📊 [Ceremony 1 Tripartite Review Verdicts]")
+        print(f"  💰 1. Cost & FinOps     : {'✅ APPROVED' if cost_pass else '❌ VETO'}")
+        print(f"  🏛️ 2. Tech & Architect  : {'✅ APPROVED' if tech_pass else '❌ VETO'}")
+        print(f"  📋 3. Scope & PO        : {'✅ APPROVED' if scope_pass else '❌ VETO'}")
+        print("-" * 50 + "\n", flush=True)
+
+        if not (cost_pass and tech_pass and scope_pass):
+            failed = []
+            if not cost_pass: failed.append("Cost/FinOps (Rate Limiting or unrequested feature detected)")
+            if not tech_pass: failed.append("Tech/Architect (Architecture or rule violation detected)")
+            if not scope_pass: failed.append("Scope/PO (Dropped specification or scope leak detected)")
+            raise RuntimeError(f"❌ [Ceremony 1 VETO] Tripartite review failed: {', '.join(failed)}. Check state/.evaluator/ceremony_1_review_*.md for details.")
+
+        print("🎉 [Ceremony 1 Tripartite Review Passed] All 3 personas (Cost, Tech, Scope) APPROVED the overall architecture & Epics!\n", flush=True)
+        return True
+
     def extract_epics_from_log(self, debate_log: str) -> list:
         epics = []
         

@@ -1,35 +1,62 @@
 # 📝 プロジェクト次回引き継ぎメモ (Handover Notes)
 
-## 0. 📌 現在の自律開発ループ進捗 & PC再起動時の復帰手順 (2026-09-06 18:43 最新更新)
+## 0. 📌 本日の作業完了ステータス & 次回再開手順 (2026-09-06 22:25 最新更新)
 
-### 🚀 現在の実行状況 (Ceremony 3: 自律TDD開発ループ)
-- **目的**: 全エピック（Epic 1〜7）を走らせて後続課題をすべて洗い出す（課題はワークアラウンドでスキップし `state/workaround_reject_list.yaml` に記録、後で根本改修して一発完走 Zero-to-One Run を検証）。
-- **進捗サマリー**:
-  - **Epic 1** (環境基盤・コンテナツールチェーン): ✅ **全 4 スプリント完了 (完全合格)**
-  - **Epic 2** (ドメインモデル・行列・色生成): ✅ **全 8 スプリント完了 (完全合格 / Sprint 3〜8 ワークアラウンド台帳記録済み)**
-  - **Epic 3** (画像ラスタライザ & PNG描画): ✅ **全 5 スプリント完了 (完全合格 / Sprint 2〜4 完全自律一発合格、Sprint 1, 5 台帳記録済み)**
-  - **Epic 4** (ユースケース層 & DI配線): ✅ **全 7 スプリント完了 (完全合格 / Sprint 1〜5 完全自律一発合格、Sprint 6, 7 台帳記録済み)**
-  - **Epic 5** (HTTP配信・OpenAPI): 🏆 **全 15 スプリント完了 (完全合格！)**
-  - **Epic 6** (SPAフロントエンド): 🏃 **開発進行中 [Sprint 7/7 準備中 (Sprint 1〜6 自律合格！あと1スプリントでEpic 6完走！)]**
-  - **Epic 7** (本番コンテナ・CI/CD・ドキュメント): ⏳ 待機中 (全 7 スプリント)
+### 🏁 現在のステータス
+- **リファインメント進捗**: **セレモニー 1 完全完了（APPROVED）** ➔ 次回は **セレモニー 2（スプリントバックログ・リファインメント）** から開始。
+- **Git作業ツリー状態**: 全改修ファイルがステージング済み（`git add` 完了、コミット承認待ち）。
+- **3者独立レビュー判定結果**:
+  - 💰 **コスト (FinOps)**: [`state/.evaluator/ceremony_1_review_cost.md`](file:///home/wimet/work/loop-ai-lab/state/.evaluator/ceremony_1_review_cost.md) ➔ **✅ APPROVED** (Rate Limiting / 外部DB / 認証排除、Cloud Run 無料枠保証)
+  - 🏛️ **技術 (Architect & Ruler)**: [`state/.evaluator/ceremony_1_review_tech.md`](file:///home/wimet/work/loop-ai-lab/state/.evaluator/ceremony_1_review_tech.md) ➔ **✅ APPROVED** (Clean Architecture 4層、Double-Mockability、事前コード実装禁止)
+  - 📋 **責任 (PO & Spec Auditor)**: [`state/.evaluator/ceremony_1_review_scope.md`](file:///home/wimet/work/loop-ai-lab/state/.evaluator/ceremony_1_review_scope.md) ➔ **✅ APPROVED** (仕様書 100% 網羅、SVG排除、Cloud Run協調契約)
 
-### ⚠️ 現在の進行状況 (Epic 6 Sprint 7: `TASK-6.7`)
-- `TASK-6.7` (SPAフロントエンドの E2E/統合検証・静的アセット完全性テスト) の自律TDDサイクルを実行。
+---
 
-### 🔄 もしPCが再起動した場合の再開手順 (One-Command Resume)
-1. ターミナルを開き、プロジェクトルートに移動:
+### 🏆 本日完了した最重要改修サマリー
+1. **Ceremony 1 独立3者レビューゲート（コスト・技術・責任の分離判定）の新設**:
+   - 単一LLMによるロールプレイ会話劇で終わらせず、確定したエピック分割案に対して**独立した3つのプロンプトで別個にGemini監査を実行**する仕組みを `EpicRefinementEngine` / `RefinementEngine` に実装。
+   - 監査証跡を `state/.evaluator/ceremony_1_review_{cost,tech,scope}.md` として物理ファイル保存。3者全員が APPROVED でない限り Ceremony 2 に進めない防壁を確立。
+2. **未要求仕様（Rate Limiting）の根本原因解明と完全根絶**:
+   - `agents/2_sprint_refinement/sprint_refinement_planner.md` にハードコードされていた未要求仕様「Mandatory IP-based rate limiting (`HTTP 429`)」を完全削除（大元凶の根本治療）。
+3. **Clean Architecture ディレクトリ命名の完全統一（Go予約語 `interface` の残存根絶）**:
+   - 古い `internal/interface/` や `internal/usecase/` が残存していた全ファイル（`sprint_refinement_planner.md`, `backlog.tpl`, `patch.tpl`, `code_gen.tpl`, `backlog_harness.py`, `sprint_execution_engine.py`）をすべて最新規約に修正：
+     - 抽象入力ポート: `internal/domain/usecase/`
+     - 具象実装: `internal/application/usecase/`
+     - 配信層（予約語回避）: `internal/delivery/http/`
+     - 静的アセット: `web/static/`
+4. **プロンプトテンプレート化 & セレモニー別階層化 (`template/prompt/`)**:
+   - 旧 `assets/` を完全撤廃し、セレモニー別（`common/`, `ceremony_1/`, `ceremony_2/`, `ceremony_3/`）に再編。
+5. **Fail-Fast 設計の徹底（サイレントフォールバックの完全排除）**:
+   - プロンプト作成・レンダリング失敗時に空文字やデフォルト値で続行せず、即座に `raise RuntimeError` でエラー停止する方針を全アダプタ・エンジンに適用。
+
+---
+
+### 🔄 次回再開時の手順 (Refinement Restart Procedure)
+
+1. **保留中コミットの実行**:
    ```bash
-   cd ~/work/loop-ai-lab
+   git commit -m "feat(governance): add ceremony 1 tripartite review gate, eliminate rate limiting hardcodes, and unify clean architecture paths"
    ```
-2. ローカルLLMサーバ（llama-server 等）が起動していることを確認。
-3. 自律開発ループを再開（合格済みスプリントはすべて自動スキップされます）:
+
+2. **セレモニー 2（スプリントバックログ詳細化 & 独立監査）の実行**:
+   ※セレモニー 1 はすでに全3者 APPROVED で完了・保存されているため自動スキップされ、即座にクリーンな状態でセレモニー 2 が開始されます：
    ```bash
-   PYTHONPATH=. python3 runner/main.py run --phase execution
+   PYTHONPATH=. python3 runner/main.py run --phase refinement -y
    ```
-4. 進行状況のリアルタイム監視:
+
+3. **全自動実行（リファインメント ➔ スプリント自律開発ループ）を行う場合**:
+   ```bash
+   PYTHONPATH=. python3 runner/main.py run --phase all -y
+   ```
+
+4. **進行状況のリアルタイム監視**:
    ```bash
    watch cat ./state/status.md
    ```
+
+---
+
+## 0.1 📌 以前の自律開発ループ進捗 & 過去の経緯 (2026-09-06 18:43)
 
 ### 🛠️ これまでに洗い出された根本是正必須課題（ゼロリセット前に一括改修）
 0. **【最上流ガバナンス】「スペック担当 vs コスト担当 vs 実装アーキテクト」の3極バランス（三権分立）ディベート新設 (正式採用決定)**:
@@ -191,3 +218,86 @@ PYTHONPATH=. python3 runner/main.py run --phase all
 ## 4. システム状態ダッシュボード (State Dashboard)
 - 最新の実行状態やスプリント進捗は `state/status.md` にリアルタイム自動更新されます。
 - 全体監査レポート（Loop #5）は `state/.evaluator/loop_5/` に完全に保存されています。
+
+---
+
+## 5. 🐧 Linux 環境移行に伴うローカル LLM (llama.cpp / llama-server) 運用引き継ぎ
+
+### ① 移行の背景と目的
+- **課題**: Windows ホスト側での `run_llama.ps1` 実行時、グラフィックドライバタイムアウト（BSoD: `0x00000116` `VIDEO_TDR_FAILURE`）や管理者権限昇格、Windows-WSL2 間のポート中継の不安定性が発生。
+- **方針**: 以降のローカル LLM 実行基盤を Linux (WSL2 Ubuntu 24.04) ネイティブ環境に移行・集約し、プロセス管理と通信を同一 Linux OS 内で完結させて安定性とレスポンスを担保する。
+
+---
+
+### ② Windows vs Linux 環境差分対照表
+
+| 項目 | Windows 環境 (旧) | Linux 環境 (新: WSL2 / Ubuntu 24.04) | 備考・注意点 |
+| :--- | :--- | :--- | :--- |
+| **起動スクリプト** | `run_llama.ps1` (PowerShell) | `scripts/run_llama.sh` (Bash) | バックグラウンド起動・プロセス管理を Bash で完結 |
+| **実行バイナリ** | `C:\llama\llama-server.exe` | `llama-server` (ビルドまたはバイナリ) | `~/llama.cpp/build/bin/llama-server` 等に配置 |
+| **モデル配置場所** | `C:\llama\models\` | `/mnt/c/llama/models/` | 既存モデル（Devstral 24B, Qwen2.5 32B）を直接参照可能 |
+| **モデルファイル名** | `mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf` | 同左 (14.3 GB) | `config.env` の `EXECUTOR_MODEL` と一致 |
+| **バックエンド / GPU** | Vulkan (`-dev Vulkan0,Vulkan1`) | CUDA (`GGML_CUDA=on`) または CPU | WSL2 CUDA 利用時は `/usr/lib/wsl/lib` 参照 |
+| **待受ポート** | `11435` | `11435` | 変更なし (Linux 内 `127.0.0.1:11435`) |
+| **コンテキスト長** | `-c 32768` | `-c 32768` | 最大 32k トークン |
+| **最大出力トークン** | `8192` | `8192` | `config.env` の `LLAMA_MAX_TOKENS` |
+| **並列処理数** | `-np 1` | `-np 1` | VRAM 枯渇防止のため 1 に固定 |
+
+---
+
+### ③ Linux 側での llama-server 起動スクリプト (`scripts/run_llama.sh`)
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+MODEL_DIR="/mnt/c/llama/models"
+MODEL_NAME="${1:-mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf}"
+MODEL_PATH="${MODEL_DIR}/${MODEL_NAME}"
+PORT=11435
+
+if [ ! -f "${MODEL_PATH}" ]; then
+  echo "❌ Error: Model not found at ${MODEL_PATH}" >&2
+  exit 1
+fi
+
+echo "🚀 Starting llama-server on Linux (Port: ${PORT}, Model: ${MODEL_NAME})..."
+
+# WSL2 の CUDA ドライバライブラリパス
+export LD_LIBRARY_PATH="/usr/lib/wsl/lib:${LD_LIBRARY_PATH:-}"
+
+exec llama-server \
+  -m "${MODEL_PATH}" \
+  --port "${PORT}" \
+  -c 32768 \
+  -np 1 \
+  -ngl 99 \
+  --host 127.0.0.1
+```
+
+---
+
+### ④ アプリケーション・Runner 側の設定影響 (`config.env`)
+- `config.env` 内の下記設定は、Linux ネイティブ起動（`127.0.0.1:11435`）でも**設定変更なしでそのまま動作**します：
+  ```ini
+  EXECUTOR_PROVIDER="llama_cpp"
+  EXECUTOR_MODEL="mistralai_Devstral-Small-2-24B-Instruct-2512-Q4_K_M.gguf"
+  LOCAL_LLM_URL="http://127.0.0.1:11435/completion"
+  LOCAL_LLM_ENDPOINT="http://127.0.0.1:11435/v1/chat/completions"
+  LOCAL_LLM_COMPLETION_ENDPOINT="http://127.0.0.1:11435/completion"
+  EXECUTOR_ENDPOINT="http://127.0.0.1:11435/v1/chat/completions"
+  LLAMA_MAX_TOKENS=8192
+  ```
+
+---
+
+### ⑤ 起動確認・ヘルスチェック手順
+1. **サーバーヘルスチェック**:
+   ```bash
+   curl -s http://127.0.0.1:11435/health
+   ```
+2. **疎通・コード生成テスト**:
+   ```bash
+   python3 scripts/test-local-llm.py "Write a hello world in Go"
+   ```
+

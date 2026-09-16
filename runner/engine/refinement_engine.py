@@ -55,6 +55,10 @@ class RefinementEngine:
     def run_epic_refinement_phase(self, auto_approve: bool = False) -> str:
         """セレモニー 1 (エピック抽出ディベート) を実行し、ディベートログを返す。"""
         overall_debate_log = self.epic_engine.run_epic_refinement()
+
+        # ⚖️ 3者独立レビュー判定（コスト・技術・責任の分離判断）
+        self.epic_engine.review_tripartite_governance(overall_debate_log)
+
         epics = self.epic_engine.extract_epics_from_log(overall_debate_log)
         if not epics:
             raise RuntimeError("❌ [RefinementEngine] Zero epics extracted from Ceremony 1 log!")

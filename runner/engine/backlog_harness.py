@@ -96,21 +96,20 @@ class BacklogHarness:
             if epic_idx > 1 and ("Clean Architecture" in title or "directory skeleton" in title.lower() or "directory structure" in title.lower()):
                 if epic_idx == 5:
                     task["title"] = "Create HTTP delivery package skeleton"
-                    task["description"] = "Initialize internal/interface/http/ and internal/interface/http/middleware/ with .gitkeep"
+                    task["description"] = "Initialize internal/delivery/http/ and internal/delivery/http/middleware/ with .gitkeep"
                     task["acceptance_criteria"] = [
-                        "internal/interface/http/ directory exists with .gitkeep",
-                        "internal/interface/http/middleware/ directory exists with .gitkeep"
+                        "internal/delivery/http/ directory exists with .gitkeep",
+                        "internal/delivery/http/middleware/ directory exists with .gitkeep"
                     ]
-                    task["verify_command"] = 'docker compose run --rm test sh -c "test -d internal/interface/http && test -d internal/interface/http/middleware"'
+                    task["verify_command"] = 'docker compose run --rm test sh -c "test -d internal/delivery/http && test -d internal/delivery/http/middleware"'
                     remediations.append(f"Trimmed whole-project skeleton task {task.get('id')} to Epic 5 delivery skeleton")
                 elif epic_idx == 6:
                     task["title"] = "Create Web SPA package skeleton"
-                    task["description"] = "Initialize internal/interface/web/ and internal/interface/web/static/ with .gitkeep"
+                    task["description"] = "Initialize web/static/ with .gitkeep"
                     task["acceptance_criteria"] = [
-                        "internal/interface/web/ directory exists with .gitkeep",
-                        "internal/interface/web/static/ directory exists with .gitkeep"
+                        "web/static/ directory exists with .gitkeep"
                     ]
-                    task["verify_command"] = 'docker compose run --rm test sh -c "test -d internal/interface/web && test -d internal/interface/web/static"'
+                    task["verify_command"] = 'docker compose run --rm test sh -c "test -d web/static"'
                     remediations.append(f"Trimmed whole-project skeleton task {task.get('id')} to Epic 6 delivery skeleton")
 
             # Epic 5以降で過去エピックのドメインモデルやユースケースを再作成するタスクは完全排除

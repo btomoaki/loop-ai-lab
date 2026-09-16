@@ -7,8 +7,8 @@
    - [PROHIBITION OF ARTIFICIAL TASK LIMITS]: NEVER artificially restrict the number of tasks. Create as many micro-tasks as needed to satisfy single-responsibility and AC <= 2.
 2. Specificity (No Ambiguity & Explicit Enumeration):
    - NEVER use "etc.", "and so on", or vague shortcuts in acceptance criteria. Fully enumerate all required directories, services, or configurations explicitly.
-   - [EXPLICIT TARGET FILE PATH MANDATE]: Every task MUST explicitly state its concrete physical target file path (e.g. `internal/interface/web/static/index.html`, `app.js`, `embed.go`, etc.) directly from Section 2 Scope in its description and acceptance criteria. Never omit the target file path!
-   - For Clean Architecture directory skeleton tasks, explicitly list all 7 required directories: `cmd/server/`, `internal/domain/model/`, `internal/domain/service/`, `internal/usecase/`, `internal/interface/`, `internal/infrastructure/`, and `docs/`, along with their `.gitkeep` files.
+   - [EXPLICIT TARGET FILE PATH MANDATE]: Every task MUST explicitly state its concrete physical target file path (e.g. `web/static/index.html`, `app.js`, `internal/delivery/http/static_embed.go`, etc.) directly from Section 2 Scope in its description and acceptance criteria. Never omit the target file path!
+   - For Clean Architecture directory skeleton tasks, explicitly list the required directories: `cmd/server/`, `internal/domain/model/`, `internal/domain/service/`, `internal/domain/usecase/`, `internal/application/usecase/`, `internal/delivery/http/`, `internal/infrastructure/png/`, and `docs/`, along with their `.gitkeep` files.
    - For Docker Compose tasks, explicitly specify ports (e.g. `8080:8080`), base images, working directories (`/app`), and volume mounts (`.:/app`) in the AC to ensure 100% specification traceability.
 3. Verification Command Governance:
    - All verify_commands MUST be ephemeral one-shot executions: `docker compose run --rm <service> ...`.

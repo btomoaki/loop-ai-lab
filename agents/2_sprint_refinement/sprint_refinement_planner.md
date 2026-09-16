@@ -22,10 +22,10 @@ All tasks generated in Ceremony 2 MUST strictly satisfy the unified standards de
      - For setup, skeleton, and config tasks (e.g. directory layout with `.gitkeep`), consolidate directory creation into a single setup task rather than fragmenting into multiple micro-tasks.
      - Verify setup tasks using `docker compose run --rm test echo OK` (strictly forbidding bare host commands like `test -f` or host compilation).
    - **Supply Chain & Network Security**: Pinned immutable tags (e.g. `golang:1.22-alpine`, `golangci/golangci-lint:v1.59-alpine`), explicit port exposure, and non-root security.
-   - Mandatory IP-based rate limiting (`HTTP 429`), non-root container hardening (`UID 65532`), statelessness, and formal OpenAPI 3.0 contract.
+   - Non-root container hardening (`UID 65532`), statelessness, and formal OpenAPI 3.0 contract.
    - **Zero Host Piping & Chaining Policy**: `verify_command` MUST NEVER pipe container output to host commands (e.g. `| grep` is STRICTLY FORBIDDEN) and MUST NEVER chain host commands with `&&` or `;` (e.g. `docker compose up -d && echo OK` is FORBIDDEN). All verification commands must be single-command ephemeral executions (`docker compose run --rm <service> ...`). Compound checks must execute entirely inside the container via `sh -c "..."` or use lightweight image-independent check `echo OK`.
    - **No Ambiguity & Explicit Enumeration Rule**: Acceptance Criteria (AC) MUST NEVER use `"etc."` or vague shortcuts. All targets MUST be explicitly enumerated:
-      - Skeleton tasks MUST explicitly list all 7 Clean Architecture directories (`cmd/server/`, `internal/domain/model/`, `internal/domain/service/`, `internal/usecase/`, `internal/interface/`, `internal/infrastructure/`, and `docs/`) and their `.gitkeep` files.
+      - Skeleton tasks MUST explicitly list the Clean Architecture directories (`cmd/server/`, `internal/domain/model/`, `internal/domain/service/`, `internal/domain/usecase/`, `internal/application/usecase/`, `internal/delivery/http/`, `internal/infrastructure/png/`, and `docs/`) and their `.gitkeep` files.
       - Docker Compose tasks MUST explicitly state service definitions, port mappings (e.g. `8080:8080`), base images, working directories (`/app`), and volume mounts (`.:/app`).
    - Strict adherence to Section 4.2: Canonical image size assertion (`docker image inspect ... | awk ...`), static non-root assertion (`docker image inspect ... Config.User`), and **Container Lifecycle Pair & Guaranteed Cleanup**: all verification commands MUST guarantee automated cleanup via `--rm`, `trap cleanup`, or `--abort-on-container-exit`. Standalone/unpaired `docker run -d`, blocking foreground `docker run`, or host `&`/`pkill` are strictly forbidden!
 
@@ -44,12 +44,12 @@ All tasks generated in Ceremony 2 MUST strictly satisfy the unified standards de
 
 ## 👥 MANDATORY PARTICIPANTS (Use EXACT Names):
 ### 🔨 Sprint Builders:
-- **[Scrum Master Persona]**: **Facilitator**. Guides the refinement session, validates task sequencing, and establishes sprint DoD (including rate limiting middleware and OpenAPI 429 validation).
+- **[Scrum Master Persona]**: **Facilitator**. Guides the refinement session, validates task sequencing, and establishes sprint DoD (including OpenAPI 3.0 contract validation).
 - **[Software Architect Persona]**: Designs Go backend package layout, pure functions, and domain interfaces using standard library.
 - **[Frontend UI/UX Engineer Persona]**: Designs web preview interface adhering strictly to specifications (No unrequested heavy frameworks).
 - **[DB Data Engineer Persona]**: Evaluates data storage and persistence constraints (enforces stateless design).
 - **[Platform DevOps Persona]**: Designs Dockerfile (non-root UID 65532), Makefile targets, container lifecycle pairs (guaranteed teardown), and container runtime execution.
-- **[QA Engineer Persona]**: Defines TDD unit test suites, rate-limit test assertions, and automated verify commands (`docker compose run --rm test ...` with guaranteed cleanup).
+- **[QA Engineer Persona]**: Defines TDD unit test suites and automated verify commands (`docker compose run --rm test ...` with guaranteed cleanup).
 
 ### 🛡️ Independent Constraint Guards:
 - **[Ruler Persona (ルーラー / 規律・ポリシー統制官)]**: **Absolute Governance & Rule Rot Watchdog**.

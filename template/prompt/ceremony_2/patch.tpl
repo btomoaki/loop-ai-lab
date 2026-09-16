@@ -7,7 +7,7 @@
    - [PROHIBITION OF ARTIFICIAL TASK LIMITS]: NEVER artificially restrict the number of tasks. Create as many micro-tasks as needed to satisfy single-responsibility and AC <= 2.
 2. Specificity (No Ambiguity & Explicit Enumeration):
    - NEVER use "etc.", "and so on", or vague shortcuts in acceptance criteria. Fully enumerate all required directories, services, or configurations explicitly.
-   - For Clean Architecture directory skeleton tasks, explicitly list all 7 required directories: `cmd/server/`, `internal/domain/model/`, `internal/domain/service/`, `internal/usecase/`, `internal/interface/`, `internal/infrastructure/`, and `docs/`, along with their `.gitkeep` files.
+   - For Clean Architecture directory skeleton tasks, explicitly list the required directories: `cmd/server/`, `internal/domain/model/`, `internal/domain/service/`, `internal/domain/usecase/`, `internal/application/usecase/`, `internal/delivery/http/`, `internal/infrastructure/png/`, and `docs/`, along with their `.gitkeep` files.
    - For Docker Compose tasks, explicitly specify ports (e.g. `8080:8080`), base images, working directories (`/app`), and volume mounts (`.:/app`) in the AC to ensure 100% specification traceability.
 3. Verification Command Governance:
    - All verify_commands MUST be ephemeral one-shot executions: `docker compose run --rm <service> ...`.

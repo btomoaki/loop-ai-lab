@@ -4,14 +4,19 @@
 1. **Domain Layer**: 
    - **Models / Entities / Value Objects**: Strictly pure data structures and schema representations (fields only). Never embed functions, constructors, validation logic, or return statements directly in model files.
    - **Domain Services**: Stateless business validations, calculations, generation algorithms, and transformations that operate on entities. Zero external dependencies.
-2. **Usecase / Service Layer**: Application workflows and business orchestration. Depends only on Domain.
-3. **Interface / Delivery Layer**: Entrypoints, HTTP/REST controllers, CLI commands, and client handlers.
-4. **Infrastructure Layer**: Concrete adapters for persistence (SQL/NoSQL databases, caches), message brokers (MQ queues/subscribers), file systems, third-party network clients, and external drivers.
+   - **Domain Interfaces (Ports)**:
+     - **Output Ports**: Interfaces for external drivers (e.g. `Rasterizer`, `Repository`) owned by `domain/`.
+     - **Input Ports**: Interfaces for application usecases (e.g. `AvatarUsecase`) owned by `domain/usecase/` to allow delivery controllers to mock business logic completely.
+2. **Application / Usecase Layer (`internal/application/usecase/`)**: Application workflows and orchestration implementing domain input ports and depending on domain output ports.
+3. **Delivery Layer (`internal/delivery/http/`)**: Entrypoints, HTTP/REST controllers, CLI commands, and client handlers. Strictly avoid naming package `interface` (reserved keyword in Go/Java). Depends only on `domain/usecase/` input ports.
+4. **Infrastructure Layer (`internal/infrastructure/`)**: Concrete adapters for persistence, rasterization, file systems, third-party network clients, and external drivers implementing domain output ports.
 
-## 2. Dependency Inversion & Middleware Decoupling
-- High-level modules (Domain, Usecase) must not depend on low-level modules (Infrastructure, DB, MQ); both must depend on abstractions/interfaces.
-- Database access (repositories) and Message Queue operations (publishers/consumers) MUST be defined as interfaces in domain/usecase and implemented as concrete adapters in `internal/infrastructure/`.
-- Constructors should accept interfaces and return concrete implementations to ensure 100% test mockability and seamless infrastructure replacement.
+## 2. Dependency Inversion & Double-Mockability
+- **High-level modules (Domain, Usecase) must not depend on low-level modules (Infrastructure, DB, Delivery)**; all dependencies point inward.
+- **Double-Mockability for 100% Isolated Unit Testing**:
+  - **Delivery UT**: HTTP controllers accept `domain/usecase` interfaces in constructors, allowing 100% isolated controller tests with mock usecases.
+  - **Usecase UT**: Application usecases accept `domain` output port interfaces in constructors, allowing 100% isolated workflow tests with mock drivers.
+- Constructors should accept interfaces and return concrete implementations to ensure 100% test mockability and seamless component replacement.
 
 ## 3. Domain Model Purity
 - Keep Entities and Models decoupled from algorithmic complexity. Business algorithms (such as hash calculation, matrix symmetry generation, and encoding) belong in Domain Services or dedicated engines, keeping models simple, testable, and reusable.

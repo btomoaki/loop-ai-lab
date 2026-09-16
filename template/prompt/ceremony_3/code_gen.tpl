@@ -13,8 +13,8 @@
 2. NEVER prefix module names or internal imports with 'workspace/' or directory paths.
    - Correct:   import "{clean_mod_name}/internal/domain/model"
    - Forbidden: import "workspace/{clean_mod_name}/..." or "workspace/..."
-3. [PACKAGE NAME COLLISION GUARD]: When importing both standard 'net/http' and internal '{clean_mod_name}/internal/interface/http',
-   you MUST use an explicit alias for the internal package (e.g. `httpDelivery "{clean_mod_name}/internal/interface/http"`) to avoid 'redeclared' errors.
+3. [PACKAGE NAME COLLISION GUARD]: When importing both standard 'net/http' and internal '{clean_mod_name}/internal/delivery/http',
+   you MUST use an explicit alias for the internal package (e.g. `httpDelivery "{clean_mod_name}/internal/delivery/http"`) to avoid 'redeclared' errors.
 4. [STRICT PROHIBITION OF LOCKFILES]: NEVER generate or output 'go.sum', 'package-lock.json', or checksum files. Dependencies must be declared ONLY in {project_file}.
 5. [NO UNAUTHORIZED SUBMODULES OR NESTED DIRECTORIES]: NEVER create 'go.mod' or 'go.sum' inside internal/ subdirectories.
 6. [NO UNAUTHORIZED EXTERNAL LIBRARIES]: Do NOT import unapproved external libraries (e.g. gorilla/mux, time/rate) unless explicitly instructed in tasks.

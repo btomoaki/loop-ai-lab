@@ -300,8 +300,8 @@ class SprintExecutionEngine:
 
         # 1. パスによる直接判定（最優先・高精度）
         has_model_path = "internal/domain/model" in text_lower
-        has_service_path = "internal/domain/service" in text_lower or "internal/usecase" in text_lower
-        has_interface_path = any(p in text_lower for p in ["internal/interface", "cmd/", "docker", "compose", "makefile", "openapi"])
+        has_service_path = any(p in text_lower for p in ["internal/domain/service", "internal/domain/usecase", "internal/application/usecase", "internal/usecase"])
+        has_interface_path = any(p in text_lower for p in ["internal/delivery", "internal/interface", "cmd/", "docker", "compose", "makefile", "openapi"])
 
         # 専用タスク判定（既存コードの破壊防止・過剰レイヤー除外）
         is_pure_test_task = bool(re.search(r"\b(add|create|implement)\s+.*(unit\s+tests?|integration\s+tests?|test\s+cases?)\b", text_lower)) and not bool(re.search(r"\b(implement|create)\s+.*(service|handler|rasterizer|model)\b", text_lower))
